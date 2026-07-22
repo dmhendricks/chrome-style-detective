@@ -1,5 +1,5 @@
 /*!
-* Style Detective — Displays a floating panel of any hovered element's CSS properties.
+* Style Detective
 */
 
 // Context-menu items that dump the current element to the page console. Each

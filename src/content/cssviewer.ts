@@ -133,26 +133,6 @@ const CSSQuickViewer_tableTagNames = [
 
 const CSSQuickViewer_listTagNames = ['UL', 'LI', 'DD', 'DT', 'OL'];
 
-// Hexadecimal
-const CSSQuickViewer_hexa = [
-    '0',
-    '1',
-    '2',
-    '3',
-    '4',
-    '5',
-    '6',
-    '7',
-    '8',
-    '9',
-    'A',
-    'B',
-    'C',
-    'D',
-    'E',
-    'F',
-];
-
 // === Utils ===
 
 function GetCurrentDocument(): Document {
@@ -168,13 +148,11 @@ function IsInArray(array: string[], name: string): boolean {
 }
 
 function DecToHex(nb: number): string {
-    let nbHexa = '';
+    // Clamp to a whole byte so a fractional or out-of-range value (e.g. an
+    // alpha channel like 0.067) can't produce a malformed hex pair.
+    const byte = Math.max(0, Math.min(255, Math.round(nb)));
 
-    nbHexa += CSSQuickViewer_hexa[Math.floor(nb / 16)];
-    nb = nb % 16;
-    nbHexa += CSSQuickViewer_hexa[nb];
-
-    return nbHexa;
+    return byte.toString(16).toUpperCase().padStart(2, '0');
 }
 
 function RGBToHex(str: string): string {
@@ -183,14 +161,17 @@ function RGBToHex(str: string): string {
 
     str = str.slice(start, end);
 
-    const hexValues = str.split(', ');
+    // Modern browsers report colors as rgb()/rgba() and may include a 4th alpha
+    // component (e.g. "rgba(101, 108, 118, 0.067)"). Only the first three are
+    // RGB channels; take those and ignore any alpha.
+    const rgbValues = str.split(',').slice(0, 3);
     let hexStr = '#';
 
-    for (let i = 0; i < hexValues.length; i++) {
-        hexStr += DecToHex(Number(hexValues[i]));
+    for (let i = 0; i < rgbValues.length; i++) {
+        hexStr += DecToHex(Number(rgbValues[i]));
     }
 
-    if (hexStr == '#00000000') {
+    if (hexStr == '#000000') {
         hexStr = '#FFFFFF';
     }
 

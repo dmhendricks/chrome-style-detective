@@ -31,12 +31,20 @@ span.CSSViewer_property,
 #CSSViewer_block {
     display: none;
     min-width: 332px !important;
+    /* Cap the width so a long value (e.g. a big font-family stack) wraps instead
+       of stretching the panel across the page. */
+    max-width: 400px !important;
     font-size: 10px !important;
     color: #555 !important;
     position: absolute !important;
     background: #fff !important;
     border-radius: 6px !important;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25) !important;
+    /* Never let the panel grow taller than the viewport (minus a strip at the
+       bottom for the browser's link-URL preview). A tall property list scrolls
+       inside the panel instead of overflowing off-screen. */
+    max-height: calc(100vh - 25px) !important;
+    overflow-y: auto !important;
 }
 
 #CSSViewer_block h1 {
@@ -134,4 +142,14 @@ span.CSSViewer_property,
     width: 100px !important;
     display: block !important;
     overflow: hidden !important;
+}
+
+/* The value span (the li's second span) sits beside the floated label. Give it
+   its own block formatting context so long values wrap within the panel's
+   max-width instead of stretching it. */
+#CSSViewer_block li span.CSSViewer_property + span {
+    display: block !important;
+    overflow: hidden !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
 }

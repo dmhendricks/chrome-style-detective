@@ -528,6 +528,14 @@ function CSSViewerMouseOver(this: HTMLElement, e: MouseEvent): void {
 
     if (isInsidePanel(el)) return;
 
+    // Suppress the element's native title tooltip while inspecting — it renders
+    // in browser chrome, outside the page's stacking context, so no z-index can
+    // keep our panel above it. Stash the value and restore it on mouseout.
+    if (el.hasAttribute('title')) {
+        el.setAttribute('data-cssviewer-title', el.getAttribute('title') ?? '');
+        el.removeAttribute('title');
+    }
+
     // Block
     const document = GetCurrentDocument();
     const block = document.getElementById('CSSViewer_block');
@@ -609,6 +617,12 @@ function CSSViewerMouseOut(this: HTMLElement, e: MouseEvent): void {
 
     this.style.outline = '';
 
+    // Restore the native title we suppressed on mouseover.
+    if (this.hasAttribute('data-cssviewer-title')) {
+        this.setAttribute('title', this.getAttribute('data-cssviewer-title') ?? '');
+        this.removeAttribute('data-cssviewer-title');
+    }
+
     e.stopPropagation();
 }
 
@@ -625,7 +639,11 @@ function CSSViewerMouseMove(this: HTMLElement, e: MouseEvent): void {
     block.style.display = 'block';
 
     const pageWidth = window.innerWidth;
-    const pageHeight = window.innerHeight;
+    // Keep the panel clear of the browser's link-URL preview, which the browser
+    // draws in the bottom-left of the viewport when hovering a link. Reserve a
+    // strip at the bottom so the panel never extends into it.
+    const BOTTOM_MARGIN = 40;
+    const pageHeight = window.innerHeight - BOTTOM_MARGIN;
     // Measure the actual rendered size — the panel grows wider than a fixed
     // width for long values, so a hardcoded width mispositions it near the edge.
     const blockWidth = block.offsetWidth;
@@ -826,6 +844,13 @@ class CSSViewer {
             if (block) document.body.removeChild(block);
             if (insertMessage) document.body.removeChild(insertMessage);
             this.RemoveEventListeners();
+
+            // Restore any titles still suppressed because the viewer was disabled
+            // while an element was hovered (mouseout never fired for it).
+            for (const el of document.querySelectorAll('[data-cssviewer-title]')) {
+                el.setAttribute('title', el.getAttribute('data-cssviewer-title') ?? '');
+                el.removeAttribute('data-cssviewer-title');
+            }
 
             return true;
         }

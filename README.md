@@ -1,8 +1,8 @@
-# CSS Quick Viewer
+# Style Detective
 
 A simple CSS property viewer for Google Chrome. Hover any element on a page to inspect its computed styles in a floating panel. Forked from [miled/cssviewer](https://github.com/miled/cssviewer) and modernized.
 
-![CSS Quick Viewer](public/img/option-demo.gif)
+![Style Detective](public/img/option-demo.gif)
 
 Features:
 

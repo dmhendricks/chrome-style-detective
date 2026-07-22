@@ -1,17 +1,17 @@
 /*!
-* CSS Quick Viewer — Displays a floating panel of any hovered element's CSS properties.
+* Style Detective — Displays a floating panel of any hovered element's CSS properties.
 */
 
 // === Globals ===
 
 // The element currently being inspected, and its generated CSS text. Updated on
 // every mouseover; read by the context-menu console dump and the [c] key prompt.
-let CSSQuickViewer_element: HTMLElement | null = null;
-let CSSQuickViewer_element_cssDefinition = '';
-let CSSQuickViewer_current_element: HTMLElement | null = null;
+let StyleDetectiveOverlay_element: HTMLElement | null = null;
+let StyleDetectiveOverlay_element_cssDefinition = '';
+let StyleDetectiveOverlay_current_element: HTMLElement | null = null;
 
 // CSS Properties
-const CSSQuickViewer_pFont = [
+const StyleDetectiveOverlay_pFont = [
     'font-family',
     'font-size',
     'font-style',
@@ -28,7 +28,7 @@ const CSSQuickViewer_pFont = [
     'word-spacing',
 ];
 
-const CSSQuickViewer_pColorBg = [
+const StyleDetectiveOverlay_pColorBg = [
     'background-attachment',
     'background-color',
     'background-image',
@@ -37,7 +37,7 @@ const CSSQuickViewer_pColorBg = [
     'color',
 ];
 
-const CSSQuickViewer_pBox = [
+const StyleDetectiveOverlay_pBox = [
     'height',
     'width',
     'border',
@@ -53,7 +53,7 @@ const CSSQuickViewer_pBox = [
     'min-width',
 ];
 
-const CSSQuickViewer_pPositioning = [
+const StyleDetectiveOverlay_pPositioning = [
     'position',
     'top',
     'bottom',
@@ -65,9 +65,9 @@ const CSSQuickViewer_pPositioning = [
     'z-index',
 ];
 
-const CSSQuickViewer_pList = ['list-style-image', 'list-style-type', 'list-style-position'];
+const StyleDetectiveOverlay_pList = ['list-style-image', 'list-style-type', 'list-style-position'];
 
-const CSSQuickViewer_pTable = [
+const StyleDetectiveOverlay_pTable = [
     'border-collapse',
     'border-spacing',
     'caption-side',
@@ -75,9 +75,9 @@ const CSSQuickViewer_pTable = [
     'table-layout',
 ];
 
-const CSSQuickViewer_pMisc = ['overflow', 'cursor', 'visibility'];
+const StyleDetectiveOverlay_pMisc = ['overflow', 'cursor', 'visibility'];
 
-const CSSQuickViewer_pEffect = [
+const StyleDetectiveOverlay_pEffect = [
     'transform',
     'transition',
     'outline',
@@ -95,18 +95,18 @@ const CSSQuickViewer_pEffect = [
 ];
 
 // CSS Property categories
-const CSSQuickViewer_categories: Record<string, string[]> = {
-    pFontText: CSSQuickViewer_pFont,
-    pColorBg: CSSQuickViewer_pColorBg,
-    pBox: CSSQuickViewer_pBox,
-    pPositioning: CSSQuickViewer_pPositioning,
-    pList: CSSQuickViewer_pList,
-    pTable: CSSQuickViewer_pTable,
-    pMisc: CSSQuickViewer_pMisc,
-    pEffect: CSSQuickViewer_pEffect,
+const StyleDetectiveOverlay_categories: Record<string, string[]> = {
+    pFontText: StyleDetectiveOverlay_pFont,
+    pColorBg: StyleDetectiveOverlay_pColorBg,
+    pBox: StyleDetectiveOverlay_pBox,
+    pPositioning: StyleDetectiveOverlay_pPositioning,
+    pList: StyleDetectiveOverlay_pList,
+    pTable: StyleDetectiveOverlay_pTable,
+    pMisc: StyleDetectiveOverlay_pMisc,
+    pEffect: StyleDetectiveOverlay_pEffect,
 };
 
-const CSSQuickViewer_categoriesTitle: Record<string, string> = {
+const StyleDetectiveOverlay_categoriesTitle: Record<string, string> = {
     pFontText: 'Font & Text',
     pColorBg: 'Color & Background',
     pBox: 'Box',
@@ -118,7 +118,7 @@ const CSSQuickViewer_categoriesTitle: Record<string, string> = {
 };
 
 // Table tagnames
-const CSSQuickViewer_tableTagNames = [
+const StyleDetectiveOverlay_tableTagNames = [
     'TABLE',
     'CAPTION',
     'THEAD',
@@ -131,7 +131,7 @@ const CSSQuickViewer_tableTagNames = [
     'TD',
 ];
 
-const CSSQuickViewer_listTagNames = ['UL', 'LI', 'DD', 'DT', 'OL'];
+const StyleDetectiveOverlay_listTagNames = ['UL', 'LI', 'DD', 'DT', 'OL'];
 
 // === Utils ===
 
@@ -207,7 +207,7 @@ function GetCSSProperty(element: CSSStyleDeclaration, property: string): string 
 
 function SetCSSProperty(element: CSSStyleDeclaration, property: string): void {
     const document = GetCurrentDocument();
-    const li = document.getElementById('CSSQuickViewer__' + property);
+    const li = document.getElementById('StyleDetectiveOverlay__' + property);
     if (!li || !li.lastChild) return;
 
     (li.lastChild as HTMLElement).innerHTML = ' : ' + element.getPropertyValue(property);
@@ -219,7 +219,7 @@ function SetCSSPropertyIf(
     condition: boolean,
 ): number {
     const document = GetCurrentDocument();
-    const li = document.getElementById('CSSQuickViewer__' + property);
+    const li = document.getElementById('StyleDetectiveOverlay__' + property);
     if (!li) return 0;
 
     if (condition) {
@@ -242,7 +242,7 @@ function SetCSSPropertyValue(
     value: string,
 ): void {
     const document = GetCurrentDocument();
-    const li = document.getElementById('CSSQuickViewer__' + property);
+    const li = document.getElementById('StyleDetectiveOverlay__' + property);
     if (!li || !li.lastChild) return;
 
     (li.lastChild as HTMLElement).innerHTML = ' : ' + value;
@@ -256,7 +256,7 @@ function SetCSSPropertyValueIf(
     condition: boolean,
 ): number {
     const document = GetCurrentDocument();
-    const li = document.getElementById('CSSQuickViewer__' + property);
+    const li = document.getElementById('StyleDetectiveOverlay__' + property);
     if (!li) return 0;
 
     if (condition) {
@@ -275,19 +275,19 @@ function SetCSSPropertyValueIf(
 
 function HideCSSProperty(property: string): void {
     const document = GetCurrentDocument();
-    const li = document.getElementById('CSSQuickViewer__' + property);
+    const li = document.getElementById('StyleDetectiveOverlay__' + property);
     if (li) li.style.display = 'none';
 }
 
 function HideCSSCategory(category: string): void {
     const document = GetCurrentDocument();
-    const div = document.getElementById('CSSQuickViewer__' + category);
+    const div = document.getElementById('StyleDetectiveOverlay__' + category);
     if (div) div.style.display = 'none';
 }
 
 function ShowCSSCategory(category: string): void {
     const document = GetCurrentDocument();
-    const div = document.getElementById('CSSQuickViewer__' + category);
+    const div = document.getElementById('StyleDetectiveOverlay__' + category);
     if (div) div.style.display = 'block';
 }
 
@@ -397,7 +397,7 @@ function UpdatePositioning(element: CSSStyleDeclaration): void
 
 function UpdateTable(element: CSSStyleDeclaration, tagName: string): void
 {
-    if (IsInArray(CSSQuickViewer_tableTagNames, tagName)) {
+    if (IsInArray(StyleDetectiveOverlay_tableTagNames, tagName)) {
         let nbProperties = 0;
 
         nbProperties += SetCSSPropertyIf(element, 'border-collapse', GetCSSProperty(element, 'border-collapse') != 'separate');
@@ -418,7 +418,7 @@ function UpdateTable(element: CSSStyleDeclaration, tagName: string): void
 
 function UpdateList(element: CSSStyleDeclaration, tagName: string): void
 {
-    if (IsInArray(CSSQuickViewer_listTagNames, tagName)) {
+    if (IsInArray(StyleDetectiveOverlay_listTagNames, tagName)) {
         ShowCSSCategory('pList');
 
         const listStyleImage = GetCSSProperty(element, 'list-style-image');
@@ -486,7 +486,7 @@ function UpdateEffects(element: CSSStyleDeclaration): void
 // CSS definition string.
 function appendCssDefinition(element: CSSStyleDeclaration, props: string[]): void {
     for (const property of props) {
-        CSSQuickViewer_element_cssDefinition +=
+        StyleDetectiveOverlay_element_cssDefinition +=
             '\t' + property + ': ' + element.getPropertyValue(property) + ';\n';
     }
 }
@@ -498,12 +498,12 @@ function appendCssDefinition(element: CSSStyleDeclaration, props: string[]): voi
 // where small width changes flip the panel from one side of the cursor to the
 // other every frame).
 function isInsidePanel(el: HTMLElement | null): boolean {
-    return !!el && !!el.closest && el.closest('#CSSQuickViewer') != null;
+    return !!el && !!el.closest && el.closest('#StyleDetectiveOverlay') != null;
 }
 
-function CSSQuickViewerMouseOver(this: HTMLElement, e: MouseEvent): void {
+function StyleDetectiveOverlayMouseOver(this: HTMLElement, e: MouseEvent): void {
     // The hovered element is `this`; alias it so it can be stashed into module
-    // state (CSSQuickViewer_element) for the console dump and freeze features to read.
+    // state (StyleDetectiveOverlay_element) for the console dump and freeze features to read.
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const el = this;
 
@@ -513,13 +513,13 @@ function CSSQuickViewerMouseOver(this: HTMLElement, e: MouseEvent): void {
     // in browser chrome, outside the page's stacking context, so no z-index can
     // keep our panel above it. Stash the value and restore it on mouseout.
     if (el.hasAttribute('title')) {
-        el.setAttribute('data-cssquickviewer-title', el.getAttribute('title') ?? '');
+        el.setAttribute('data-styledetective-title', el.getAttribute('title') ?? '');
         el.removeAttribute('title');
     }
 
     // Block
     const document = GetCurrentDocument();
-    const block = document.getElementById('CSSQuickViewer');
+    const block = document.getElementById('StyleDetectiveOverlay');
 
     if (!block) {
         return;
@@ -537,7 +537,7 @@ function CSSQuickViewerMouseOver(this: HTMLElement, e: MouseEvent): void {
     // Outline element
     if (el.tagName != 'body') {
         el.style.outline = '1px dashed #f00';
-        CSSQuickViewer_current_element = el;
+        StyleDetectiveOverlay_current_element = el;
     }
 
     // Updating CSS properties
@@ -553,65 +553,65 @@ function CSSQuickViewerMouseOver(this: HTMLElement, e: MouseEvent): void {
     UpdateMisc(element);
     UpdateEffects(element);
 
-    CSSQuickViewer_element = el;
+    StyleDetectiveOverlay_element = el;
 
-    cssQuickViewerRemoveElement('cssQuickViewerInsertMessage');
+    styleDetectiveRemoveElement('styleDetectiveInsertMessage');
 
     e.stopPropagation();
 
     // generate simple css definition
-    CSSQuickViewer_element_cssDefinition =
+    StyleDetectiveOverlay_element_cssDefinition =
         el.tagName.toLowerCase() +
         (el.id == '' ? '' : ' #' + el.id) +
         (el.className == '' ? '' : ' .' + el.className) +
         ' {\n';
 
-    CSSQuickViewer_element_cssDefinition += '\t/* Font & Text */\n';
-    appendCssDefinition(element, CSSQuickViewer_pFont);
+    StyleDetectiveOverlay_element_cssDefinition += '\t/* Font & Text */\n';
+    appendCssDefinition(element, StyleDetectiveOverlay_pFont);
 
-    CSSQuickViewer_element_cssDefinition += '\n\t/* Color & Background */\n';
-    appendCssDefinition(element, CSSQuickViewer_pColorBg);
+    StyleDetectiveOverlay_element_cssDefinition += '\n\t/* Color & Background */\n';
+    appendCssDefinition(element, StyleDetectiveOverlay_pColorBg);
 
-    CSSQuickViewer_element_cssDefinition += '\n\t/* Box */\n';
-    appendCssDefinition(element, CSSQuickViewer_pBox);
+    StyleDetectiveOverlay_element_cssDefinition += '\n\t/* Box */\n';
+    appendCssDefinition(element, StyleDetectiveOverlay_pBox);
 
-    CSSQuickViewer_element_cssDefinition += '\n\t/* Positioning */\n';
-    appendCssDefinition(element, CSSQuickViewer_pPositioning);
+    StyleDetectiveOverlay_element_cssDefinition += '\n\t/* Positioning */\n';
+    appendCssDefinition(element, StyleDetectiveOverlay_pPositioning);
 
-    CSSQuickViewer_element_cssDefinition += '\n\t/* List */\n';
-    appendCssDefinition(element, CSSQuickViewer_pList);
+    StyleDetectiveOverlay_element_cssDefinition += '\n\t/* List */\n';
+    appendCssDefinition(element, StyleDetectiveOverlay_pList);
 
-    CSSQuickViewer_element_cssDefinition += '\n\t/* Table */\n';
-    appendCssDefinition(element, CSSQuickViewer_pTable);
+    StyleDetectiveOverlay_element_cssDefinition += '\n\t/* Table */\n';
+    appendCssDefinition(element, StyleDetectiveOverlay_pTable);
 
-    CSSQuickViewer_element_cssDefinition += '\n\t/* Miscellaneous */\n';
-    appendCssDefinition(element, CSSQuickViewer_pMisc);
+    StyleDetectiveOverlay_element_cssDefinition += '\n\t/* Miscellaneous */\n';
+    appendCssDefinition(element, StyleDetectiveOverlay_pMisc);
 
-    CSSQuickViewer_element_cssDefinition += '\n\t/* Effects */\n';
-    appendCssDefinition(element, CSSQuickViewer_pEffect);
+    StyleDetectiveOverlay_element_cssDefinition += '\n\t/* Effects */\n';
+    appendCssDefinition(element, StyleDetectiveOverlay_pEffect);
 
-    CSSQuickViewer_element_cssDefinition += '}';
+    StyleDetectiveOverlay_element_cssDefinition += '}';
 }
 
-function CSSQuickViewerMouseOut(this: HTMLElement, e: MouseEvent): void {
+function StyleDetectiveOverlayMouseOut(this: HTMLElement, e: MouseEvent): void {
     if (isInsidePanel(this)) return;
 
     this.style.outline = '';
 
     // Restore the native title we suppressed on mouseover.
-    if (this.hasAttribute('data-cssquickviewer-title')) {
-        this.setAttribute('title', this.getAttribute('data-cssquickviewer-title') ?? '');
-        this.removeAttribute('data-cssquickviewer-title');
+    if (this.hasAttribute('data-styledetective-title')) {
+        this.setAttribute('title', this.getAttribute('data-styledetective-title') ?? '');
+        this.removeAttribute('data-styledetective-title');
     }
 
     e.stopPropagation();
 }
 
-function CSSQuickViewerMouseMove(this: HTMLElement, e: MouseEvent): void {
+function StyleDetectiveOverlayMouseMove(this: HTMLElement, e: MouseEvent): void {
     if (isInsidePanel(this)) return;
 
     const document = GetCurrentDocument();
-    const block = document.getElementById('CSSQuickViewer');
+    const block = document.getElementById('StyleDetectiveOverlay');
 
     if (!block) {
         return;
@@ -641,7 +641,7 @@ function CSSQuickViewerMouseMove(this: HTMLElement, e: MouseEvent): void {
     } else block.style.top = e.pageY + 20 + 'px';
 
     // adapt block top to screen offset
-    const inView = CSSQuickViewerIsElementInViewport(block);
+    const inView = StyleDetectiveOverlayIsElementInViewport(block);
 
     if (!inView) block.style.top = window.pageYOffset + 20 + 'px';
 
@@ -649,7 +649,7 @@ function CSSQuickViewerMouseMove(this: HTMLElement, e: MouseEvent): void {
 }
 
 // http://stackoverflow.com/a/7557433
-function CSSQuickViewerIsElementInViewport(el: HTMLElement): boolean {
+function StyleDetectiveOverlayIsElementInViewport(el: HTMLElement): boolean {
     const rect = el.getBoundingClientRect();
 
     return (
@@ -660,9 +660,9 @@ function CSSQuickViewerIsElementInViewport(el: HTMLElement): boolean {
     );
 }
 
-// === CSSQuickViewer ===
+// === StyleDetectiveOverlay ===
 
-class CSSQuickViewer {
+class StyleDetectiveOverlay {
     // Whether all elements currently have the hover event listeners attached.
     haveEventListeners = false;
 
@@ -674,7 +674,7 @@ class CSSQuickViewer {
         if (document) {
             // Create a div block
             block = document.createElement('div');
-            block.id = 'CSSQuickViewer';
+            block.id = 'StyleDetectiveOverlay';
 
             // Insert a title for CSS selector
             const header = document.createElement('h1');
@@ -685,29 +685,29 @@ class CSSQuickViewer {
             // Insert all properties
             const center = document.createElement('div');
 
-            center.id = 'CSSQuickViewer__center';
+            center.id = 'StyleDetectiveOverlay__center';
 
-            for (const cat in CSSQuickViewer_categories) {
+            for (const cat in StyleDetectiveOverlay_categories) {
                 const div = document.createElement('div');
 
-                div.id = 'CSSQuickViewer__' + cat;
-                div.className = 'CSSQuickViewer__category';
+                div.id = 'StyleDetectiveOverlay__' + cat;
+                div.className = 'StyleDetectiveOverlay__category';
 
                 const h2 = document.createElement('h2');
 
-                h2.appendChild(document.createTextNode(CSSQuickViewer_categoriesTitle[cat]!));
+                h2.appendChild(document.createTextNode(StyleDetectiveOverlay_categoriesTitle[cat]!));
 
                 const ul = document.createElement('ul');
-                const properties = CSSQuickViewer_categories[cat]!;
+                const properties = StyleDetectiveOverlay_categories[cat]!;
 
                 for (const property of properties) {
                     const li = document.createElement('li');
 
-                    li.id = 'CSSQuickViewer__' + property;
+                    li.id = 'StyleDetectiveOverlay__' + property;
 
                     const spanName = document.createElement('span');
 
-                    spanName.className = 'CSSQuickViewer__property';
+                    spanName.className = 'StyleDetectiveOverlay__property';
 
                     const spanValue = document.createElement('span');
 
@@ -727,18 +727,18 @@ class CSSQuickViewer {
             // Insert a footer
             const footer = document.createElement('div');
 
-            footer.id = 'CSSQuickViewer__footer';
+            footer.id = 'StyleDetectiveOverlay__footer';
 
             footer.appendChild(
                 document.createTextNode(
-                    'CSS Quick Viewer 1.8.0. Keys: [F] Un/Freeze • [C] Copy • [Esc] Close',
+                    'Style Detective 1.8.0. Keys: [F] Un/Freeze • [C] Copy • [Esc] Close',
                 ),
             );
             block.appendChild(footer);
         }
 
-        cssQuickViewerInsertMessage(
-            'CSS Quick Viewer loaded! Hover any element you want to inspect in the page.',
+        styleDetectiveInsertMessage(
+            'Style Detective loaded! Hover any element you want to inspect in the page.',
         );
 
         return block;
@@ -772,9 +772,9 @@ class CSSQuickViewer {
         const elements = this.GetAllElements(document.body);
 
         for (const element of elements) {
-            element.addEventListener('mouseover', CSSQuickViewerMouseOver, false);
-            element.addEventListener('mouseout', CSSQuickViewerMouseOut, false);
-            element.addEventListener('mousemove', CSSQuickViewerMouseMove, false);
+            element.addEventListener('mouseover', StyleDetectiveOverlayMouseOver, false);
+            element.addEventListener('mouseout', StyleDetectiveOverlayMouseOut, false);
+            element.addEventListener('mousemove', StyleDetectiveOverlayMouseMove, false);
         }
         this.haveEventListeners = true;
     }
@@ -785,24 +785,24 @@ class CSSQuickViewer {
         const elements = this.GetAllElements(document.body);
 
         for (const element of elements) {
-            element.removeEventListener('mouseover', CSSQuickViewerMouseOver, false);
-            element.removeEventListener('mouseout', CSSQuickViewerMouseOut, false);
-            element.removeEventListener('mousemove', CSSQuickViewerMouseMove, false);
+            element.removeEventListener('mouseover', StyleDetectiveOverlayMouseOver, false);
+            element.removeEventListener('mouseout', StyleDetectiveOverlayMouseOut, false);
+            element.removeEventListener('mousemove', StyleDetectiveOverlayMouseMove, false);
         }
         this.haveEventListeners = false;
     }
 
-    // Check whether CSSQuickViewer is enabled
+    // Check whether StyleDetectiveOverlay is enabled
     IsEnabled(): boolean {
         const document = GetCurrentDocument();
 
-        return document.getElementById('CSSQuickViewer') != null;
+        return document.getElementById('StyleDetectiveOverlay') != null;
     }
 
-    // Enable CSSQuickViewer
+    // Enable StyleDetectiveOverlay
     Enable(): boolean {
         const document = GetCurrentDocument();
-        const block = document.getElementById('CSSQuickViewer');
+        const block = document.getElementById('StyleDetectiveOverlay');
 
         if (!block) {
             const created = this.CreateBlock();
@@ -815,11 +815,11 @@ class CSSQuickViewer {
         return false;
     }
 
-    // Disable CSSQuickViewer
+    // Disable StyleDetectiveOverlay
     Disable(): boolean {
         const document = GetCurrentDocument();
-        const block = document.getElementById('CSSQuickViewer');
-        const insertMessage = document.getElementById('cssQuickViewerInsertMessage');
+        const block = document.getElementById('StyleDetectiveOverlay');
+        const insertMessage = document.getElementById('styleDetectiveInsertMessage');
 
         if (block || insertMessage) {
             if (block) document.body.removeChild(block);
@@ -828,9 +828,9 @@ class CSSQuickViewer {
 
             // Restore any titles still suppressed because the viewer was disabled
             // while an element was hovered (mouseout never fired for it).
-            for (const el of document.querySelectorAll('[data-cssquickviewer-title]')) {
-                el.setAttribute('title', el.getAttribute('data-cssquickviewer-title') ?? '');
-                el.removeAttribute('data-cssquickviewer-title');
+            for (const el of document.querySelectorAll('[data-styledetective-title]')) {
+                el.setAttribute('title', el.getAttribute('data-styledetective-title') ?? '');
+                el.removeAttribute('data-styledetective-title');
             }
 
             return true;
@@ -839,10 +839,10 @@ class CSSQuickViewer {
         return false;
     }
 
-    // Freeze CSSQuickViewer
+    // Freeze StyleDetectiveOverlay
     Freeze(): boolean {
         const document = GetCurrentDocument();
-        const block = document.getElementById('CSSQuickViewer');
+        const block = document.getElementById('StyleDetectiveOverlay');
         if (block && this.haveEventListeners) {
             this.RemoveEventListeners();
 
@@ -852,13 +852,13 @@ class CSSQuickViewer {
         return false;
     }
 
-    // Unfreeze CSSQuickViewer
+    // Unfreeze StyleDetectiveOverlay
     Unfreeze(): boolean {
         const document = GetCurrentDocument();
-        const block = document.getElementById('CSSQuickViewer');
+        const block = document.getElementById('StyleDetectiveOverlay');
         if (block && !this.haveEventListeners) {
             // Remove the red outline
-            if (CSSQuickViewer_current_element) CSSQuickViewer_current_element.style.outline = '';
+            if (StyleDetectiveOverlay_current_element) StyleDetectiveOverlay_current_element.style.outline = '';
             this.AddEventListeners();
 
             return true;
@@ -871,12 +871,12 @@ class CSSQuickViewer {
 /*
 * Display the notification message
 */
-function cssQuickViewerInsertMessage(msg: string): void {
+function styleDetectiveInsertMessage(msg: string): void {
     const oNewP = document.createElement('p');
     const oText = document.createTextNode(msg);
 
     oNewP.appendChild(oText);
-    oNewP.id                    = 'cssQuickViewerInsertMessage';
+    oNewP.id                    = 'styleDetectiveInsertMessage';
     oNewP.style.backgroundColor = '#b40000';
     oNewP.style.color           = '#ffffff';
     oNewP.style.position        = "fixed";
@@ -891,7 +891,7 @@ function cssQuickViewerInsertMessage(msg: string): void {
 /*
 * Removes an element from the DOM, used to remove the notification message.
 */
-function cssQuickViewerRemoveElement(divid: string): void {
+function styleDetectiveRemoveElement(divid: string): void {
     const n = document.getElementById(divid);
 
     if (n) {
@@ -903,43 +903,43 @@ function cssQuickViewerRemoveElement(divid: string): void {
 * Copy the current element's CSS to the console. Called by the service worker's
 * context-menu handler (see globalThis assignment at the end of this file).
 */
-function cssQuickViewerCopyCssToConsole(type: string): void {
-    if (!CSSQuickViewer_element) return;
+function styleDetectiveCopyCssToConsole(type: string): void {
+    if (!StyleDetectiveOverlay_element) return;
     const view = document.defaultView;
 
-    if (type == 'el') console.log(CSSQuickViewer_element);
-    else if (type == 'id') console.log(CSSQuickViewer_element.id);
-    else if (type == 'tagName') console.log(CSSQuickViewer_element.tagName);
-    else if (type == 'className') console.log(CSSQuickViewer_element.className);
-    else if (type == 'style') console.log(CSSQuickViewer_element.style);
+    if (type == 'el') console.log(StyleDetectiveOverlay_element);
+    else if (type == 'id') console.log(StyleDetectiveOverlay_element.id);
+    else if (type == 'tagName') console.log(StyleDetectiveOverlay_element.tagName);
+    else if (type == 'className') console.log(StyleDetectiveOverlay_element.className);
+    else if (type == 'style') console.log(StyleDetectiveOverlay_element.style);
     else if (type == 'cssText' && view)
-        console.log(view.getComputedStyle(CSSQuickViewer_element, null).cssText);
+        console.log(view.getComputedStyle(StyleDetectiveOverlay_element, null).cssText);
     else if (type == 'getComputedStyle' && view)
-        console.log(view.getComputedStyle(CSSQuickViewer_element, null));
-    else if (type == 'simpleCssDefinition') console.log(CSSQuickViewer_element_cssDefinition);
+        console.log(view.getComputedStyle(StyleDetectiveOverlay_element, null));
+    else if (type == 'simpleCssDefinition') console.log(StyleDetectiveOverlay_element_cssDefinition);
 }
 
 /*
 *  Close the viewer on [Esc], freeze/unfreeze on [f], show CSS on [c].
 */
 function CssViewerKeyMap(e: KeyboardEvent): void {
-    if (!cssQuickViewer.IsEnabled()) return;
+    if (!styleDetective.IsEnabled()) return;
 
-    // ESC: Close the css viewer if the cssQuickViewer is enabled.
+    // ESC: Close the css viewer if the styleDetective is enabled.
     if (e.keyCode === 27) {
         // Remove the red outline
-        if (CSSQuickViewer_current_element) CSSQuickViewer_current_element.style.outline = '';
-        cssQuickViewer.Disable();
+        if (StyleDetectiveOverlay_current_element) StyleDetectiveOverlay_current_element.style.outline = '';
+        styleDetective.Disable();
     }
 
     if (e.altKey || e.ctrlKey) return;
 
-    // f: Freeze or Unfreeze the css viewer if the cssQuickViewer is enabled
+    // f: Freeze or Unfreeze the css viewer if the styleDetective is enabled
     if (e.keyCode === 70) {
-        if (cssQuickViewer.haveEventListeners) {
-            cssQuickViewer.Freeze();
+        if (styleDetective.haveEventListeners) {
+            styleDetective.Freeze();
         } else {
-            cssQuickViewer.Unfreeze();
+            styleDetective.Unfreeze();
         }
     }
 
@@ -948,19 +948,19 @@ function CssViewerKeyMap(e: KeyboardEvent): void {
     if (e.keyCode === 67) {
         window.prompt(
             'Simple Css Definition :\n\nYou may copy the code below then hit escape to continue.',
-            CSSQuickViewer_element_cssDefinition,
+            StyleDetectiveOverlay_element_cssDefinition,
         );
     }
 }
 
 
 // Entry point: toggle the viewer on (re-)injection.
-const cssQuickViewer = new CSSQuickViewer();
+const styleDetective = new StyleDetectiveOverlay();
 
-if (cssQuickViewer.IsEnabled()) {
-    cssQuickViewer.Disable();
+if (styleDetective.IsEnabled()) {
+    styleDetective.Disable();
 } else {
-    cssQuickViewer.Enable();
+    styleDetective.Enable();
 }
 
 document.onkeydown = CssViewerKeyMap;
@@ -968,5 +968,5 @@ document.onkeydown = CssViewerKeyMap;
 // The build wraps this file in an IIFE, so top-level functions no longer attach
 // to the page's global scope automatically. The context-menu handler in the
 // service worker injects a separate function that calls this by name, so expose
-// it explicitly. It closes over the same CSSQuickViewer_element that hovering updates.
-globalThis.cssQuickViewerCopyCssToConsole = cssQuickViewerCopyCssToConsole;
+// it explicitly. It closes over the same StyleDetectiveOverlay_element that hovering updates.
+globalThis.styleDetectiveCopyCssToConsole = styleDetectiveCopyCssToConsole;

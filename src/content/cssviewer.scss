@@ -1,49 +1,49 @@
 /*!
-* CSS Quick Viewer — Displays a floating panel of any hovered element's CSS properties.
+* Style Detective — Displays a floating panel of any hovered element's CSS properties.
 */
 
 // This stylesheet is injected into arbitrary host pages. Two consequences drive
 // its structure:
 //
 //   1. Every declaration is !important so it wins against the host page's CSS.
-//   2. Custom properties are declared on the #CSSQuickViewer block (never :root)
-//      and prefixed --cssqv-* so they neither leak onto nor collide with the
+//   2. Custom properties are declared on the #StyleDetectiveOverlay block (never :root)
+//      and prefixed --sd-* so they neither leak onto nor collide with the
 //      host page's own variables. Descendants inherit them for free.
 //
-// Naming follows BEM: #CSSQuickViewer is the block; its parts are elements
-// (CSSQuickViewer__center, __category, __footer, __property). Singleton parts
+// Naming follows BEM: #StyleDetectiveOverlay is the block; its parts are elements
+// (StyleDetectiveOverlay__center, __category, __footer, __property). Singleton parts
 // are #ids and use the & parent selector (&__center); parts the panel renders
-// many of are .classes and are written out (.CSSQuickViewer__category) since
+// many of are .classes and are written out (.StyleDetectiveOverlay__category) since
 // &__ would compile to an #id. Rules mirror the panel's DOM:
 //
-//   #CSSQuickViewer                             floating panel (block)
+//   #StyleDetectiveOverlay                       floating panel (block)
 //     h1                                        title banner
 //     &__center                                 body (#id)
-//       .CSSQuickViewer__category               one per property group (.class)
+//       .StyleDetectiveOverlay__category         one per property group (.class)
 //         h2                                    group heading
 //         ul > li                               property rows
-//           .CSSQuickViewer__property           property name / label (.class)
+//           .StyleDetectiveOverlay__property     property name / label (.class)
 //           + span                              property value
 //     &__footer                                 footer (#id)
 
-#CSSQuickViewer {
+#StyleDetectiveOverlay {
     // Palette
-    --cssqv-text: #555;
-    --cssqv-panel-bg: #fff;
-    --cssqv-label: #888;
-    --cssqv-heading: #6a8e46;
-    --cssqv-banner-bg: #f87575;
-    --cssqv-banner-stripe: rgba(255, 255, 255, 0.15);
-    --cssqv-bullet: #ff8f8f;
-    --cssqv-divider: #f0f0f0;
+    --sd-text: #555;
+    --sd-panel-bg: #fff;
+    --sd-label: #888;
+    --sd-heading: #6a8e46;
+    --sd-banner-bg: #f87575;
+    --sd-banner-stripe: rgba(255, 255, 255, 0.15);
+    --sd-bullet: #ff8f8f;
+    --sd-divider: #f0f0f0;
 
     // Dimensions
-    --cssqv-radius: 6px;
-    --cssqv-min-width: 332px;
+    --sd-radius: 6px;
+    --sd-min-width: 332px;
     // Cap so a long value (e.g. a big font-family stack) wraps rather than
     // stretching the panel across the page.
-    --cssqv-max-width: 400px;
-    --cssqv-label-width: 100px;
+    --sd-max-width: 400px;
+    --sd-label-width: 100px;
 
     // Reset applied to the panel and every element inside it, so host-page
     // styles for these tags can't bleed in.
@@ -69,16 +69,16 @@
 
     display: none;
     position: absolute !important;
-    min-width: var(--cssqv-min-width) !important;
-    max-width: var(--cssqv-max-width) !important;
+    min-width: var(--sd-min-width) !important;
+    max-width: var(--sd-max-width) !important;
     // Never grow taller than the viewport (less a strip at the bottom for the
     // browser's link-URL preview); a long property list scrolls internally
     // instead of overflowing off-screen.
     max-height: calc(100vh - 25px) !important;
     overflow-y: auto !important;
-    color: var(--cssqv-text) !important;
-    background: var(--cssqv-panel-bg) !important;
-    border-radius: var(--cssqv-radius) !important;
+    color: var(--sd-text) !important;
+    background: var(--sd-panel-bg) !important;
+    border-radius: var(--sd-radius) !important;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25) !important;
 
     // Title banner. CSS-drawn (replaces the old fixed-height header PNG): a
@@ -93,15 +93,15 @@
         font-size: 12px !important;
         text-align: center !important;
         text-transform: none !important;
-        background-color: var(--cssqv-banner-bg) !important;
+        background-color: var(--sd-banner-bg) !important;
         background-image: repeating-linear-gradient(
             -45deg,
-            var(--cssqv-banner-stripe) 0,
-            var(--cssqv-banner-stripe) 2px,
+            var(--sd-banner-stripe) 0,
+            var(--sd-banner-stripe) 2px,
             transparent 2px,
             transparent 6px
         ) !important;
-        border-radius: var(--cssqv-radius) var(--cssqv-radius) 0 0 !important;
+        border-radius: var(--sd-radius) var(--sd-radius) 0 0 !important;
         // Wrap long selectors, breaking anywhere so no single token overflows.
         white-space: normal !important;
         overflow-wrap: break-word !important;
@@ -111,13 +111,13 @@
     &__center {
         padding: 10px 32px 0 !important;
         overflow: hidden !important;
-        background: var(--cssqv-panel-bg) !important;
+        background: var(--sd-panel-bg) !important;
     }
 
-    .CSSQuickViewer__category {
+    .StyleDetectiveOverlay__category {
         padding: 0 5px !important;
         // Light divider above each group (was list.png)...
-        border-top: 1px solid var(--cssqv-divider) !important;
+        border-top: 1px solid var(--sd-divider) !important;
 
         // ...except the first, which sits directly under the banner.
         &:first-child {
@@ -127,7 +127,7 @@
 
     h2 {
         padding-top: 6px !important;
-        color: var(--cssqv-heading) !important;
+        color: var(--sd-heading) !important;
         font-size: 12px !important;
         letter-spacing: -0.5px !important;
     }
@@ -150,16 +150,16 @@
             width: 3px !important;
             height: 3px !important;
             margin-top: -1px !important;
-            background: var(--cssqv-bullet) !important;
+            background: var(--sd-bullet) !important;
         }
     }
 
-    .CSSQuickViewer__property {
+    .StyleDetectiveOverlay__property {
         display: block !important;
         float: left !important;
-        width: var(--cssqv-label-width) !important;
+        width: var(--sd-label-width) !important;
         overflow: hidden !important;
-        color: var(--cssqv-label) !important;
+        color: var(--sd-label) !important;
 
         // Property value — the sibling span. Its own block formatting context
         // keeps long values wrapping within max-width instead of stretching
@@ -176,9 +176,9 @@
         display: block !important;
         height: 30px !important;
         padding-top: 5px !important;
-        color: var(--cssqv-text) !important;
+        color: var(--sd-text) !important;
         text-align: center !important;
-        background: var(--cssqv-panel-bg) !important;
-        border-radius: 0 0 var(--cssqv-radius) var(--cssqv-radius) !important;
+        background: var(--sd-panel-bg) !important;
+        border-radius: 0 0 var(--sd-radius) var(--sd-radius) !important;
     }
 }

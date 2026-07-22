@@ -1,9 +1,9 @@
 /*!
-* CSS Quick Viewer — Displays a floating panel of any hovered element's CSS properties.
+* Style Detective — Displays a floating panel of any hovered element's CSS properties.
 */
 
 // Context-menu items that dump the current element to the page console. Each
-// value is passed as the `type` argument to the page-side cssQuickViewerCopyCssToConsole().
+// value is passed as the `type` argument to the page-side styleDetectiveCopyCssToConsole().
 const CONTEXT_MENU_ITEMS = [
     { id: 'el', title: 'element' },
     { id: 'id', title: 'element.id' },
@@ -19,8 +19,8 @@ const CONTEXT_MENU_ITEMS = [
 chrome.runtime.onInstalled.addListener(function (details) {
     chrome.contextMenus.removeAll(function () {
         const parent = chrome.contextMenus.create({
-            id: 'cssquickviewer-console',
-            title: 'CSS Quick Viewer console',
+            id: 'styledetective-console',
+            title: 'Style Detective console',
             contexts: ['all'],
         });
 
@@ -71,21 +71,21 @@ chrome.action.onClicked.addListener(function (tab) {
 // Context-menu clicks: call the page-side helper that cssviewer.js defined in
 // the isolated world. `func` injection replaces MV2's banned executeScript({code}).
 chrome.contextMenus.onClicked.addListener(function (info, tab) {
-    if (!tab || !tab.id || info.menuItemId === 'cssquickviewer-console') {
+    if (!tab || !tab.id || info.menuItemId === 'styledetective-console') {
         return;
     }
 
     chrome.scripting.executeScript({
         target: { tabId: tab.id },
         // This function is serialized and runs in the page's isolated world, where
-        // cssQuickViewerCopyCssToConsole was defined by cssviewer.ts on a prior injection.
+        // styleDetectiveCopyCssToConsole was defined by cssviewer.ts on a prior injection.
         func: function (type: string) {
-            const fn = (globalThis as Record<string, unknown>).cssQuickViewerCopyCssToConsole;
+            const fn = (globalThis as Record<string, unknown>).styleDetectiveCopyCssToConsole;
             if (typeof fn === 'function') {
                 fn(type);
             } else {
                 console.warn(
-                    'CSS Quick Viewer is not active on this page. Click the CSS Quick Viewer icon first.',
+                    'Style Detective is not active on this page. Click the Style Detective icon first.',
                 );
             }
         },

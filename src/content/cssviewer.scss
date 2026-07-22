@@ -6,23 +6,27 @@
 // its structure:
 //
 //   1. Every declaration is !important so it wins against the host page's CSS.
-//   2. Custom properties are declared on #CSSQuickViewer_block (never :root) and
-//      prefixed --cssqv-* so they neither leak onto nor collide with the host
-//      page's own variables. Descendants inherit them for free.
+//   2. Custom properties are declared on the #CSSQuickViewer block (never :root)
+//      and prefixed --cssqv-* so they neither leak onto nor collide with the
+//      host page's own variables. Descendants inherit them for free.
 //
-// The rules are nested to mirror the panel's actual DOM:
+// Naming follows BEM: #CSSQuickViewer is the block; its parts are elements
+// (CSSQuickViewer__center, __category, __footer, __property). Singleton parts
+// are #ids and use the & parent selector (&__center); parts the panel renders
+// many of are .classes and are written out (.CSSQuickViewer__category) since
+// &__ would compile to an #id. Rules mirror the panel's DOM:
 //
-//   #CSSQuickViewer_block                       floating panel (singleton)
+//   #CSSQuickViewer                             floating panel (block)
 //     h1                                        title banner
-//     #CSSQuickViewer_center                    body (singleton)
-//       .CSSQuickViewer_category                one per property group (many)
+//     &__center                                 body (#id)
+//       .CSSQuickViewer__category               one per property group (.class)
 //         h2                                    group heading
 //         ul > li                               property rows
-//           span.CSSQuickViewer_property        property name
-//           span                                property value
-//     #CSSQuickViewer_footer                    footer (singleton)
+//           .CSSQuickViewer__property           property name / label (.class)
+//           + span                              property value
+//     &__footer                                 footer (#id)
 
-#CSSQuickViewer_block {
+#CSSQuickViewer {
     // Palette
     --cssqv-text: #555;
     --cssqv-panel-bg: #fff;
@@ -43,7 +47,12 @@
 
     // Reset applied to the panel and every element inside it, so host-page
     // styles for these tags can't bleed in.
-    &, h1, h2, ul, li, span {
+    &,
+    h1,
+    h2,
+    ul,
+    li,
+    span {
         font-family: 'Lucida sans', helvetica, sans-serif !important;
         font-size: 10px !important;
         line-height: 20px;
@@ -99,15 +108,13 @@
         word-break: break-all !important;
     }
 
-    #CSSQuickViewer_center {
+    &__center {
         padding: 10px 32px 0 !important;
         overflow: hidden !important;
         background: var(--cssqv-panel-bg) !important;
     }
 
-    // One block per property group. A class (not an ID) because the panel
-    // renders many of them; each also gets a unique #CSSQuickViewer_<group> id.
-    .CSSQuickViewer_category {
+    .CSSQuickViewer__category {
         padding: 0 5px !important;
         // Light divider above each group (was list.png)...
         border-top: 1px solid var(--cssqv-divider) !important;
@@ -147,8 +154,7 @@
         }
     }
 
-    // Property name — floated label of fixed width.
-    span.CSSQuickViewer_property {
+    .CSSQuickViewer__property {
         display: block !important;
         float: left !important;
         width: var(--cssqv-label-width) !important;
@@ -166,7 +172,7 @@
         }
     }
 
-    #CSSQuickViewer_footer {
+    &__footer {
         display: block !important;
         height: 30px !important;
         padding-top: 5px !important;

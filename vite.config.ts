@@ -82,6 +82,11 @@ const contentScript: Plugin = {
 
 export default defineConfig({
   plugins: [crx({ manifest: manifest as unknown as ManifestV3Export }), contentScript, copyLicense],
+  css: {
+    preprocessorOptions: {
+      scss: { quietDeps: true },
+    },
+  },
   build: {
     outDir: 'dist',
     emptyOutDir: true,

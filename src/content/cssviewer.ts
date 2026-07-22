@@ -207,7 +207,7 @@ function GetCSSProperty(element: CSSStyleDeclaration, property: string): string 
 
 function SetCSSProperty(element: CSSStyleDeclaration, property: string): void {
     const document = GetCurrentDocument();
-    const li = document.getElementById('CSSQuickViewer_' + property);
+    const li = document.getElementById('CSSQuickViewer__' + property);
     if (!li || !li.lastChild) return;
 
     (li.lastChild as HTMLElement).innerHTML = ' : ' + element.getPropertyValue(property);
@@ -219,7 +219,7 @@ function SetCSSPropertyIf(
     condition: boolean,
 ): number {
     const document = GetCurrentDocument();
-    const li = document.getElementById('CSSQuickViewer_' + property);
+    const li = document.getElementById('CSSQuickViewer__' + property);
     if (!li) return 0;
 
     if (condition) {
@@ -242,7 +242,7 @@ function SetCSSPropertyValue(
     value: string,
 ): void {
     const document = GetCurrentDocument();
-    const li = document.getElementById('CSSQuickViewer_' + property);
+    const li = document.getElementById('CSSQuickViewer__' + property);
     if (!li || !li.lastChild) return;
 
     (li.lastChild as HTMLElement).innerHTML = ' : ' + value;
@@ -256,7 +256,7 @@ function SetCSSPropertyValueIf(
     condition: boolean,
 ): number {
     const document = GetCurrentDocument();
-    const li = document.getElementById('CSSQuickViewer_' + property);
+    const li = document.getElementById('CSSQuickViewer__' + property);
     if (!li) return 0;
 
     if (condition) {
@@ -275,19 +275,19 @@ function SetCSSPropertyValueIf(
 
 function HideCSSProperty(property: string): void {
     const document = GetCurrentDocument();
-    const li = document.getElementById('CSSQuickViewer_' + property);
+    const li = document.getElementById('CSSQuickViewer__' + property);
     if (li) li.style.display = 'none';
 }
 
 function HideCSSCategory(category: string): void {
     const document = GetCurrentDocument();
-    const div = document.getElementById('CSSQuickViewer_' + category);
+    const div = document.getElementById('CSSQuickViewer__' + category);
     if (div) div.style.display = 'none';
 }
 
 function ShowCSSCategory(category: string): void {
     const document = GetCurrentDocument();
-    const div = document.getElementById('CSSQuickViewer_' + category);
+    const div = document.getElementById('CSSQuickViewer__' + category);
     if (div) div.style.display = 'block';
 }
 
@@ -498,7 +498,7 @@ function appendCssDefinition(element: CSSStyleDeclaration, props: string[]): voi
 // where small width changes flip the panel from one side of the cursor to the
 // other every frame).
 function isInsidePanel(el: HTMLElement | null): boolean {
-    return !!el && !!el.closest && el.closest('#CSSQuickViewer_block') != null;
+    return !!el && !!el.closest && el.closest('#CSSQuickViewer') != null;
 }
 
 function CSSQuickViewerMouseOver(this: HTMLElement, e: MouseEvent): void {
@@ -519,7 +519,7 @@ function CSSQuickViewerMouseOver(this: HTMLElement, e: MouseEvent): void {
 
     // Block
     const document = GetCurrentDocument();
-    const block = document.getElementById('CSSQuickViewer_block');
+    const block = document.getElementById('CSSQuickViewer');
 
     if (!block) {
         return;
@@ -611,7 +611,7 @@ function CSSQuickViewerMouseMove(this: HTMLElement, e: MouseEvent): void {
     if (isInsidePanel(this)) return;
 
     const document = GetCurrentDocument();
-    const block = document.getElementById('CSSQuickViewer_block');
+    const block = document.getElementById('CSSQuickViewer');
 
     if (!block) {
         return;
@@ -674,7 +674,7 @@ class CSSQuickViewer {
         if (document) {
             // Create a div block
             block = document.createElement('div');
-            block.id = 'CSSQuickViewer_block';
+            block.id = 'CSSQuickViewer';
 
             // Insert a title for CSS selector
             const header = document.createElement('h1');
@@ -685,13 +685,13 @@ class CSSQuickViewer {
             // Insert all properties
             const center = document.createElement('div');
 
-            center.id = 'CSSQuickViewer_center';
+            center.id = 'CSSQuickViewer__center';
 
             for (const cat in CSSQuickViewer_categories) {
                 const div = document.createElement('div');
 
-                div.id = 'CSSQuickViewer_' + cat;
-                div.className = 'CSSQuickViewer_category';
+                div.id = 'CSSQuickViewer__' + cat;
+                div.className = 'CSSQuickViewer__category';
 
                 const h2 = document.createElement('h2');
 
@@ -703,11 +703,11 @@ class CSSQuickViewer {
                 for (const property of properties) {
                     const li = document.createElement('li');
 
-                    li.id = 'CSSQuickViewer_' + property;
+                    li.id = 'CSSQuickViewer__' + property;
 
                     const spanName = document.createElement('span');
 
-                    spanName.className = 'CSSQuickViewer_property';
+                    spanName.className = 'CSSQuickViewer__property';
 
                     const spanValue = document.createElement('span');
 
@@ -727,7 +727,7 @@ class CSSQuickViewer {
             // Insert a footer
             const footer = document.createElement('div');
 
-            footer.id = 'CSSQuickViewer_footer';
+            footer.id = 'CSSQuickViewer__footer';
 
             footer.appendChild(
                 document.createTextNode(
@@ -796,13 +796,13 @@ class CSSQuickViewer {
     IsEnabled(): boolean {
         const document = GetCurrentDocument();
 
-        return document.getElementById('CSSQuickViewer_block') != null;
+        return document.getElementById('CSSQuickViewer') != null;
     }
 
     // Enable CSSQuickViewer
     Enable(): boolean {
         const document = GetCurrentDocument();
-        const block = document.getElementById('CSSQuickViewer_block');
+        const block = document.getElementById('CSSQuickViewer');
 
         if (!block) {
             const created = this.CreateBlock();
@@ -818,7 +818,7 @@ class CSSQuickViewer {
     // Disable CSSQuickViewer
     Disable(): boolean {
         const document = GetCurrentDocument();
-        const block = document.getElementById('CSSQuickViewer_block');
+        const block = document.getElementById('CSSQuickViewer');
         const insertMessage = document.getElementById('cssQuickViewerInsertMessage');
 
         if (block || insertMessage) {
@@ -842,7 +842,7 @@ class CSSQuickViewer {
     // Freeze CSSQuickViewer
     Freeze(): boolean {
         const document = GetCurrentDocument();
-        const block = document.getElementById('CSSQuickViewer_block');
+        const block = document.getElementById('CSSQuickViewer');
         if (block && this.haveEventListeners) {
             this.RemoveEventListeners();
 
@@ -855,7 +855,7 @@ class CSSQuickViewer {
     // Unfreeze CSSQuickViewer
     Unfreeze(): boolean {
         const document = GetCurrentDocument();
-        const block = document.getElementById('CSSQuickViewer_block');
+        const block = document.getElementById('CSSQuickViewer');
         if (block && !this.haveEventListeners) {
             // Remove the red outline
             if (CSSQuickViewer_current_element) CSSQuickViewer_current_element.style.outline = '';

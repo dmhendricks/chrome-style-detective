@@ -2,12 +2,13 @@ import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { build, defineConfig, type Plugin } from 'vite';
 import { crx, type ManifestV3Export } from '@crxjs/vite-plugin';
+import * as sass from 'sass';
 import manifest from './src/manifest.json' with { type: 'json' };
 
 const DIST = resolve(__dirname, 'dist');
 const CONTENT_OUT_DIR = resolve(DIST, 'src/content');
 const CONTENT_ENTRY = resolve(__dirname, 'src/content/cssviewer.ts');
-const CONTENT_CSS = resolve(__dirname, 'src/content/cssviewer.css');
+const CONTENT_SCSS = resolve(__dirname, 'src/content/cssviewer.scss');
 
 const copyLicense: Plugin = {
   name: 'copy-license',
@@ -32,7 +33,7 @@ const contentScript: Plugin = {
   // build (and thus the closeBundle hook that rebuilds the content script).
   buildStart() {
     this.addWatchFile(CONTENT_ENTRY);
-    this.addWatchFile(CONTENT_CSS);
+    this.addWatchFile(CONTENT_SCSS);
   },
   async closeBundle() {
     await build({
@@ -52,8 +53,12 @@ const contentScript: Plugin = {
       },
     });
 
+    // The service worker injects the stylesheet via chrome.scripting.insertCSS
+    // ({ files: [...] }), which needs a plain .css file — so compile the Sass
+    // source to dist/src/content/cssviewer.css here.
     mkdirSync(CONTENT_OUT_DIR, { recursive: true });
-    copyFileSync(CONTENT_CSS, resolve(CONTENT_OUT_DIR, 'cssviewer.css'));
+    const compiledCss = sass.compile(CONTENT_SCSS).css;
+    writeFileSync(resolve(CONTENT_OUT_DIR, 'cssviewer.css'), compiledCss + '\n');
 
     // Register the separately-built content files as web-accessible so the
     // service worker can inject them. crxjs drops an empty web_accessible_resources

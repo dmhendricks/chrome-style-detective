@@ -25,6 +25,8 @@
 //           .StyleDetectiveOverlay__property     property name / label (.class)
 //           + span                              property value
 //     &__footer                                 footer (#id)
+//       .StyleDetectiveOverlay__shortcuts        shortcut chip row
+//         .StyleDetectiveOverlay__shortcut       one kbd + label pair
 
 #StyleDetectiveOverlay {
     // Palette
@@ -36,6 +38,10 @@
     --sd-banner-stripe: rgba(255, 255, 255, 0.15);
     --sd-bullet: #ff8f8f;
     --sd-divider: #f0f0f0;
+    --sd-footer-bg: #fafbfc;
+    --sd-kbd-bg: #f3f5f8;
+    --sd-kbd-border: #c9d0da;
+    --sd-kbd-text: #3d4654;
 
     // Dimensions
     --sd-radius: 6px;
@@ -52,7 +58,8 @@
     h2,
     ul,
     li,
-    span {
+    span,
+    kbd {
         font-family: 'Lucida sans', helvetica, sans-serif !important;
         font-size: 10px !important;
         line-height: 20px;
@@ -173,12 +180,55 @@
     }
 
     &__footer {
-        display: block !important;
-        height: 30px !important;
-        padding-top: 5px !important;
-        color: var(--sd-text) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        box-sizing: border-box !important;
+        padding: 8px 14px 10px !important;
+        color: var(--sd-label) !important;
         text-align: center !important;
-        background: var(--sd-panel-bg) !important;
+        background: var(--sd-footer-bg) !important;
+        border-top: 1px solid var(--sd-divider) !important;
         border-radius: 0 0 var(--sd-radius) var(--sd-radius) !important;
+    }
+
+    .StyleDetectiveOverlay__shortcuts {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        gap: 6px 10px !important;
+    }
+
+    .StyleDetectiveOverlay__shortcut {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 5px !important;
+        color: var(--sd-label) !important;
+        font-size: 10px !important;
+        line-height: 1 !important;
+        white-space: nowrap !important;
+
+        kbd {
+            display: inline-block !important;
+            box-sizing: border-box !important;
+            min-width: 18px !important;
+            padding: 2px 6px !important;
+            color: var(--sd-kbd-text) !important;
+            font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace !important;
+            font-size: 10px !important;
+            font-weight: 600 !important;
+            line-height: 1.3 !important;
+            text-align: center !important;
+            background: var(--sd-kbd-bg) !important;
+            border: 1px solid var(--sd-kbd-border) !important;
+            border-radius: 5px !important;
+            box-shadow: 0 1px 0 var(--sd-kbd-border) !important;
+        }
+    }
+
+    .StyleDetectiveOverlay__shortcut-label {
+        color: var(--sd-label) !important;
+        font-size: 10px !important;
+        line-height: 1 !important;
     }
 }

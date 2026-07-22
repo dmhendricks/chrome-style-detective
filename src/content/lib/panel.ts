@@ -401,7 +401,7 @@ export function updatePanel(style: CSSStyleDeclaration, tagName: string): void {
  * Build the panel element (header, per-category property lists, footer). Ids are
  * assigned so the update functions above can address each row and category.
  */
-export function createBlock(doc: Document, footerText: string): HTMLDivElement {
+export function createBlock(doc: Document): HTMLDivElement {
     const header = el(doc, 'h1');
 
     const categoryDivs = CSS_CATEGORIES.map((category) => {
@@ -426,7 +426,32 @@ export function createBlock(doc: Document, footerText: string): HTMLDivElement {
     });
 
     const center = el(doc, 'div', { id: 'StyleDetectiveOverlay__center', children: categoryDivs });
-    const footer = el(doc, 'div', { id: 'StyleDetectiveOverlay__footer', text: footerText });
+
+    const shortcut = (key: string, label: string) =>
+        el(doc, 'span', {
+            className: 'StyleDetectiveOverlay__shortcut',
+            children: [
+                el(doc, 'kbd', { text: key }),
+                el(doc, 'span', {
+                    className: 'StyleDetectiveOverlay__shortcut-label',
+                    text: label,
+                }),
+            ],
+        });
+
+    const footer = el(doc, 'div', {
+        id: 'StyleDetectiveOverlay__footer',
+        children: [
+            el(doc, 'div', {
+                className: 'StyleDetectiveOverlay__shortcuts',
+                children: [
+                    shortcut('F', 'Freeze'),
+                    shortcut('C', 'Copy'),
+                    shortcut('Esc', 'Close'),
+                ],
+            }),
+        ],
+    });
 
     return el(doc, 'div', {
         id: 'StyleDetectiveOverlay',

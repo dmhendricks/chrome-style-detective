@@ -68,14 +68,6 @@ function onMouseOver(this: HTMLElement, e: MouseEvent): void {
 
     if (isInsidePanel(el)) return;
 
-    // Suppress the element's native title tooltip while inspecting — it renders
-    // in browser chrome, outside the page's stacking context, so no z-index can
-    // keep our panel above it. Stash the value and restore it on mouseout.
-    if (el.hasAttribute('title')) {
-        el.setAttribute('data-styledetective-title', el.getAttribute('title') ?? '');
-        el.removeAttribute('title');
-    }
-
     const document = currentDocument();
     const block = document.getElementById('StyleDetectiveOverlay');
 
@@ -109,12 +101,6 @@ function onMouseOut(this: HTMLElement, e: MouseEvent): void {
     if (isInsidePanel(this)) return;
 
     this.style.outline = '';
-
-    // Restore the native title we suppressed on mouseover.
-    if (this.hasAttribute('data-styledetective-title')) {
-        this.setAttribute('title', this.getAttribute('data-styledetective-title') ?? '');
-        this.removeAttribute('data-styledetective-title');
-    }
 
     e.stopPropagation();
 }
@@ -200,10 +186,7 @@ class StyleDetectiveOverlay {
 
     // Build the panel and show the "loaded" notification.
     createBlock(): HTMLElement {
-        const block = createBlock(
-            currentDocument(),
-            'Style Detective 1.8.0. Keys: [F] Un/Freeze • [C] Copy • [Esc] Close',
-        );
+        const block = createBlock(currentDocument());
 
         insertMessage('Style Detective loaded! Hover any element you want to inspect in the page.');
 
@@ -286,13 +269,6 @@ class StyleDetectiveOverlay {
             if (block) document.body.removeChild(block);
             if (message) document.body.removeChild(message);
             this.removeEventListeners();
-
-            // Restore any titles still suppressed because the viewer was disabled
-            // while an element was hovered (mouseout never fired for it).
-            for (const el of document.querySelectorAll('[data-styledetective-title]')) {
-                el.setAttribute('title', el.getAttribute('data-styledetective-title') ?? '');
-                el.removeAttribute('data-styledetective-title');
-            }
 
             return true;
         }

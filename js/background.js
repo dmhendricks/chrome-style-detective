@@ -26,7 +26,7 @@ chrome.runtime.onInstalled.addListener(function (details) {
     chrome.contextMenus.removeAll(function () {
         var parent = chrome.contextMenus.create({
             id: 'cssviewer-console',
-            title: 'CSSViewer console',
+            title: 'CSS Viewer Classic console',
             contexts: ['all'],
         });
 
@@ -87,7 +87,7 @@ chrome.contextMenus.onClicked.addListener(function (info, tab) {
             if (typeof cssViewerCopyCssToConsole === 'function') {
                 cssViewerCopyCssToConsole(type);
             } else {
-                console.warn('CSSViewer is not active on this page. Click the CSSViewer icon first.');
+                console.warn('CSS Viewer Classic is not active on this page. Click the CSS Viewer Classic icon first.');
             }
         },
         args: [String(info.menuItemId)],

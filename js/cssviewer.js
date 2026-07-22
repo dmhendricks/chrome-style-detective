@@ -763,11 +763,11 @@ function CSSViewer()
             footer.id = 'CSSViewer_footer';
 
             //<
-            footer.appendChild( document.createTextNode('CSSViewer 1.8.0. keys: [f] Un/Freeze. [c] Css. [Esc] Close.') );
+            footer.appendChild( document.createTextNode('CSS Viewer Classic 1.8.0. keys: [f] Un/Freeze. [c] Css. [Esc] Close.') );
             block.appendChild(footer);
         }
 
-        cssViewerInsertMessage( "CSSViewer loaded! Hover any element you want to inspect in the page." );
+        cssViewerInsertMessage( "CSS Viewer Classic loaded! Hover any element you want to inspect in the page." );
 
         return block;
     }

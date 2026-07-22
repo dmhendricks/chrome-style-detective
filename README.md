@@ -1,50 +1,42 @@
-CSSViewer Chrome  Extension 1.8.0
-=================================
+# CSS Viewer Classic
 
-**CSSViewer** is a simple CSS property viewer for Google chrome originally made by **Nicolas Huon** as a [FireFox addon](https://addons.mozilla.org/en-US/firefox/addon/2104).
+A simple CSS property viewer for Google Chrome. Hover any element on a page to inspect its computed styles in a floating panel. Forked from [miled/cssviewer](https://github.com/miled/cssviewer) and modernized.
 
-![CSSViewer](https://lh3.googleusercontent.com/NZMW7YOEbW0hpZcJRTRcApO4jJpcGGj7QIdwkTfND27UwbW_sF6BuuHlfT4SAzLgdmxzQRM4=s640-h400-e365)
+![CSS Viewer Classic](img/option-demo.gif)
 
-Download
---------
+Features:
 
-**CSSViewer** is available at Google Chrome Webstore: https://chrome.google.com/webstore/detail/cssviewer/ggfgijbpiheegefliciemofobhmofgce
+- Hover any element to view its CSS properties in a floating panel
+- Right-click an element for quick access to `element`, `id`, `className`, `style`, `cssText`, and computed style in the console
+- Freeze the panel in place to inspect it, or generate a simple CSS definition for the selected element
+- Keyboard shortcut to toggle the viewer (`Ctrl+Shift+S` / `Cmd+Shift+S`)
 
-How to use
-----------
+## Installation
 
-To enable/disable CSSViewer, simply click the toolbar icon and then hover any element you want to inspect in the current page.
+The easiest way to install the extension is from the [Chrome Web Store](https://chrome.google.com/webstore/detail/cssviewer/ggfgijbpiheegefliciemofobhmofgce).
 
-Copyright & License?
---------------------
+## Usage
 
-Whell, it's GPLv2, but please bear with me,
+Click the toolbar icon (or press `Ctrl+Shift+S` on Windows/Linux/ChromeOS, `Cmd+Shift+S` on macOS) to enable or disable the viewer on the current page. While enabled, hover any element to inspect it.
 
-**CSSViewer** was created by **Nicolas Huon** as a [FireFox addon](https://addons.mozilla.org/en-US/firefox/addon/2104), but unfortunately, the original code source comes with NO SPECIFIC LICENSE or COPYRIGHT.
+Keyboard shortcuts while the viewer is active:
 
-I attempted to contact Nicolas to ask for permission but to no avail, furthermore, the FireFox add-on seems abandoned since June 2008. Believing that **CSSViewer** is a great resource for web developers and web designers alike, I made a CSSViewer port to Google Chrome on March 2010, and on February 2013, I decided to release the code under the terms of the **[GNU GENERAL PUBLIC LICENSE Version 2](http://www.gnu.org/licenses/gpl-2.0.txt)** (GPLv2), so his original work would benefit the whole world and remain free.
+- `F` to freeze or unfreeze the panel in place
+- `C` to show a simple CSS definition for the selected element
+- `Esc` to close the viewer
 
-If by any change, you happen to be Nicolas and reading this, or that you know him on person, please contact me. As the orginal author he reserves all the right to take over or take down both the Github fork and the extension on Google Chrome webstore.
+## Known Issues
 
-Hotkeys
-------------
-- You can activate extension by hotkey
-- Ctrl+Shift+S - on windows, linux & chromeos
-- Cmd+Shift+S - on macos
+- The viewer will not activate on tabs that were already open before installation, nor on the Chrome Web Store itself. Reload the tab after installing.
+- Styling may occasionally conflict with the host page's CSS.
 
-Known Issues
-------------
-- CSSViewer will not work in any opened tabs before installing it nor in the Google chrome store (This is how google roll :)
-- The style may broke sometimes depending on the site you are surfing.
+## Changelog
 
-Changelog
----------
-
-*  1.8.0 - 07/2026 - Ported to Manifest V3 for compatibility with current versions of Chrome. Includes the previously-unreleased header overlap fix (increased line-height, adjusted padding/width in 'CSSViewer_block h1').
-*  1.7 - 04/2017 - Add keyboard shortcuts and enable the viewer for local files.
-*  1.6 - 11/2014 - Add inspect element to menu. Add generate css definition. Fix few issues with auto-positioning. reFix an issue with chrome/38.
-*  1.5 - 10/2015 - Hotfix an issue with Chrome/38.0.2125.101.
-*  1.4 - 02/2013 - A bunch of minor changes in order to release CSSViewer as an open source project.
-*  1.3 - 08/2011 - Support some CSS3 properties under the "Effects' category.
-*  1.2 - 07/2011 - Fix some minor bugs.
-*  1.1 - 03/2010 - Initial version.
+- **1.8.0** — 07/2026 — Ported to Manifest V3 for compatibility with current versions of Chrome. Includes a previously unreleased fix for a header text overlap issue.
+- **1.7** — 04/2017 — Added keyboard shortcuts and enabled the viewer for local files.
+- **1.6** — 11/2014 — Added "Inspect Element" to the context menu and CSS definition generation. Fixed auto-positioning issues and a Chrome 38 regression.
+- **1.5** — 10/2015 — Fixed an issue with Chrome 38.0.2125.101.
+- **1.4** — 02/2013 — Released as an open source project.
+- **1.3** — 08/2011 — Added support for some CSS3 properties under the "Effects" category.
+- **1.2** — 07/2011 — Minor bug fixes.
+- **1.1** — 03/2010 — Initial version.

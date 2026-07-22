@@ -1,5 +1,5 @@
 {
-    "name": "CSSViewer",
+    "name": "CSS Viewer Classic",
     "manifest_version": 3,
     "version": "1.8.0",
 
@@ -21,7 +21,7 @@
 
     "action": {
         "default_icon": "img/16.png",
-        "default_title": "CSSViewer"
+        "default_title": "CSS Viewer Classic"
     },
 
     "web_accessible_resources": [

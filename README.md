@@ -7,7 +7,6 @@ A simple CSS property viewer for Google Chrome. Hover any element on a page to i
 Features:
 
 - Hover any element to view its CSS properties in a floating panel
-- Right-click an element for quick access to `element`, `id`, `className`, `style`, `cssText`, and computed style in the console
 - Freeze the panel in place to inspect it, or generate a simple CSS definition for the selected element
 - Keyboard shortcut to toggle the viewer (`Ctrl+Shift+S` / `Cmd+Shift+S`)
 

@@ -1,0 +1,111 @@
+name: Release
+
+# Two-job layout:
+#
+#   build   — runs `npm run build`, zips dist/, uploads the zip as a
+#             workflow artifact.
+#   release — only when there's a tag. Downloads the zip and creates a
+#             draft GitHub Release via softprops/action-gh-release.
+#
+# Splitting the two means a broken release step never hides broken builds,
+# and a broken build step never wastes time trying to publish.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. v1.8.0). Will be created on the current commit if it doesn't already exist."
+        required: true
+  push:
+    tags:
+      - 'v*'
+
+concurrency:
+  group: release
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '26.x'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      # Sync manifest version with the tag so the published extension's
+      # manifest.json matches the GitHub release. Strips the leading `v`.
+      # Our manifest is indented with 4 spaces, so serialize with `null, 4`
+      # to avoid reformatting the whole file.
+      - name: Sync manifest version with tag
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          VERSION="${TAG#v}"
+          node -e "const fs=require('fs');const p='src/manifest.json';const m=JSON.parse(fs.readFileSync(p));m.version='$VERSION';fs.writeFileSync(p,JSON.stringify(m,null,4)+'\n');"
+          echo "Set manifest version to $VERSION"
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Zip dist/
+        run: |
+          cd dist
+          zip -r ../chrome-style-detective.zip .
+
+      - name: Upload zip as workflow artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: chrome-style-detective
+          path: chrome-style-detective.zip
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    needs: build
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-slim
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download zip
+        uses: actions/download-artifact@v8
+        with:
+          name: chrome-style-detective
+          path: dist
+
+      - name: List downloaded artifacts
+        run: ls -lah dist
+
+      - name: Create draft release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          name: ${{ github.event.inputs.tag || github.ref_name }}
+          body: |
+            ## Installation
+
+            1. Download `chrome-style-detective.zip` below and unzip it.
+            2. Open `chrome://extensions`, turn on **Developer mode** (top-right).
+            3. Click **Load Unpacked** and select the unzipped folder.
+          draft: true
+          files: dist/chrome-style-detective.zip
+          fail_on_unmatched_files: true

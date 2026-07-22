@@ -1,5 +1,5 @@
-CSSViewer Chrome  Extension 1.7
-===============================
+CSSViewer Chrome  Extension 1.8.0
+=================================
 
 **CSSViewer** is a simple CSS property viewer for Google chrome originally made by **Nicolas Huon** as a [FireFox addon](https://addons.mozilla.org/en-US/firefox/addon/2104).
 
@@ -40,7 +40,7 @@ Known Issues
 Changelog
 ---------
 
-*  1.8 - 02/2018 - Fixed overlapping text issue on the header. In 'CSSViewer_block h1' increased line-height to 10px, changed 'padding:30px 10px 5px 10px', and changed width:322px.
+*  1.8.0 - 07/2026 - Ported to Manifest V3 for compatibility with current versions of Chrome. Includes the previously-unreleased header overlap fix (increased line-height, adjusted padding/width in 'CSSViewer_block h1').
 *  1.7 - 04/2017 - Add keyboard shortcuts and enable the viewer for local files.
 *  1.6 - 11/2014 - Add inspect element to menu. Add generate css definition. Fix few issues with auto-positioning. reFix an issue with chrome/38.
 *  1.5 - 10/2015 - Hotfix an issue with Chrome/38.0.2125.101.

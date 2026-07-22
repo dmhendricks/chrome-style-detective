@@ -1,19 +1,19 @@
 /*!
-* CSS Viewer Classic — Displays a floating panel of any hovered element's CSS properties.
+* CSS Quick Viewer — Displays a floating panel of any hovered element's CSS properties.
 */
 
 /* Common styles. Almost everything is !important to override host-page CSS. */
 
-#CSSViewer_block,
-#CSSViewer_center,
-#CSSViewer_footer,
-.CSSViewer_category,
-span.CSSViewer_property,
-#CSSViewer_block h1,
-#CSSViewer_block h2,
-#CSSViewer_block ul,
-#CSSViewer_block li,
-#CSSViewer_block span {
+#CSSQuickViewer_block,
+#CSSQuickViewer_center,
+#CSSQuickViewer_footer,
+.CSSQuickViewer_category,
+span.CSSQuickViewer_property,
+#CSSQuickViewer_block h1,
+#CSSQuickViewer_block h2,
+#CSSQuickViewer_block ul,
+#CSSQuickViewer_block li,
+#CSSQuickViewer_block span {
     font-family: 'Lucida sans', helvetica, sans-serif !important;
     font-size: 10px !important;
     z-index: 9999 !important;
@@ -28,7 +28,7 @@ span.CSSViewer_property,
     line-height: 20px;
 }
 
-#CSSViewer_block {
+#CSSQuickViewer_block {
     display: none;
     min-width: 332px !important;
     /* Cap the width so a long value (e.g. a big font-family stack) wraps instead
@@ -47,7 +47,7 @@ span.CSSViewer_property,
     overflow-y: auto !important;
 }
 
-#CSSViewer_block h1 {
+#CSSQuickViewer_block h1 {
     color: #fff !important;
     font-size: 12px !important;
     text-transform: none !important;
@@ -77,13 +77,13 @@ span.CSSViewer_property,
     word-break: break-all !important;
 }
 
-#CSSViewer_center {
+#CSSQuickViewer_center {
     padding: 10px 32px 0 32px !important;
     overflow: hidden !important;
     background: #fff !important;
 }
 
-#CSSViewer_footer {
+#CSSQuickViewer_footer {
     padding-top: 5px !important;
     color: #555 !important;
     text-align: center !important;
@@ -94,18 +94,18 @@ span.CSSViewer_property,
     border-radius: 0 0 6px 6px !important;
 }
 
-.CSSViewer_category {
+.CSSQuickViewer_category {
     /* Light divider line above each property category (was list.png). */
     border-top: 1px solid #f0f0f0 !important;
     padding: 0 5px !important;
 }
 
 /* The first category needs no divider (the header sits above it). */
-#CSSViewer_center > .CSSViewer_category:first-child {
+#CSSQuickViewer_center > .CSSQuickViewer_category:first-child {
     border-top: 0 !important;
 }
 
-#CSSViewer_block h2 {
+#CSSQuickViewer_block h2 {
     padding-top: 6px !important;
     color: #6a8e46 !important;
     font-size: 12px !important;
@@ -113,19 +113,19 @@ span.CSSViewer_property,
     letter-spacing: -0.5px !important;
 }
 
-#CSSViewer_block ul {
+#CSSQuickViewer_block ul {
     padding: 5px 5px 10px 5px !important;
     list-style: none !important;
     width: auto !important;
 }
 
-#CSSViewer_block li {
+#CSSQuickViewer_block li {
     position: relative !important;
     padding-left: 10px !important;
 }
 
 /* Small pink bullet marker (was bullet.png — a 5px pink plus/dot). */
-#CSSViewer_block li::before {
+#CSSQuickViewer_block li::before {
     content: '' !important;
     position: absolute !important;
     left: 0 !important;
@@ -136,7 +136,7 @@ span.CSSViewer_property,
     background: #ff8f8f !important;
 }
 
-#CSSViewer_block span.CSSViewer_property {
+#CSSQuickViewer_block span.CSSQuickViewer_property {
     color: #888 !important;
     float: left !important;
     width: 100px !important;
@@ -147,7 +147,7 @@ span.CSSViewer_property,
 /* The value span (the li's second span) sits beside the floated label. Give it
    its own block formatting context so long values wrap within the panel's
    max-width instead of stretching it. */
-#CSSViewer_block li span.CSSViewer_property + span {
+#CSSQuickViewer_block li span.CSSQuickViewer_property + span {
     display: block !important;
     overflow: hidden !important;
     overflow-wrap: break-word !important;

@@ -1,8 +1,8 @@
-# CSS Viewer Classic
+# CSS Quick Viewer
 
 A simple CSS property viewer for Google Chrome. Hover any element on a page to inspect its computed styles in a floating panel. Forked from [miled/cssviewer](https://github.com/miled/cssviewer) and modernized.
 
-![CSS Viewer Classic](img/option-demo.gif)
+![CSS Quick Viewer](img/option-demo.gif)
 
 Features:
 

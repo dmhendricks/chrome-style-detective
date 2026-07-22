@@ -1,17 +1,17 @@
 /*!
-* CSS Viewer Classic — Displays a floating panel of any hovered element's CSS properties.
+* CSS Quick Viewer — Displays a floating panel of any hovered element's CSS properties.
 */
 
 // === Globals ===
 
 // The element currently being inspected, and its generated CSS text. Updated on
 // every mouseover; read by the context-menu console dump and the [c] key prompt.
-let CSSViewer_element: HTMLElement | null = null;
-let CSSViewer_element_cssDefinition = '';
-let CSSViewer_current_element: HTMLElement | null = null;
+let CSSQuickViewer_element: HTMLElement | null = null;
+let CSSQuickViewer_element_cssDefinition = '';
+let CSSQuickViewer_current_element: HTMLElement | null = null;
 
 // CSS Properties
-const CSSViewer_pFont = [
+const CSSQuickViewer_pFont = [
     'font-family',
     'font-size',
     'font-style',
@@ -28,7 +28,7 @@ const CSSViewer_pFont = [
     'word-spacing',
 ];
 
-const CSSViewer_pColorBg = [
+const CSSQuickViewer_pColorBg = [
     'background-attachment',
     'background-color',
     'background-image',
@@ -37,7 +37,7 @@ const CSSViewer_pColorBg = [
     'color',
 ];
 
-const CSSViewer_pBox = [
+const CSSQuickViewer_pBox = [
     'height',
     'width',
     'border',
@@ -53,7 +53,7 @@ const CSSViewer_pBox = [
     'min-width',
 ];
 
-const CSSViewer_pPositioning = [
+const CSSQuickViewer_pPositioning = [
     'position',
     'top',
     'bottom',
@@ -65,9 +65,9 @@ const CSSViewer_pPositioning = [
     'z-index',
 ];
 
-const CSSViewer_pList = ['list-style-image', 'list-style-type', 'list-style-position'];
+const CSSQuickViewer_pList = ['list-style-image', 'list-style-type', 'list-style-position'];
 
-const CSSViewer_pTable = [
+const CSSQuickViewer_pTable = [
     'border-collapse',
     'border-spacing',
     'caption-side',
@@ -75,9 +75,9 @@ const CSSViewer_pTable = [
     'table-layout',
 ];
 
-const CSSViewer_pMisc = ['overflow', 'cursor', 'visibility'];
+const CSSQuickViewer_pMisc = ['overflow', 'cursor', 'visibility'];
 
-const CSSViewer_pEffect = [
+const CSSQuickViewer_pEffect = [
     'transform',
     'transition',
     'outline',
@@ -95,18 +95,18 @@ const CSSViewer_pEffect = [
 ];
 
 // CSS Property categories
-const CSSViewer_categories: Record<string, string[]> = {
-    pFontText: CSSViewer_pFont,
-    pColorBg: CSSViewer_pColorBg,
-    pBox: CSSViewer_pBox,
-    pPositioning: CSSViewer_pPositioning,
-    pList: CSSViewer_pList,
-    pTable: CSSViewer_pTable,
-    pMisc: CSSViewer_pMisc,
-    pEffect: CSSViewer_pEffect,
+const CSSQuickViewer_categories: Record<string, string[]> = {
+    pFontText: CSSQuickViewer_pFont,
+    pColorBg: CSSQuickViewer_pColorBg,
+    pBox: CSSQuickViewer_pBox,
+    pPositioning: CSSQuickViewer_pPositioning,
+    pList: CSSQuickViewer_pList,
+    pTable: CSSQuickViewer_pTable,
+    pMisc: CSSQuickViewer_pMisc,
+    pEffect: CSSQuickViewer_pEffect,
 };
 
-const CSSViewer_categoriesTitle: Record<string, string> = {
+const CSSQuickViewer_categoriesTitle: Record<string, string> = {
     pFontText: 'Font & Text',
     pColorBg: 'Color & Background',
     pBox: 'Box',
@@ -118,7 +118,7 @@ const CSSViewer_categoriesTitle: Record<string, string> = {
 };
 
 // Table tagnames
-const CSSViewer_tableTagNames = [
+const CSSQuickViewer_tableTagNames = [
     'TABLE',
     'CAPTION',
     'THEAD',
@@ -131,10 +131,10 @@ const CSSViewer_tableTagNames = [
     'TD',
 ];
 
-const CSSViewer_listTagNames = ['UL', 'LI', 'DD', 'DT', 'OL'];
+const CSSQuickViewer_listTagNames = ['UL', 'LI', 'DD', 'DT', 'OL'];
 
 // Hexadecimal
-const CSSViewer_hexa = [
+const CSSQuickViewer_hexa = [
     '0',
     '1',
     '2',
@@ -170,9 +170,9 @@ function IsInArray(array: string[], name: string): boolean {
 function DecToHex(nb: number): string {
     let nbHexa = '';
 
-    nbHexa += CSSViewer_hexa[Math.floor(nb / 16)];
+    nbHexa += CSSQuickViewer_hexa[Math.floor(nb / 16)];
     nb = nb % 16;
-    nbHexa += CSSViewer_hexa[nb];
+    nbHexa += CSSQuickViewer_hexa[nb];
 
     return nbHexa;
 }
@@ -226,7 +226,7 @@ function GetCSSProperty(element: CSSStyleDeclaration, property: string): string 
 
 function SetCSSProperty(element: CSSStyleDeclaration, property: string): void {
     const document = GetCurrentDocument();
-    const li = document.getElementById('CSSViewer_' + property);
+    const li = document.getElementById('CSSQuickViewer_' + property);
     if (!li || !li.lastChild) return;
 
     (li.lastChild as HTMLElement).innerHTML = ' : ' + element.getPropertyValue(property);
@@ -238,7 +238,7 @@ function SetCSSPropertyIf(
     condition: boolean,
 ): number {
     const document = GetCurrentDocument();
-    const li = document.getElementById('CSSViewer_' + property);
+    const li = document.getElementById('CSSQuickViewer_' + property);
     if (!li) return 0;
 
     if (condition) {
@@ -261,7 +261,7 @@ function SetCSSPropertyValue(
     value: string,
 ): void {
     const document = GetCurrentDocument();
-    const li = document.getElementById('CSSViewer_' + property);
+    const li = document.getElementById('CSSQuickViewer_' + property);
     if (!li || !li.lastChild) return;
 
     (li.lastChild as HTMLElement).innerHTML = ' : ' + value;
@@ -275,7 +275,7 @@ function SetCSSPropertyValueIf(
     condition: boolean,
 ): number {
     const document = GetCurrentDocument();
-    const li = document.getElementById('CSSViewer_' + property);
+    const li = document.getElementById('CSSQuickViewer_' + property);
     if (!li) return 0;
 
     if (condition) {
@@ -294,19 +294,19 @@ function SetCSSPropertyValueIf(
 
 function HideCSSProperty(property: string): void {
     const document = GetCurrentDocument();
-    const li = document.getElementById('CSSViewer_' + property);
+    const li = document.getElementById('CSSQuickViewer_' + property);
     if (li) li.style.display = 'none';
 }
 
 function HideCSSCategory(category: string): void {
     const document = GetCurrentDocument();
-    const div = document.getElementById('CSSViewer_' + category);
+    const div = document.getElementById('CSSQuickViewer_' + category);
     if (div) div.style.display = 'none';
 }
 
 function ShowCSSCategory(category: string): void {
     const document = GetCurrentDocument();
-    const div = document.getElementById('CSSViewer_' + category);
+    const div = document.getElementById('CSSQuickViewer_' + category);
     if (div) div.style.display = 'block';
 }
 
@@ -416,7 +416,7 @@ function UpdatePositioning(element: CSSStyleDeclaration): void
 
 function UpdateTable(element: CSSStyleDeclaration, tagName: string): void
 {
-    if (IsInArray(CSSViewer_tableTagNames, tagName)) {
+    if (IsInArray(CSSQuickViewer_tableTagNames, tagName)) {
         let nbProperties = 0;
 
         nbProperties += SetCSSPropertyIf(element, 'border-collapse', GetCSSProperty(element, 'border-collapse') != 'separate');
@@ -437,7 +437,7 @@ function UpdateTable(element: CSSStyleDeclaration, tagName: string): void
 
 function UpdateList(element: CSSStyleDeclaration, tagName: string): void
 {
-    if (IsInArray(CSSViewer_listTagNames, tagName)) {
+    if (IsInArray(CSSQuickViewer_listTagNames, tagName)) {
         ShowCSSCategory('pList');
 
         const listStyleImage = GetCSSProperty(element, 'list-style-image');
@@ -505,7 +505,7 @@ function UpdateEffects(element: CSSStyleDeclaration): void
 // CSS definition string.
 function appendCssDefinition(element: CSSStyleDeclaration, props: string[]): void {
     for (const property of props) {
-        CSSViewer_element_cssDefinition +=
+        CSSQuickViewer_element_cssDefinition +=
             '\t' + property + ': ' + element.getPropertyValue(property) + ';\n';
     }
 }
@@ -517,12 +517,12 @@ function appendCssDefinition(element: CSSStyleDeclaration, props: string[]): voi
 // where small width changes flip the panel from one side of the cursor to the
 // other every frame).
 function isInsidePanel(el: HTMLElement | null): boolean {
-    return !!el && !!el.closest && el.closest('#CSSViewer_block') != null;
+    return !!el && !!el.closest && el.closest('#CSSQuickViewer_block') != null;
 }
 
-function CSSViewerMouseOver(this: HTMLElement, e: MouseEvent): void {
+function CSSQuickViewerMouseOver(this: HTMLElement, e: MouseEvent): void {
     // The hovered element is `this`; alias it so it can be stashed into module
-    // state (CSSViewer_element) for the console dump and freeze features to read.
+    // state (CSSQuickViewer_element) for the console dump and freeze features to read.
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const el = this;
 
@@ -532,13 +532,13 @@ function CSSViewerMouseOver(this: HTMLElement, e: MouseEvent): void {
     // in browser chrome, outside the page's stacking context, so no z-index can
     // keep our panel above it. Stash the value and restore it on mouseout.
     if (el.hasAttribute('title')) {
-        el.setAttribute('data-cssviewer-title', el.getAttribute('title') ?? '');
+        el.setAttribute('data-cssquickviewer-title', el.getAttribute('title') ?? '');
         el.removeAttribute('title');
     }
 
     // Block
     const document = GetCurrentDocument();
-    const block = document.getElementById('CSSViewer_block');
+    const block = document.getElementById('CSSQuickViewer_block');
 
     if (!block) {
         return;
@@ -556,7 +556,7 @@ function CSSViewerMouseOver(this: HTMLElement, e: MouseEvent): void {
     // Outline element
     if (el.tagName != 'body') {
         el.style.outline = '1px dashed #f00';
-        CSSViewer_current_element = el;
+        CSSQuickViewer_current_element = el;
     }
 
     // Updating CSS properties
@@ -572,65 +572,65 @@ function CSSViewerMouseOver(this: HTMLElement, e: MouseEvent): void {
     UpdateMisc(element);
     UpdateEffects(element);
 
-    CSSViewer_element = el;
+    CSSQuickViewer_element = el;
 
-    cssViewerRemoveElement('cssViewerInsertMessage');
+    cssQuickViewerRemoveElement('cssQuickViewerInsertMessage');
 
     e.stopPropagation();
 
     // generate simple css definition
-    CSSViewer_element_cssDefinition =
+    CSSQuickViewer_element_cssDefinition =
         el.tagName.toLowerCase() +
         (el.id == '' ? '' : ' #' + el.id) +
         (el.className == '' ? '' : ' .' + el.className) +
         ' {\n';
 
-    CSSViewer_element_cssDefinition += '\t/* Font & Text */\n';
-    appendCssDefinition(element, CSSViewer_pFont);
+    CSSQuickViewer_element_cssDefinition += '\t/* Font & Text */\n';
+    appendCssDefinition(element, CSSQuickViewer_pFont);
 
-    CSSViewer_element_cssDefinition += '\n\t/* Color & Background */\n';
-    appendCssDefinition(element, CSSViewer_pColorBg);
+    CSSQuickViewer_element_cssDefinition += '\n\t/* Color & Background */\n';
+    appendCssDefinition(element, CSSQuickViewer_pColorBg);
 
-    CSSViewer_element_cssDefinition += '\n\t/* Box */\n';
-    appendCssDefinition(element, CSSViewer_pBox);
+    CSSQuickViewer_element_cssDefinition += '\n\t/* Box */\n';
+    appendCssDefinition(element, CSSQuickViewer_pBox);
 
-    CSSViewer_element_cssDefinition += '\n\t/* Positioning */\n';
-    appendCssDefinition(element, CSSViewer_pPositioning);
+    CSSQuickViewer_element_cssDefinition += '\n\t/* Positioning */\n';
+    appendCssDefinition(element, CSSQuickViewer_pPositioning);
 
-    CSSViewer_element_cssDefinition += '\n\t/* List */\n';
-    appendCssDefinition(element, CSSViewer_pList);
+    CSSQuickViewer_element_cssDefinition += '\n\t/* List */\n';
+    appendCssDefinition(element, CSSQuickViewer_pList);
 
-    CSSViewer_element_cssDefinition += '\n\t/* Table */\n';
-    appendCssDefinition(element, CSSViewer_pTable);
+    CSSQuickViewer_element_cssDefinition += '\n\t/* Table */\n';
+    appendCssDefinition(element, CSSQuickViewer_pTable);
 
-    CSSViewer_element_cssDefinition += '\n\t/* Miscellaneous */\n';
-    appendCssDefinition(element, CSSViewer_pMisc);
+    CSSQuickViewer_element_cssDefinition += '\n\t/* Miscellaneous */\n';
+    appendCssDefinition(element, CSSQuickViewer_pMisc);
 
-    CSSViewer_element_cssDefinition += '\n\t/* Effects */\n';
-    appendCssDefinition(element, CSSViewer_pEffect);
+    CSSQuickViewer_element_cssDefinition += '\n\t/* Effects */\n';
+    appendCssDefinition(element, CSSQuickViewer_pEffect);
 
-    CSSViewer_element_cssDefinition += '}';
+    CSSQuickViewer_element_cssDefinition += '}';
 }
 
-function CSSViewerMouseOut(this: HTMLElement, e: MouseEvent): void {
+function CSSQuickViewerMouseOut(this: HTMLElement, e: MouseEvent): void {
     if (isInsidePanel(this)) return;
 
     this.style.outline = '';
 
     // Restore the native title we suppressed on mouseover.
-    if (this.hasAttribute('data-cssviewer-title')) {
-        this.setAttribute('title', this.getAttribute('data-cssviewer-title') ?? '');
-        this.removeAttribute('data-cssviewer-title');
+    if (this.hasAttribute('data-cssquickviewer-title')) {
+        this.setAttribute('title', this.getAttribute('data-cssquickviewer-title') ?? '');
+        this.removeAttribute('data-cssquickviewer-title');
     }
 
     e.stopPropagation();
 }
 
-function CSSViewerMouseMove(this: HTMLElement, e: MouseEvent): void {
+function CSSQuickViewerMouseMove(this: HTMLElement, e: MouseEvent): void {
     if (isInsidePanel(this)) return;
 
     const document = GetCurrentDocument();
-    const block = document.getElementById('CSSViewer_block');
+    const block = document.getElementById('CSSQuickViewer_block');
 
     if (!block) {
         return;
@@ -660,7 +660,7 @@ function CSSViewerMouseMove(this: HTMLElement, e: MouseEvent): void {
     } else block.style.top = e.pageY + 20 + 'px';
 
     // adapt block top to screen offset
-    const inView = CSSViewerIsElementInViewport(block);
+    const inView = CSSQuickViewerIsElementInViewport(block);
 
     if (!inView) block.style.top = window.pageYOffset + 20 + 'px';
 
@@ -668,7 +668,7 @@ function CSSViewerMouseMove(this: HTMLElement, e: MouseEvent): void {
 }
 
 // http://stackoverflow.com/a/7557433
-function CSSViewerIsElementInViewport(el: HTMLElement): boolean {
+function CSSQuickViewerIsElementInViewport(el: HTMLElement): boolean {
     const rect = el.getBoundingClientRect();
 
     return (
@@ -679,9 +679,9 @@ function CSSViewerIsElementInViewport(el: HTMLElement): boolean {
     );
 }
 
-// === CSSViewer ===
+// === CSSQuickViewer ===
 
-class CSSViewer {
+class CSSQuickViewer {
     // Whether all elements currently have the hover event listeners attached.
     haveEventListeners = false;
 
@@ -693,7 +693,7 @@ class CSSViewer {
         if (document) {
             // Create a div block
             block = document.createElement('div');
-            block.id = 'CSSViewer_block';
+            block.id = 'CSSQuickViewer_block';
 
             // Insert a title for CSS selector
             const header = document.createElement('h1');
@@ -704,29 +704,29 @@ class CSSViewer {
             // Insert all properties
             const center = document.createElement('div');
 
-            center.id = 'CSSViewer_center';
+            center.id = 'CSSQuickViewer_center';
 
-            for (const cat in CSSViewer_categories) {
+            for (const cat in CSSQuickViewer_categories) {
                 const div = document.createElement('div');
 
-                div.id = 'CSSViewer_' + cat;
-                div.className = 'CSSViewer_category';
+                div.id = 'CSSQuickViewer_' + cat;
+                div.className = 'CSSQuickViewer_category';
 
                 const h2 = document.createElement('h2');
 
-                h2.appendChild(document.createTextNode(CSSViewer_categoriesTitle[cat]!));
+                h2.appendChild(document.createTextNode(CSSQuickViewer_categoriesTitle[cat]!));
 
                 const ul = document.createElement('ul');
-                const properties = CSSViewer_categories[cat]!;
+                const properties = CSSQuickViewer_categories[cat]!;
 
                 for (const property of properties) {
                     const li = document.createElement('li');
 
-                    li.id = 'CSSViewer_' + property;
+                    li.id = 'CSSQuickViewer_' + property;
 
                     const spanName = document.createElement('span');
 
-                    spanName.className = 'CSSViewer_property';
+                    spanName.className = 'CSSQuickViewer_property';
 
                     const spanValue = document.createElement('span');
 
@@ -746,18 +746,18 @@ class CSSViewer {
             // Insert a footer
             const footer = document.createElement('div');
 
-            footer.id = 'CSSViewer_footer';
+            footer.id = 'CSSQuickViewer_footer';
 
             footer.appendChild(
                 document.createTextNode(
-                    'CSS Viewer Classic 1.8.0. Keys: [F] Un/Freeze • [C] Copy • [Esc] Close',
+                    'CSS Quick Viewer 1.8.0. Keys: [F] Un/Freeze • [C] Copy • [Esc] Close',
                 ),
             );
             block.appendChild(footer);
         }
 
-        cssViewerInsertMessage(
-            'CSS Viewer Classic loaded! Hover any element you want to inspect in the page.',
+        cssQuickViewerInsertMessage(
+            'CSS Quick Viewer loaded! Hover any element you want to inspect in the page.',
         );
 
         return block;
@@ -791,9 +791,9 @@ class CSSViewer {
         const elements = this.GetAllElements(document.body);
 
         for (const element of elements) {
-            element.addEventListener('mouseover', CSSViewerMouseOver, false);
-            element.addEventListener('mouseout', CSSViewerMouseOut, false);
-            element.addEventListener('mousemove', CSSViewerMouseMove, false);
+            element.addEventListener('mouseover', CSSQuickViewerMouseOver, false);
+            element.addEventListener('mouseout', CSSQuickViewerMouseOut, false);
+            element.addEventListener('mousemove', CSSQuickViewerMouseMove, false);
         }
         this.haveEventListeners = true;
     }
@@ -804,24 +804,24 @@ class CSSViewer {
         const elements = this.GetAllElements(document.body);
 
         for (const element of elements) {
-            element.removeEventListener('mouseover', CSSViewerMouseOver, false);
-            element.removeEventListener('mouseout', CSSViewerMouseOut, false);
-            element.removeEventListener('mousemove', CSSViewerMouseMove, false);
+            element.removeEventListener('mouseover', CSSQuickViewerMouseOver, false);
+            element.removeEventListener('mouseout', CSSQuickViewerMouseOut, false);
+            element.removeEventListener('mousemove', CSSQuickViewerMouseMove, false);
         }
         this.haveEventListeners = false;
     }
 
-    // Check whether CSSViewer is enabled
+    // Check whether CSSQuickViewer is enabled
     IsEnabled(): boolean {
         const document = GetCurrentDocument();
 
-        return document.getElementById('CSSViewer_block') != null;
+        return document.getElementById('CSSQuickViewer_block') != null;
     }
 
-    // Enable CSSViewer
+    // Enable CSSQuickViewer
     Enable(): boolean {
         const document = GetCurrentDocument();
-        const block = document.getElementById('CSSViewer_block');
+        const block = document.getElementById('CSSQuickViewer_block');
 
         if (!block) {
             const created = this.CreateBlock();
@@ -834,11 +834,11 @@ class CSSViewer {
         return false;
     }
 
-    // Disable CSSViewer
+    // Disable CSSQuickViewer
     Disable(): boolean {
         const document = GetCurrentDocument();
-        const block = document.getElementById('CSSViewer_block');
-        const insertMessage = document.getElementById('cssViewerInsertMessage');
+        const block = document.getElementById('CSSQuickViewer_block');
+        const insertMessage = document.getElementById('cssQuickViewerInsertMessage');
 
         if (block || insertMessage) {
             if (block) document.body.removeChild(block);
@@ -847,9 +847,9 @@ class CSSViewer {
 
             // Restore any titles still suppressed because the viewer was disabled
             // while an element was hovered (mouseout never fired for it).
-            for (const el of document.querySelectorAll('[data-cssviewer-title]')) {
-                el.setAttribute('title', el.getAttribute('data-cssviewer-title') ?? '');
-                el.removeAttribute('data-cssviewer-title');
+            for (const el of document.querySelectorAll('[data-cssquickviewer-title]')) {
+                el.setAttribute('title', el.getAttribute('data-cssquickviewer-title') ?? '');
+                el.removeAttribute('data-cssquickviewer-title');
             }
 
             return true;
@@ -858,10 +858,10 @@ class CSSViewer {
         return false;
     }
 
-    // Freeze CSSViewer
+    // Freeze CSSQuickViewer
     Freeze(): boolean {
         const document = GetCurrentDocument();
-        const block = document.getElementById('CSSViewer_block');
+        const block = document.getElementById('CSSQuickViewer_block');
         if (block && this.haveEventListeners) {
             this.RemoveEventListeners();
 
@@ -871,13 +871,13 @@ class CSSViewer {
         return false;
     }
 
-    // Unfreeze CSSViewer
+    // Unfreeze CSSQuickViewer
     Unfreeze(): boolean {
         const document = GetCurrentDocument();
-        const block = document.getElementById('CSSViewer_block');
+        const block = document.getElementById('CSSQuickViewer_block');
         if (block && !this.haveEventListeners) {
             // Remove the red outline
-            if (CSSViewer_current_element) CSSViewer_current_element.style.outline = '';
+            if (CSSQuickViewer_current_element) CSSQuickViewer_current_element.style.outline = '';
             this.AddEventListeners();
 
             return true;
@@ -890,12 +890,12 @@ class CSSViewer {
 /*
 * Display the notification message
 */
-function cssViewerInsertMessage(msg: string): void {
+function cssQuickViewerInsertMessage(msg: string): void {
     const oNewP = document.createElement('p');
     const oText = document.createTextNode(msg);
 
     oNewP.appendChild(oText);
-    oNewP.id                    = 'cssViewerInsertMessage';
+    oNewP.id                    = 'cssQuickViewerInsertMessage';
     oNewP.style.backgroundColor = '#b40000';
     oNewP.style.color           = '#ffffff';
     oNewP.style.position        = "fixed";
@@ -910,7 +910,7 @@ function cssViewerInsertMessage(msg: string): void {
 /*
 * Removes an element from the DOM, used to remove the notification message.
 */
-function cssViewerRemoveElement(divid: string): void {
+function cssQuickViewerRemoveElement(divid: string): void {
     const n = document.getElementById(divid);
 
     if (n) {
@@ -922,43 +922,43 @@ function cssViewerRemoveElement(divid: string): void {
 * Copy the current element's CSS to the console. Called by the service worker's
 * context-menu handler (see globalThis assignment at the end of this file).
 */
-function cssViewerCopyCssToConsole(type: string): void {
-    if (!CSSViewer_element) return;
+function cssQuickViewerCopyCssToConsole(type: string): void {
+    if (!CSSQuickViewer_element) return;
     const view = document.defaultView;
 
-    if (type == 'el') console.log(CSSViewer_element);
-    else if (type == 'id') console.log(CSSViewer_element.id);
-    else if (type == 'tagName') console.log(CSSViewer_element.tagName);
-    else if (type == 'className') console.log(CSSViewer_element.className);
-    else if (type == 'style') console.log(CSSViewer_element.style);
+    if (type == 'el') console.log(CSSQuickViewer_element);
+    else if (type == 'id') console.log(CSSQuickViewer_element.id);
+    else if (type == 'tagName') console.log(CSSQuickViewer_element.tagName);
+    else if (type == 'className') console.log(CSSQuickViewer_element.className);
+    else if (type == 'style') console.log(CSSQuickViewer_element.style);
     else if (type == 'cssText' && view)
-        console.log(view.getComputedStyle(CSSViewer_element, null).cssText);
+        console.log(view.getComputedStyle(CSSQuickViewer_element, null).cssText);
     else if (type == 'getComputedStyle' && view)
-        console.log(view.getComputedStyle(CSSViewer_element, null));
-    else if (type == 'simpleCssDefinition') console.log(CSSViewer_element_cssDefinition);
+        console.log(view.getComputedStyle(CSSQuickViewer_element, null));
+    else if (type == 'simpleCssDefinition') console.log(CSSQuickViewer_element_cssDefinition);
 }
 
 /*
 *  Close the viewer on [Esc], freeze/unfreeze on [f], show CSS on [c].
 */
 function CssViewerKeyMap(e: KeyboardEvent): void {
-    if (!cssViewer.IsEnabled()) return;
+    if (!cssQuickViewer.IsEnabled()) return;
 
-    // ESC: Close the css viewer if the cssViewer is enabled.
+    // ESC: Close the css viewer if the cssQuickViewer is enabled.
     if (e.keyCode === 27) {
         // Remove the red outline
-        if (CSSViewer_current_element) CSSViewer_current_element.style.outline = '';
-        cssViewer.Disable();
+        if (CSSQuickViewer_current_element) CSSQuickViewer_current_element.style.outline = '';
+        cssQuickViewer.Disable();
     }
 
     if (e.altKey || e.ctrlKey) return;
 
-    // f: Freeze or Unfreeze the css viewer if the cssViewer is enabled
+    // f: Freeze or Unfreeze the css viewer if the cssQuickViewer is enabled
     if (e.keyCode === 70) {
-        if (cssViewer.haveEventListeners) {
-            cssViewer.Freeze();
+        if (cssQuickViewer.haveEventListeners) {
+            cssQuickViewer.Freeze();
         } else {
-            cssViewer.Unfreeze();
+            cssQuickViewer.Unfreeze();
         }
     }
 
@@ -967,19 +967,19 @@ function CssViewerKeyMap(e: KeyboardEvent): void {
     if (e.keyCode === 67) {
         window.prompt(
             'Simple Css Definition :\n\nYou may copy the code below then hit escape to continue.',
-            CSSViewer_element_cssDefinition,
+            CSSQuickViewer_element_cssDefinition,
         );
     }
 }
 
 
 // Entry point: toggle the viewer on (re-)injection.
-const cssViewer = new CSSViewer();
+const cssQuickViewer = new CSSQuickViewer();
 
-if (cssViewer.IsEnabled()) {
-    cssViewer.Disable();
+if (cssQuickViewer.IsEnabled()) {
+    cssQuickViewer.Disable();
 } else {
-    cssViewer.Enable();
+    cssQuickViewer.Enable();
 }
 
 document.onkeydown = CssViewerKeyMap;
@@ -987,5 +987,5 @@ document.onkeydown = CssViewerKeyMap;
 // The build wraps this file in an IIFE, so top-level functions no longer attach
 // to the page's global scope automatically. The context-menu handler in the
 // service worker injects a separate function that calls this by name, so expose
-// it explicitly. It closes over the same CSSViewer_element that hovering updates.
-globalThis.cssViewerCopyCssToConsole = cssViewerCopyCssToConsole;
+// it explicitly. It closes over the same CSSQuickViewer_element that hovering updates.
+globalThis.cssQuickViewerCopyCssToConsole = cssQuickViewerCopyCssToConsole;

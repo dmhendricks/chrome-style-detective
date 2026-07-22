@@ -46,7 +46,7 @@ const contentScript: Plugin = {
         lib: {
           entry: CONTENT_ENTRY,
           formats: ['iife'],
-          name: 'CSSViewerClassic',
+          name: 'CSSQuickViewer',
           fileName: () => 'cssviewer.js',
         },
       },

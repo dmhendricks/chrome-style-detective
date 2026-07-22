@@ -1,5 +1,5 @@
 {
-    "name": "CSS Viewer Classic",
+    "name": "CSS Quick Viewer",
     "manifest_version": 3,
     "version": "1.8.0",
     "description": "Displays a floating panel of any hovered element's CSS properties.",
@@ -17,7 +17,7 @@
     },
     "action": {
         "default_icon": "img/16.png",
-        "default_title": "CSS Viewer Classic"
+        "default_title": "CSS Quick Viewer"
     },
     "permissions": [
         "scripting",

@@ -7,7 +7,7 @@
 * Copyright (c) 2006, 2008 Nicolas Huon
 *
 * This source code is licensed under the GNU General Public License,
-* Version 2. See the file COPYING for more details.
+* Version 2. See the file LICENSE for more details.
 */
 
 // Roadmap/ToDos

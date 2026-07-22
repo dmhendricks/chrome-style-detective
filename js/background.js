@@ -5,7 +5,7 @@
 * https://chrome.google.com/webstore/detail/cssviewer/ggfgijbpiheegefliciemofobhmofgce
 *
 * This source code is licensed under the GNU General Public License,
-* Version 2. See the file COPYING for more details.
+* Version 2. See the file LICENSE for more details.
 */
 
 // Context-menu items that dump the current element to the page console. Each

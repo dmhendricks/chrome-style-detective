@@ -1,98 +1,104 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
-<!--
-/*!
-* CSS Quick Viewer — Displays a floating panel of any hovered element's CSS properties.
-*/
--->
-<head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<title>CSS Quick Viewer</title>
-</head>
+<!doctype html>
+<html lang="en">
+    <!--
+    /*!
+    * CSS Quick Viewer — Displays a floating panel of any hovered element's CSS properties.
+    */
+    -->
+    <head>
+        <meta charset="utf-8" />
+        <title>CSS Quick Viewer</title>
+        <link rel="stylesheet" href="./options.scss" />
+    </head>
 
-<body>
+    <body>
+        <main>
+            <h1>CSS Quick Viewer 1.8.0</h1>
 
-<center>
-<table width="910" border="0">
-  <tr>
-    <td>
-<h2 style="font-size: 1.2em;font-family: Arial,sans-serif;padding: .5em 0 .5em ;">CSS Quick Viewer 1.8.0</h2>
-<p align="justify">
-CSS Quick Viewer is a simple CSS property viewer for Google chrome originally made by <a href="https://addons.mozilla.org/en-US/firefox/user/9866/" target="_blank">Nicolas Huon</a> as a FireFox addon.
-<br />
-<br />
-CSS Quick Viewer source code is publicly available on GitHub for anyone to help and contribute. <br />
-<a href="https://github.com/miled/cssviewer" target="_blank">https://github.com/miled/cssviewer</a>.
-</p>
-<br />
-<img style="border: 1px solid #DDDDDD;margin: 5px;padding:0px;" src="img/option-demo.gif" align="right" />
-<h4 style="font-size: 0.9em;font-family: Arial,sans-serif;padding: 0;margin:0;">How to use :</h4>
-<ul>
-    <li>CSS Quick Viewer shows the css parameters of any element in a web page. To enable/disable CSS Quick Viewer, simply click the toolbar icon and then hover any element on you want to inspect in current page.<br /><br /></li>
-    <li>For quick usage you may use the available keyboard shortcuts:
-        <br />
-        <br /> &nbsp; [<b>f</b>] Freeze/Unfreeze the widget in place,
-        <br /> &nbsp; [<b>c</b>] Shows selected element simpleCssDefinition on a modal, and
-        <br /> &nbsp; [<b>esc</b>] Disable the viewer.
-        <br />
-        <br />
-        </li>
-    <li>To display the CSS definition, open Google Chrome console [F12] then right click on the element you're hovering:
-        <br />
-        <br /> &nbsp; <b>CSS Quick Viewer console</b> &gt; <b>element.simpleCssDefinition</b>.
-    </li>
-</ul>
+            <p>
+                CSS Quick Viewer is a simple CSS property viewer for Google Chrome originally made
+                by
+                <a href="https://addons.mozilla.org/en-US/firefox/user/9866/" target="_blank"
+                    >Nicolas Huon</a
+                >
+                as a Firefox addon.
+            </p>
+            <p>
+                CSS Quick Viewer source code is publicly available on GitHub for anyone to help
+                and contribute:
+                <a href="https://github.com/miled/cssviewer" target="_blank"
+                    >https://github.com/miled/cssviewer</a
+                >.
+            </p>
 
-<p>Note that the menu will only show up when you enable CSS Quick Viewer and will only work on the page you're inspecting. Also, CSS Quick Viewer will only work on http, https and local pages.</p>
+            <img src="/img/option-demo.gif" alt="CSS Quick Viewer usage demo" />
 
-<h4 style="font-size: 0.9em;font-family: Arial,sans-serif;padding: 1em 0 0;margin-bottom:5px;">Privacy :</h4>
-<p align="justify">
-    In order to work properly, CSS Quick Viewer requires the permission to access to your history and website data.
-    However, CSS Quick Viewer do not collect nor will ever transmit any of your private data.
+            <h4>How to use:</h4>
+            <ul>
+                <li>
+                    CSS Quick Viewer shows the CSS parameters of any element in a web page. To
+                    enable/disable CSS Quick Viewer, simply click the toolbar icon and then hover
+                    any element you want to inspect on the current page.
+                </li>
+                <li>
+                    For quick usage you may use the available keyboard shortcuts:
+                    <ul>
+                        <li><kbd>F</kbd> Freeze/Unfreeze the widget in place</li>
+                        <li><kbd>C</kbd> Show the selected element's CSS definition in a modal</li>
+                        <li><kbd>Esc</kbd> Disable the viewer</li>
+                    </ul>
+                </li>
+                <li>
+                    To display the CSS definition, open the Google Chrome console [F12] then
+                    right-click the element you're hovering:
+                    <br />
+                    <strong>CSS Quick Viewer console</strong> &gt;
+                    <strong>element.simpleCssDefinition</strong>.
+                </li>
+            </ul>
 
-    <!-- .. besides, I couldn't care less about your data p -->
-</p>
+            <p>
+                Note that the menu will only show up when you enable CSS Quick Viewer and will
+                only work on the page you're inspecting. Also, CSS Quick Viewer will only work on
+                http, https, and local pages.
+            </p>
 
-<h4 style="font-size: 0.9em;font-family: Arial,sans-serif;padding: 1em 0 0;margin-bottom:5px;">How to uninstall :</h4>
-<ol>
-    <li>Click the wrench icon on the browser toolbar.</li>
-    <li>Click <strong>Tools</strong>.</li>
-    <li>Select <strong>Extensions</strong>.</li>
-    <li>Find the CSS Quick Viewer extension then click <strong>Uninstall</strong>.</li>
-</ol>
+            <h4>Privacy:</h4>
+            <p>
+                In order to work properly, CSS Quick Viewer requires permission to access your
+                history and website data. However, CSS Quick Viewer does not collect nor will ever
+                transmit any of your private data.
+            </p>
 
-<h4 style="font-size: 0.9em;font-family: Arial,sans-serif; ">Changelog:</h4>
-<div style="margin-left:15px">
-    <strong>1.8.0</strong>: 07/2026 - Ported to Manifest V3 for compatibility with current versions of Chrome.<br />
-    <strong>1.7</strong>: 04/2017 - Add keyboard shortcuts and enable the viewer for local files.<br />
-    <strong>1.6</strong>: 11/2014 - Add inspect element to menu. Add generate css definition. Fix few issues with auto-positioning. reFix an issue with chrome/38.<br />
-    <strong>1.5</strong>: 10/2015 - Hotfix an issue with Chrome/38.0.2125.101.<br />
-    <strong>1.4</strong>: 02/2013 - A bunch of minor changes in order to release CSSViewer as an open source project at <a href="https://github.com/miled/cssviewer" target="_blank">Github</a>.<br />
-    <strong>1.3</strong>: 08/2011 - Support some CSS3 properties under the "Effects' category.<br />
-    <strong>1.2</strong>: 07/2011 - Fix some minor bugs.<br />
-    <strong>1.1</strong>: 03/2010 - Initial version.<br />
-</div>
+            <h4>How to uninstall:</h4>
+            <ol>
+                <li>Click the puzzle-piece (Extensions) icon on the browser toolbar.</li>
+                <li>Click <strong>Manage Extensions</strong>.</li>
+                <li>Find the CSS Quick Viewer extension, then click <strong>Remove</strong>.</li>
+            </ol>
 
-<h4 style="font-size: 0.9em;font-family: Arial,sans-serif; ">Known Issues:</h4>
-<div style="margin-left:15px">
-    CSS Quick Viewer will not work in any opened tabs before installing it nor in the Google chrome store.<br />
-    The style may broke sometimes depending on the site you are surfing.<br />
-</div>
+            <h4>Changelog:</h4>
+            <ul>
+                <li><strong>1.8.0</strong>: 07/2026 - Ported to Manifest V3 for compatibility with current versions of Chrome.</li>
+                <li><strong>1.7</strong>: 04/2017 - Add keyboard shortcuts and enable the viewer for local files.</li>
+                <li><strong>1.6</strong>: 11/2014 - Add inspect element to menu. Add generate CSS definition. Fix a few issues with auto-positioning. Refix an issue with Chrome/38.</li>
+                <li><strong>1.5</strong>: 10/2015 - Hotfix an issue with Chrome/38.0.2125.101.</li>
+                <li><strong>1.4</strong>: 02/2013 - A bunch of minor changes in order to release CSSViewer as an open source project on <a href="https://github.com/miled/cssviewer" target="_blank">GitHub</a>.</li>
+                <li><strong>1.3</strong>: 08/2011 - Support some CSS3 properties under the "Effects" category.</li>
+                <li><strong>1.2</strong>: 07/2011 - Fix some minor bugs.</li>
+                <li><strong>1.1</strong>: 03/2010 - Initial version.</li>
+            </ul>
 
-    <br />
-    <hr />
+            <h4>Known Issues:</h4>
+            <ul>
+                <li>CSS Quick Viewer will not work in any tabs opened before installing it, nor in the Chrome Web Store.</li>
+                <li>The style may break sometimes depending on the site you're surfing.</li>
+            </ul>
 
-    <p align="justify">
-        <em>CSS Quick Viewer automatically display this page when the extension is updated to a new version.</em>
-    </p>
-    <p align="justify">
-        <em>This chrome extension is a straight port of the Firefox CSSViewer add-on with minor enhancements. Credits goes to the original developer and contributors.</em>
-    </p>
-    </td>
-  </tr>
-</table>
-</center>
+            <hr />
 
-
-</body>
+            <p><em>CSS Quick Viewer automatically displays this page when the extension is updated to a new version.</em></p>
+            <p><em>This Chrome extension is a straight port of the Firefox CSSViewer add-on with minor enhancements. Credit goes to the original developer and contributors.</em></p>
+        </main>
+    </body>
 </html>

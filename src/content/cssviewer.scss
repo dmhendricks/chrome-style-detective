@@ -43,12 +43,7 @@
 
     // Reset applied to the panel and every element inside it, so host-page
     // styles for these tags can't bleed in.
-    &,
-    h1,
-    h2,
-    ul,
-    li,
-    span {
+    &, h1, h2, ul, li, span {
         font-family: 'Lucida sans', helvetica, sans-serif !important;
         font-size: 10px !important;
         line-height: 20px;

@@ -22,6 +22,7 @@ Keyboard shortcuts while the viewer is active:
 
 - `F` to freeze or unfreeze the panel in place
 - `C` to show a simple CSS definition for the selected element
+- `+` / `-` to increase or decrease the panel font size
 - `Esc` to close the viewer
 
 ## Known Issues

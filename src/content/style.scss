@@ -43,13 +43,13 @@
     --sd-kbd-border: #c9d0da;
     --sd-kbd-text: #3d4654;
 
-    // Dimensions
+    // Dimensions — width tracks font size (10px → 332/400 base) so larger
+    // text gets a proportionally wider panel, still capped to the viewport.
+    --sd-font-size: 10px;
     --sd-radius: 6px;
-    --sd-min-width: 332px;
-    // Cap so a long value (e.g. a big font-family stack) wraps rather than
-    // stretching the panel across the page.
-    --sd-max-width: 400px;
-    --sd-label-width: 100px;
+    --sd-min-width: min(calc(var(--sd-font-size) * 33.2), var(--sd-max-width));
+    --sd-max-width: min(calc(var(--sd-font-size) * 40), calc(100vw - 40px));
+    --sd-label-width: calc(var(--sd-font-size) * 10);
 
     // Reset applied to the panel and every element inside it, so host-page
     // styles for these tags can't bleed in.
@@ -61,8 +61,8 @@
     span,
     kbd {
         font-family: 'Lucida sans', helvetica, sans-serif !important;
-        font-size: 10px !important;
-        line-height: 20px;
+        font-size: var(--sd-font-size) !important;
+        line-height: calc(var(--sd-font-size) * 2);
         margin: 0 !important;
         padding: 0 !important;
         text-align: left !important;
@@ -95,9 +95,9 @@
         display: block !important;
         box-sizing: border-box !important;
         padding: 10px 16px !important;
-        line-height: 16px !important;
+        line-height: calc(var(--sd-font-size) * 1.6) !important;
         color: #fff !important;
-        font-size: 12px !important;
+        font-size: calc(var(--sd-font-size) * 1.2) !important;
         text-align: center !important;
         text-transform: none !important;
         background-color: var(--sd-banner-bg) !important;
@@ -135,7 +135,7 @@
     h2 {
         padding-top: 6px !important;
         color: var(--sd-heading) !important;
-        font-size: 12px !important;
+        font-size: calc(var(--sd-font-size) * 1.2) !important;
         letter-spacing: -0.5px !important;
     }
 
@@ -204,18 +204,18 @@
         align-items: center !important;
         gap: 5px !important;
         color: var(--sd-label) !important;
-        font-size: 10px !important;
+        font-size: var(--sd-font-size) !important;
         line-height: 1 !important;
         white-space: nowrap !important;
 
         kbd {
             display: inline-block !important;
             box-sizing: border-box !important;
-            min-width: 18px !important;
+            min-width: calc(var(--sd-font-size) * 1.8) !important;
             padding: 2px 6px !important;
             color: var(--sd-kbd-text) !important;
             font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace !important;
-            font-size: 10px !important;
+            font-size: var(--sd-font-size) !important;
             font-weight: 600 !important;
             line-height: 1.3 !important;
             text-align: center !important;
@@ -228,7 +228,7 @@
 
     .StyleDetectiveOverlay__shortcut-label {
         color: var(--sd-label) !important;
-        font-size: 10px !important;
+        font-size: var(--sd-font-size) !important;
         line-height: 1 !important;
     }
 }

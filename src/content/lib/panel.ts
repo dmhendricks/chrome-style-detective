@@ -447,6 +447,7 @@ export function createBlock(doc: Document): HTMLDivElement {
                 children: [
                     shortcut('F', 'Freeze'),
                     shortcut('C', 'Copy'),
+                    shortcut('+/−', 'Zoom'),
                     shortcut('Esc', 'Close'),
                 ],
             }),

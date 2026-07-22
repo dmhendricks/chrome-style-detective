@@ -47,7 +47,7 @@ const contentScript: Plugin = {
         lib: {
           entry: CONTENT_ENTRY,
           formats: ['iife'],
-          name: 'CSSQuickViewer',
+          name: 'StyleDetectiveOverlay',
           fileName: () => 'cssviewer.js',
         },
       },

@@ -691,7 +691,24 @@ function CSSViewer()
 			// Create a div block
 			block = document.createElement('div');
 			block.id = 'CSSViewer_block';
-			
+
+			// Resolve the packaged background images to their extension URLs and
+			// expose them as CSS custom properties. Manifest V3 does not substitute
+			// the __MSG_@@extension_id__ placeholder in scripting.insertCSS()-injected
+			// stylesheets, so we wire the URLs up at runtime instead.
+			if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getURL) {
+				var imgVars = {
+					'--cssviewer-header': 'img/header.png',
+					'--cssviewer-body': 'img/body.png',
+					'--cssviewer-footer': 'img/footer.png',
+					'--cssviewer-list': 'img/list.png',
+					'--cssviewer-bullet': 'img/bullet.png',
+				};
+				for (var v in imgVars) {
+					block.style.setProperty(v, 'url("' + chrome.runtime.getURL(imgVars[v]) + '")');
+				}
+			}
+
 			// Insert a title for CSS selector
 			var header = document.createElement('h1');
 

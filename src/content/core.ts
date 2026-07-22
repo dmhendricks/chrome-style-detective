@@ -16,6 +16,80 @@ import { selectorLabel } from './lib/dom';
 let inspectedCssDefinition = '';
 let outlinedElement: HTMLElement | null = null;
 
+// Panel body font size (px). +/- keys adjust this within [MIN, MAX]; applied as
+// --sd-font-size on #StyleDetectiveOverlay so headings/labels scale with it.
+// Persisted in chrome.storage.local so the last size is restored on next open.
+const PANEL_FONT_SIZE_DEFAULT = 10;
+const PANEL_FONT_SIZE_MIN = 8;
+const PANEL_FONT_SIZE_MAX = 18;
+const PANEL_FONT_SIZE_STEP = 1;
+const PANEL_FONT_SIZE_STORAGE_KEY = 'panelFontSize';
+let panelFontSize = PANEL_FONT_SIZE_DEFAULT;
+
+function clampPanelFontSize(size: number): number {
+    return Math.min(PANEL_FONT_SIZE_MAX, Math.max(PANEL_FONT_SIZE_MIN, size));
+}
+
+function applyPanelFontSize(): void {
+    const block = currentDocument().getElementById('StyleDetectiveOverlay');
+    if (block) {
+        block.style.setProperty('--sd-font-size', `${panelFontSize}px`);
+        // Width grows with font size; nudge left/top so the panel stays on-screen
+        // (mousemove won't re-run while frozen or between hover moves).
+        keepPanelInViewport(block);
+    }
+}
+
+/** Shift an absolutely-positioned panel so its box stays inside the viewport. */
+function keepPanelInViewport(block: HTMLElement): void {
+    const MARGIN = 8;
+    const BOTTOM_MARGIN = 40;
+    const rect = block.getBoundingClientRect();
+
+    let dx = 0;
+    let dy = 0;
+
+    if (rect.right > window.innerWidth - MARGIN) {
+        dx = window.innerWidth - MARGIN - rect.right;
+    }
+    if (rect.left + dx < MARGIN) {
+        dx = MARGIN - rect.left;
+    }
+    if (rect.bottom > window.innerHeight - BOTTOM_MARGIN) {
+        dy = window.innerHeight - BOTTOM_MARGIN - rect.bottom;
+    }
+    if (rect.top + dy < MARGIN) {
+        dy = MARGIN - rect.top;
+    }
+
+    if (dx !== 0) {
+        block.style.left = `${block.offsetLeft + dx}px`;
+    }
+    if (dy !== 0) {
+        block.style.top = `${block.offsetTop + dy}px`;
+    }
+}
+
+function persistPanelFontSize(): void {
+    void chrome.storage.local.set({ [PANEL_FONT_SIZE_STORAGE_KEY]: panelFontSize });
+}
+
+async function loadPanelFontSize(): Promise<void> {
+    const stored = await chrome.storage.local.get(PANEL_FONT_SIZE_STORAGE_KEY);
+    const value = stored[PANEL_FONT_SIZE_STORAGE_KEY];
+    if (typeof value === 'number' && Number.isFinite(value)) {
+        panelFontSize = clampPanelFontSize(Math.round(value));
+    }
+}
+
+function adjustPanelFontSize(delta: number): void {
+    const next = clampPanelFontSize(panelFontSize + delta);
+    if (next === panelFontSize) return;
+    panelFontSize = next;
+    applyPanelFontSize();
+    persistPanelFontSize();
+}
+
 function currentDocument(): Document {
     return window.document;
 }
@@ -251,6 +325,7 @@ class StyleDetectiveOverlay {
 
         if (!block) {
             document.body.appendChild(this.createBlock());
+            applyPanelFontSize();
             this.addEventListeners();
 
             return true;
@@ -305,42 +380,62 @@ class StyleDetectiveOverlay {
 
 // === Keymap ===
 
-// Close the viewer on [Esc], freeze/unfreeze on [f], show CSS on [c].
+// Close on [Esc], freeze on [f], CSS definition on [c], font size on [+] / [-].
 function keyMap(e: KeyboardEvent): void {
     if (!overlay.isEnabled()) return;
 
     // ESC: Close the css viewer.
-    if (e.keyCode === 27) {
+    if (e.key === 'Escape' || e.keyCode === 27) {
         if (outlinedElement) outlinedElement.style.outline = '';
         overlay.disable();
+        return;
     }
 
-    if (e.altKey || e.ctrlKey) return;
+    // Don't steal browser/OS shortcuts (zoom, copy, etc.).
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
 
     // f: Freeze or Unfreeze the css viewer.
-    if (e.keyCode === 70) {
+    if (e.key === 'f' || e.key === 'F' || e.keyCode === 70) {
         if (overlay.haveEventListeners) overlay.freeze();
         else overlay.unfreeze();
+        return;
     }
 
     // c: Show css for selected element. window.prompt should suffice for now.
-    if (e.keyCode === 67) {
+    if (e.key === 'c' || e.key === 'C' || e.keyCode === 67) {
         window.prompt(
             'Simple Css Definition :\n\nYou may copy the code below then hit escape to continue.',
             inspectedCssDefinition,
         );
+        return;
+    }
+
+    // + / = / NumpadAdd: increase panel font size.
+    if (e.key === '+' || e.key === '=' || e.key === 'Add') {
+        e.preventDefault();
+        adjustPanelFontSize(PANEL_FONT_SIZE_STEP);
+        return;
+    }
+
+    // - / _ / NumpadSubtract: decrease panel font size.
+    if (e.key === '-' || e.key === '_' || e.key === 'Subtract') {
+        e.preventDefault();
+        adjustPanelFontSize(-PANEL_FONT_SIZE_STEP);
     }
 }
 
 // === Entry point ===
 
-// Toggle the viewer on (re-)injection.
+// Toggle the viewer on (re-)injection. Restore the last font size first so
+// enable() applies it to a freshly created panel.
 const overlay = new StyleDetectiveOverlay();
 
-if (overlay.isEnabled()) {
-    overlay.disable();
-} else {
-    overlay.enable();
-}
+void loadPanelFontSize().then(() => {
+    if (overlay.isEnabled()) {
+        overlay.disable();
+    } else {
+        overlay.enable();
+    }
+});
 
 document.onkeydown = keyMap;

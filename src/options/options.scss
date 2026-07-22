@@ -1,0 +1,22 @@
+/*!
+* CSS Quick Viewer — Displays a floating panel of any hovered element's CSS properties.
+*/
+
+// Classless mode auto-styles bare h1–h4, p, ul, img, etc. — no utility
+// classes needed for this simple, static page. Also gives dark-mode support
+// for free via prefers-color-scheme.
+@use '@picocss/pico/scss/pico.classless' as pico;
+
+main {
+    max-width: 700px;
+    margin-inline: auto;
+    padding: 1rem 1.5rem 3rem;
+}
+
+img {
+    float: right;
+    max-width: 240px;
+    margin: 0 0 1rem 1.5rem;
+    border: 1px solid var(--pico-muted-border-color);
+    border-radius: var(--pico-border-radius);
+}

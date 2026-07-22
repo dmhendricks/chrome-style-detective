@@ -1,11 +1,5 @@
 /*!
-* CSSViewer, A Google Chrome Extension for fellow web developers, web designers, and hobbyists.
-*
-* https://github.com/miled/cssviewer
-* https://chrome.google.com/webstore/detail/cssviewer/ggfgijbpiheegefliciemofobhmofgce
-*
-* This source code is licensed under the GNU General Public License,
-* Version 2. See the file LICENSE for more details.
+* CSS Viewer Classic — Displays a floating panel of any hovered element's CSS properties.
 */
 
 // Context-menu items that dump the current element to the page console. Each

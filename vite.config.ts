@@ -6,6 +6,8 @@ import manifest from './src/manifest.json' with { type: 'json' };
 
 const DIST = resolve(__dirname, 'dist');
 const CONTENT_OUT_DIR = resolve(DIST, 'src/content');
+const CONTENT_ENTRY = resolve(__dirname, 'src/content/cssviewer.ts');
+const CONTENT_CSS = resolve(__dirname, 'src/content/cssviewer.css');
 
 const copyLicense: Plugin = {
   name: 'copy-license',
@@ -24,14 +26,25 @@ const copyLicense: Plugin = {
 const contentScript: Plugin = {
   name: 'build-content-script',
   apply: 'build',
+  // The content script is built by a nested build() below, so its sources are
+  // not in the main build's module graph and `vite build --watch` wouldn't
+  // rebuild on edits. Register them with the watcher so a change re-triggers the
+  // build (and thus the closeBundle hook that rebuilds the content script).
+  buildStart() {
+    this.addWatchFile(CONTENT_ENTRY);
+    this.addWatchFile(CONTENT_CSS);
+  },
   async closeBundle() {
     await build({
       configFile: false,
+      // Don't copy public/ again — the main crxjs build already emits it to
+      // dist/, and this nested build would duplicate it under dist/src/content/.
+      publicDir: false,
       build: {
         outDir: CONTENT_OUT_DIR,
         emptyOutDir: false,
         lib: {
-          entry: resolve(__dirname, 'src/content/cssviewer.ts'),
+          entry: CONTENT_ENTRY,
           formats: ['iife'],
           name: 'CSSViewerClassic',
           fileName: () => 'cssviewer.js',
@@ -40,17 +53,24 @@ const contentScript: Plugin = {
     });
 
     mkdirSync(CONTENT_OUT_DIR, { recursive: true });
-    copyFileSync(
-      resolve(__dirname, 'src/content/cssviewer.css'),
-      resolve(CONTENT_OUT_DIR, 'cssviewer.css'),
-    );
+    copyFileSync(CONTENT_CSS, resolve(CONTENT_OUT_DIR, 'cssviewer.css'));
 
+    // Register the separately-built content files as web-accessible so the
+    // service worker can inject them. crxjs drops an empty web_accessible_resources
+    // array, so recreate the entry if it isn't present.
     const manifestPath = resolve(DIST, 'manifest.json');
     const emitted = JSON.parse(readFileSync(manifestPath, 'utf8'));
-    emitted.web_accessible_resources[0].resources.push(
-      'src/content/cssviewer.js',
-      'src/content/cssviewer.css',
-    );
+    const files = ['src/content/cssviewer.js', 'src/content/cssviewer.css'];
+    if (!Array.isArray(emitted.web_accessible_resources)) {
+      emitted.web_accessible_resources = [];
+    }
+    const war = emitted.web_accessible_resources;
+    const entry = war.find((r: { matches?: string[] }) => r.matches?.includes('<all_urls>'));
+    if (entry) {
+      entry.resources = [...(entry.resources ?? []), ...files];
+    } else {
+      war.push({ resources: files, matches: ['<all_urls>'] });
+    }
     writeFileSync(manifestPath, JSON.stringify(emitted, null, 2) + '\n');
   },
 };

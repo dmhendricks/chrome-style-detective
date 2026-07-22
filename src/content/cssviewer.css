@@ -1,17 +1,8 @@
 /*!
-* CSSViewer, A Google Chrome Extension for fellow web developers, web designers, and hobbyists.
-* https://github.com/cssviewer/cssviewer
-* https://chrome.google.com/webstore/detail/cssviewer/ggfgijbpiheegefliciemofobhmofgce
-*
-* Copyright (c) 2006, 2008 Nicolas Huon
-*
-* This source code is licensed under the GNU General Public License,
-* Version 2. See the file COPYING for more details.
+* CSS Viewer Classic — Displays a floating panel of any hovered element's CSS properties.
 */
 
-/*
-** Common styles. Almost everything is !important; here p
-*/
+/* Common styles. Almost everything is !important to override host-page CSS. */
 
 #CSSViewer_block,
 #CSSViewer_center,
@@ -22,97 +13,125 @@ span.CSSViewer_property,
 #CSSViewer_block h2,
 #CSSViewer_block ul,
 #CSSViewer_block li,
-#CSSViewer_block span
-{
-    font-family:"Lucida sans", helvetica, sans-serif !important;
-    font-size:10px !important;
-    z-index:9999 !important;
-    padding:0 !important;
-    margin:0 !important;
-    text-indent:0px !important;
-    text-align:left !important;
-    background:transparent !important;
+#CSSViewer_block span {
+    font-family: 'Lucida sans', helvetica, sans-serif !important;
+    font-size: 10px !important;
+    z-index: 9999 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    text-indent: 0px !important;
+    text-align: left !important;
+    background: transparent !important;
     visibility: visible !important;
-    width:auto !important;
-    height:auto !important;
+    width: auto !important;
+    height: auto !important;
     line-height: 20px;
 }
 
-#CSSViewer_block
-{
-    display:none;
-    min-width:332px !important;
-    font-size:10px !important;
-    color:#555 !important;
-    position:absolute !important;
+#CSSViewer_block {
+    display: none;
+    min-width: 332px !important;
+    font-size: 10px !important;
+    color: #555 !important;
+    position: absolute !important;
+    background: #fff !important;
+    border-radius: 6px !important;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25) !important;
 }
 
-#CSSViewer_block h1
-{
-    color:#fff !important;
-    font-size:12px !important;
-    text-transform:none !important;
-    text-align:center !important;
-    width:322px !important;
-    display:block !important;
-    background:var(--cssviewer-header) !important;
-    padding:30px 10px 5px 10px !important;
-    margin:5% auto;
-    line-height: 10px;
+#CSSViewer_block h1 {
+    color: #fff !important;
+    font-size: 12px !important;
+    text-transform: none !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+    width: auto !important;
+    display: block !important;
+    /* CSS-drawn banner (replaces the old fixed-height header PNG): a solid red
+       base with a subtle diagonal stripe overlay, rounded corners. Because it's
+       drawn rather than a fixed image, it grows to fit long selectors that wrap
+       to multiple lines instead of clipping or leaving a gap. */
+    background-color: #f87575 !important;
+    background-image: repeating-linear-gradient(
+        -45deg,
+        rgba(255, 255, 255, 0.15) 0,
+        rgba(255, 255, 255, 0.15) 2px,
+        transparent 2px,
+        transparent 6px
+    ) !important;
+    border-radius: 6px 6px 0 0 !important;
+    padding: 10px 16px !important;
+    margin: 0 !important;
+    line-height: 16px !important;
+    /* Wrap long selectors and break anywhere so no single long token overflows. */
+    white-space: normal !important;
+    overflow-wrap: break-word !important;
+    word-break: break-all !important;
 }
 
-#CSSViewer_center
-{
-    padding:10px 32px 0 32px !important;
-    overflow:hidden !important;
-    background:var(--cssviewer-body) repeat-y !important;
+#CSSViewer_center {
+    padding: 10px 32px 0 32px !important;
+    overflow: hidden !important;
+    background: #fff !important;
 }
 
-#CSSViewer_footer
-{
-    padding-top:5px;
-    color:#555 !important;
-    text-align:center !important;
-    width:332px !important;
-    height:30px !important;
-    display:block !important;
-    background:var(--cssviewer-footer) !important;
+#CSSViewer_footer {
+    padding-top: 5px !important;
+    color: #555 !important;
+    text-align: center !important;
+    width: auto !important;
+    height: 30px !important;
+    display: block !important;
+    background: #fff !important;
+    border-radius: 0 0 6px 6px !important;
 }
 
-.CSSViewer_category
-{
-    background:var(--cssviewer-list) no-repeat top left !important;
-    padding:0 5px !important;
+.CSSViewer_category {
+    /* Light divider line above each property category (was list.png). */
+    border-top: 1px solid #f0f0f0 !important;
+    padding: 0 5px !important;
 }
 
-#CSSViewer_block h2
-{
-    padding-top:6px !important;
-    color:#6a8e46 !important;
-    font-size:12px !important;
-    text-align:left !important;
-    letter-spacing:-0.5px !important;
+/* The first category needs no divider (the header sits above it). */
+#CSSViewer_center > .CSSViewer_category:first-child {
+    border-top: 0 !important;
 }
 
-#CSSViewer_block ul
-{
-    padding:5px 5px 10px 5px !important;
-    list-style:none !important;
-    width:282px !important;
+#CSSViewer_block h2 {
+    padding-top: 6px !important;
+    color: #6a8e46 !important;
+    font-size: 12px !important;
+    text-align: left !important;
+    letter-spacing: -0.5px !important;
 }
 
-#CSSViewer_block li
-{
-    background:var(--cssviewer-bullet) no-repeat left center !important;
-    padding-left:10px !important;
+#CSSViewer_block ul {
+    padding: 5px 5px 10px 5px !important;
+    list-style: none !important;
+    width: auto !important;
 }
 
+#CSSViewer_block li {
+    position: relative !important;
+    padding-left: 10px !important;
+}
 
-#CSSViewer_block span.CSSViewer_property
-{
-    color:#888 !important;
-    float:left !important;
-    width:100px !important;
-    display:block !important;
-    overflow:hidden !important;
+/* Small pink bullet marker (was bullet.png — a 5px pink plus/dot). */
+#CSSViewer_block li::before {
+    content: '' !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 50% !important;
+    width: 3px !important;
+    height: 3px !important;
+    margin-top: -1px !important;
+    background: #ff8f8f !important;
+}
+
+#CSSViewer_block span.CSSViewer_property {
+    color: #888 !important;
+    float: left !important;
+    width: 100px !important;
+    display: block !important;
+    overflow: hidden !important;
 }

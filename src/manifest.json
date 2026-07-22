@@ -2,7 +2,7 @@
     "name": "CSS Viewer Classic",
     "manifest_version": 3,
     "version": "1.8.0",
-    "description": "A simple CSS property viewer.",
+    "description": "Displays a floating panel of any hovered element's CSS properties.",
     "icons": {
         "16": "img/16.png",
         "22": "img/22.png",
@@ -19,18 +19,6 @@
         "default_icon": "img/16.png",
         "default_title": "CSS Viewer Classic"
     },
-    "web_accessible_resources": [
-        {
-            "resources": [
-                "img/header.png",
-                "img/body.png",
-                "img/list.png",
-                "img/footer.png",
-                "img/bullet.png"
-            ],
-            "matches": ["<all_urls>"]
-        }
-    ],
     "permissions": [
         "scripting",
         "contextMenus"

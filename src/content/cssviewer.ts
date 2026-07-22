@@ -510,11 +510,23 @@ function appendCssDefinition(element: CSSStyleDeclaration, props: string[]): voi
     }
 }
 
+// True if the element is the panel itself or lives inside it. The panel is
+// appended to document.body, so AddEventListeners() attaches hover handlers to
+// its own children too; without this guard, hovering the panel would re-inspect
+// and reposition it, causing a flicker feedback loop (worst near the right edge,
+// where small width changes flip the panel from one side of the cursor to the
+// other every frame).
+function isInsidePanel(el: HTMLElement | null): boolean {
+    return !!el && !!el.closest && el.closest('#CSSViewer_block') != null;
+}
+
 function CSSViewerMouseOver(this: HTMLElement, e: MouseEvent): void {
     // The hovered element is `this`; alias it so it can be stashed into module
     // state (CSSViewer_element) for the console dump and freeze features to read.
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const el = this;
+
+    if (isInsidePanel(el)) return;
 
     // Block
     const document = GetCurrentDocument();
@@ -593,16 +605,20 @@ function CSSViewerMouseOver(this: HTMLElement, e: MouseEvent): void {
 }
 
 function CSSViewerMouseOut(this: HTMLElement, e: MouseEvent): void {
+    if (isInsidePanel(this)) return;
+
     this.style.outline = '';
 
     e.stopPropagation();
 }
 
 function CSSViewerMouseMove(this: HTMLElement, e: MouseEvent): void {
+    if (isInsidePanel(this)) return;
+
     const document = GetCurrentDocument();
     const block = document.getElementById('CSSViewer_block');
 
-    if (!block || !document.defaultView) {
+    if (!block) {
         return;
     }
 
@@ -610,12 +626,10 @@ function CSSViewerMouseMove(this: HTMLElement, e: MouseEvent): void {
 
     const pageWidth = window.innerWidth;
     const pageHeight = window.innerHeight;
-    const blockWidth = 332;
-    const blockHeightStr = document.defaultView
-        .getComputedStyle(block, null)
-        .getPropertyValue('height');
-
-    const blockHeight = Number(blockHeightStr.substr(0, blockHeightStr.length - 2));
+    // Measure the actual rendered size — the panel grows wider than a fixed
+    // width for long values, so a hardcoded width mispositions it near the edge.
+    const blockWidth = block.offsetWidth;
+    const blockHeight = block.offsetHeight;
 
     if (e.pageX + blockWidth > pageWidth) {
         if (e.pageX - blockWidth - 10 > 0) block.style.left = e.pageX - blockWidth - 40 + 'px';
@@ -718,7 +732,7 @@ class CSSViewer {
 
             footer.appendChild(
                 document.createTextNode(
-                    'CSS Viewer Classic 1.8.0. keys: [F] Un/Freeze &bull; [C] Copy &bull; [Esc] Close',
+                    'CSS Viewer Classic 1.8.0. Keys: [F] Un/Freeze • [C] Copy • [Esc] Close',
                 ),
             );
             block.appendChild(footer);

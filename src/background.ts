@@ -50,7 +50,7 @@ function isRestrictedUrl(url: string | undefined): boolean {
     );
 }
 
-// Toolbar icon / keyboard shortcut: inject cssviewer.css + cssviewer.js into
+// Toolbar icon / keyboard shortcut: inject style.css + core.js into
 // the active tab. The content script toggles itself on/off on re-injection.
 chrome.action.onClicked.addListener(function (tab) {
     if (!tab || !tab.id || isRestrictedUrl(tab.url)) {
@@ -59,16 +59,16 @@ chrome.action.onClicked.addListener(function (tab) {
 
     chrome.scripting.insertCSS({
         target: { tabId: tab.id },
-        files: ['src/content/cssviewer.css'],
+        files: ['src/content/style.css'],
     });
 
     chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        files: ['src/content/cssviewer.js'],
+        files: ['src/content/core.js'],
     });
 });
 
-// Context-menu clicks: call the page-side helper that cssviewer.js defined in
+// Context-menu clicks: call the page-side helper that core.js defined in
 // the isolated world. `func` injection replaces MV2's banned executeScript({code}).
 chrome.contextMenus.onClicked.addListener(function (info, tab) {
     if (!tab || !tab.id || info.menuItemId === 'styledetective-console') {
@@ -78,7 +78,7 @@ chrome.contextMenus.onClicked.addListener(function (info, tab) {
     chrome.scripting.executeScript({
         target: { tabId: tab.id },
         // This function is serialized and runs in the page's isolated world, where
-        // styleDetectiveCopyCssToConsole was defined by cssviewer.ts on a prior injection.
+        // styleDetectiveCopyCssToConsole was defined by core.ts on a prior injection.
         func: function (type: string) {
             const fn = (globalThis as Record<string, unknown>).styleDetectiveCopyCssToConsole;
             if (typeof fn === 'function') {

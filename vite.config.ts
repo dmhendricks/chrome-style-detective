@@ -3,12 +3,12 @@ import { resolve } from 'node:path';
 import { build, defineConfig, type Plugin } from 'vite';
 import { crx, type ManifestV3Export } from '@crxjs/vite-plugin';
 import * as sass from 'sass';
-import manifest from './src/manifest.json' with { type: 'json' };
+import manifest from './src/manifest.json';
 
 const DIST = resolve(__dirname, 'dist');
 const CONTENT_OUT_DIR = resolve(DIST, 'src/content');
-const CONTENT_ENTRY = resolve(__dirname, 'src/content/cssviewer.ts');
-const CONTENT_SCSS = resolve(__dirname, 'src/content/cssviewer.scss');
+const CONTENT_ENTRY = resolve(__dirname, 'src/content/core.ts');
+const CONTENT_SCSS = resolve(__dirname, 'src/content/style.scss');
 
 const copyLicense: Plugin = {
   name: 'copy-license',
@@ -21,7 +21,7 @@ const copyLicense: Plugin = {
 // The content script is injected at runtime via chrome.scripting.executeScript
 // ({ files: [...] }), which only accepts a plain classic .js file. crxjs can't
 // produce that (it matches web_accessible_resource entries to on-disk source
-// paths and won't transpile .ts -> .js for them), so we build cssviewer.ts on
+// paths and won't transpile .ts -> .js for them), so we build core.ts on
 // its own — as an IIFE, unhashed — copy its standalone CSS next to it, and add
 // both to the emitted manifest's web_accessible_resources.
 const contentScript: Plugin = {
@@ -48,24 +48,24 @@ const contentScript: Plugin = {
           entry: CONTENT_ENTRY,
           formats: ['iife'],
           name: 'StyleDetectiveOverlay',
-          fileName: () => 'cssviewer.js',
+          fileName: () => 'core.js',
         },
       },
     });
 
     // The service worker injects the stylesheet via chrome.scripting.insertCSS
     // ({ files: [...] }), which needs a plain .css file — so compile the Sass
-    // source to dist/src/content/cssviewer.css here.
+    // source to dist/src/content/style.css here.
     mkdirSync(CONTENT_OUT_DIR, { recursive: true });
     const compiledCss = sass.compile(CONTENT_SCSS).css;
-    writeFileSync(resolve(CONTENT_OUT_DIR, 'cssviewer.css'), compiledCss + '\n');
+    writeFileSync(resolve(CONTENT_OUT_DIR, 'style.css'), compiledCss + '\n');
 
     // Register the separately-built content files as web-accessible so the
     // service worker can inject them. crxjs drops an empty web_accessible_resources
     // array, so recreate the entry if it isn't present.
     const manifestPath = resolve(DIST, 'manifest.json');
     const emitted = JSON.parse(readFileSync(manifestPath, 'utf8'));
-    const files = ['src/content/cssviewer.js', 'src/content/cssviewer.css'];
+    const files = ['src/content/core.js', 'src/content/style.css'];
     if (!Array.isArray(emitted.web_accessible_resources)) {
       emitted.web_accessible_resources = [];
     }

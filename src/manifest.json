@@ -2,9 +2,7 @@
     "name": "CSS Viewer Classic",
     "manifest_version": 3,
     "version": "1.8.0",
-
     "description": "A simple CSS property viewer.",
-
     "icons": {
         "16": "img/16.png",
         "22": "img/22.png",
@@ -12,18 +10,15 @@
         "32": "img/32.png",
         "48": "img/48.png"
     },
-
-    "options_page": "option.html",
-
+    "options_page": "src/options/options.html",
     "background": {
-        "service_worker": "js/background.js"
+        "service_worker": "src/background.ts",
+        "type": "module"
     },
-
     "action": {
         "default_icon": "img/16.png",
         "default_title": "CSS Viewer Classic"
     },
-
     "web_accessible_resources": [
         {
             "resources": [
@@ -36,18 +31,15 @@
             "matches": ["<all_urls>"]
         }
     ],
-
     "permissions": [
         "scripting",
         "contextMenus"
     ],
-
     "host_permissions": [
         "http://*/*",
         "https://*/*",
         "file://*/*"
     ],
-
     "commands": {
         "_execute_action": {
             "suggested_key": {

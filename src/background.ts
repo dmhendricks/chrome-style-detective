@@ -10,7 +10,7 @@
 
 // Context-menu items that dump the current element to the page console. Each
 // value is passed as the `type` argument to the page-side cssViewerCopyCssToConsole().
-var CONTEXT_MENU_ITEMS = [
+const CONTEXT_MENU_ITEMS = [
     { id: 'el', title: 'element' },
     { id: 'id', title: 'element.id' },
     { id: 'tagName', title: 'element.tagName' },
@@ -24,7 +24,7 @@ var CONTEXT_MENU_ITEMS = [
 // Register the context menus and open the options page on install/update.
 chrome.runtime.onInstalled.addListener(function (details) {
     chrome.contextMenus.removeAll(function () {
-        var parent = chrome.contextMenus.create({
+        const parent = chrome.contextMenus.create({
             id: 'cssviewer-console',
             title: 'CSS Viewer Classic console',
             contexts: ['all'],
@@ -46,7 +46,7 @@ chrome.runtime.onInstalled.addListener(function (details) {
 });
 
 // Pages where injection is not allowed / not useful.
-function isRestrictedUrl(url) {
+function isRestrictedUrl(url: string | undefined): boolean {
     return (
         !url ||
         url.indexOf('https://chrome.google.com') === 0 ||
@@ -65,12 +65,12 @@ chrome.action.onClicked.addListener(function (tab) {
 
     chrome.scripting.insertCSS({
         target: { tabId: tab.id },
-        files: ['css/cssviewer.css'],
+        files: ['src/content/cssviewer.css'],
     });
 
     chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        files: ['js/cssviewer.js'],
+        files: ['src/content/cssviewer.js'],
     });
 });
 
@@ -83,11 +83,16 @@ chrome.contextMenus.onClicked.addListener(function (info, tab) {
 
     chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        func: function (type) {
-            if (typeof cssViewerCopyCssToConsole === 'function') {
-                cssViewerCopyCssToConsole(type);
+        // This function is serialized and runs in the page's isolated world, where
+        // cssViewerCopyCssToConsole was defined by cssviewer.ts on a prior injection.
+        func: function (type: string) {
+            const fn = (globalThis as Record<string, unknown>).cssViewerCopyCssToConsole;
+            if (typeof fn === 'function') {
+                fn(type);
             } else {
-                console.warn('CSS Viewer Classic is not active on this page. Click the CSS Viewer Classic icon first.');
+                console.warn(
+                    'CSS Viewer Classic is not active on this page. Click the CSS Viewer Classic icon first.',
+                );
             }
         },
         args: [String(info.menuItemId)],

@@ -1,3 +1,4 @@
+// @ts-nocheck — legacy content script; ported verbatim in Step 1, typed in Step 2.
 /*!
 * CSSViewer, A Google Chrome Extension for fellow web developers, web designers, and hobbyists.
 *
@@ -1058,3 +1059,9 @@ else{
 
 // Set event handler for the CssViewer
 document.onkeydown = CssViewerKeyMap;
+
+// The build wraps this file in an IIFE, so top-level functions no longer attach
+// to the page's global scope automatically. The context-menu handler in the
+// service worker injects a separate function that calls this by name, so expose
+// it explicitly. It closes over the same CSSViewer_element that hovering updates.
+globalThis.cssViewerCopyCssToConsole = cssViewerCopyCssToConsole;

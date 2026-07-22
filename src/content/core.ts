@@ -1,10 +1,8 @@
 /*!
  * Style Detective — content-script entry point.
  *
- * Wires the panel renderer (lib/panel) to hover events, manages enable/disable/
- * freeze state, and exposes the console-dump helper on globalThis so the service
- * worker's context-menu handler can call it. Bundled as a single IIFE by the
- * nested Vite build in vite.config.ts.
+ * Wires the panel renderer (lib/panel) to hover events and manages enable/disable/
+ * freeze state. Bundled as a single IIFE by the nested Vite build in vite.config.ts.
  */
 
 import { CSS_CATEGORIES, propertiesFor } from './lib/properties';
@@ -13,9 +11,8 @@ import { selectorLabel } from './lib/dom';
 
 // === Module state ===
 
-// The element currently being inspected, and its generated CSS text. Updated on
-// every mouseover; read by the context-menu console dump and the [c] key prompt.
-let inspectedElement: HTMLElement | null = null;
+// Generated CSS text for the element currently being inspected. Updated on every
+// mouseover; read by the [c] key prompt.
 let inspectedCssDefinition = '';
 let outlinedElement: HTMLElement | null = null;
 
@@ -65,8 +62,7 @@ function isInsidePanel(el: HTMLElement | null): boolean {
 }
 
 function onMouseOver(this: HTMLElement, e: MouseEvent): void {
-    // The hovered element is `this`; alias it so it can be stashed into module
-    // state (inspectedElement) for the console dump and freeze features to read.
+    // The hovered element is `this`; alias it for the rest of the handler.
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const el = this;
 
@@ -101,8 +97,6 @@ function onMouseOver(this: HTMLElement, e: MouseEvent): void {
     const style = document.defaultView.getComputedStyle(el, null);
 
     updatePanel(style, el.tagName);
-
-    inspectedElement = el;
 
     removeElement('styleDetectiveInsertMessage');
 
@@ -333,26 +327,6 @@ class StyleDetectiveOverlay {
     }
 }
 
-// === Console dump ===
-
-// Copy the current element's CSS to the console. Called by the service worker's
-// context-menu handler (see globalThis assignment at the end of this file).
-function copyCssToConsole(type: string): void {
-    if (!inspectedElement) return;
-    const view = document.defaultView;
-
-    if (type == 'el') console.log(inspectedElement);
-    else if (type == 'id') console.log(inspectedElement.id);
-    else if (type == 'tagName') console.log(inspectedElement.tagName);
-    else if (type == 'className') console.log(inspectedElement.className);
-    else if (type == 'style') console.log(inspectedElement.style);
-    else if (type == 'cssText' && view)
-        console.log(view.getComputedStyle(inspectedElement, null).cssText);
-    else if (type == 'getComputedStyle' && view)
-        console.log(view.getComputedStyle(inspectedElement, null));
-    else if (type == 'simpleCssDefinition') console.log(inspectedCssDefinition);
-}
-
 // === Keymap ===
 
 // Close the viewer on [Esc], freeze/unfreeze on [f], show CSS on [c].
@@ -394,9 +368,3 @@ if (overlay.isEnabled()) {
 }
 
 document.onkeydown = keyMap;
-
-// The build wraps this file in an IIFE, so top-level functions no longer attach
-// to the page's global scope automatically. The context-menu handler in the
-// service worker injects a separate function that calls this by name, so expose
-// it explicitly. It closes over the same inspectedElement that hovering updates.
-(globalThis as Record<string, unknown>).styleDetectiveCopyCssToConsole = copyCssToConsole;

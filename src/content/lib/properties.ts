@@ -82,11 +82,11 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
         properties: [
             { name: 'width' },
             { name: 'height' },
+            { name: 'aspect-ratio' },
             { name: 'min-width' },
             { name: 'min-height' },
             { name: 'max-width' },
             { name: 'max-height' },
-            { name: 'aspect-ratio' },
             { name: 'margin' },
             { name: 'padding' },
             { name: 'border' },

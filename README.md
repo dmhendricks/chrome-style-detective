@@ -28,8 +28,9 @@ Click the toolbar icon (or press `Ctrl+Shift+S` on Windows/Linux/ChromeOS, `Cmd+
 Keyboard shortcuts while the viewer is active:
 
 - `F` to freeze or unfreeze the panel in place
-- `C` to show a simple CSS definition for the selected element
+- `C` to copy a simple CSS definition for the selected element to the clipboard
 - `+` / `-` to increase or decrease the panel font size
+- `0` to reset the panel font size
 - `Esc` to close the viewer
 
 ## Known Issues

@@ -14,8 +14,14 @@ import {
     enabledPropertyNames,
     isPropertyEnabled,
 } from './properties';
-import { getFileName, isInArray, removeExtraFloat, rgbToHex } from './format';
-import { colorSwatch, el, setValueContent } from './dom';
+import {
+    formatAspectRatio,
+    getFileName,
+    isInArray,
+    removeExtraFloat,
+    rgbToHex,
+} from './format';
+import { colorSwatch, el, selectorLabel, setValueContent } from './dom';
 
 const ID_PREFIX = 'StyleDetectiveOverlay__';
 
@@ -185,9 +191,14 @@ function updateColorBg(style: CSSStyleDeclaration): void {
     );
 }
 
-function updateBox(style: CSSStyleDeclaration): void {
+function updateBox(style: CSSStyleDeclaration, el: HTMLElement): void {
     setCSSPropertyIf(style, 'height', removeExtraFloat(getCSSProperty(style, 'height')) != 'auto');
     setCSSPropertyIf(style, 'width', removeExtraFloat(getCSSProperty(style, 'width')) != 'auto');
+
+    // Rendered box ratio (from layout), not only the CSS aspect-ratio property.
+    const rect = el.getBoundingClientRect();
+    const renderedRatio = formatAspectRatio(rect.width, rect.height);
+    setCSSPropertyValueIf('aspect-ratio', renderedRatio, renderedRatio !== '');
 
     const border = (side: string): string =>
         removeExtraFloat(getCSSProperty(style, `border-${side}-width`)) +
@@ -262,7 +273,6 @@ function updateBox(style: CSSStyleDeclaration): void {
     setCSSPropertyIf(style, 'border-radius', !isRadiusZero(borderRadius));
 
     setCSSPropertyIf(style, 'box-sizing', getCSSProperty(style, 'box-sizing') != 'content-box');
-    setCSSPropertyIf(style, 'aspect-ratio', getCSSProperty(style, 'aspect-ratio') != 'auto');
     setCSSPropertyIf(style, 'object-fit', getCSSProperty(style, 'object-fit') != 'fill');
 }
 
@@ -439,15 +449,23 @@ function updateEffects(style: CSSStyleDeclaration): void {
 }
 
 /** Update every category from a hovered element's computed style. */
-export function updatePanel(style: CSSStyleDeclaration, tagName: string): void {
+export function updatePanel(style: CSSStyleDeclaration, el: HTMLElement): void {
     updateFontText(style);
     updateColorBg(style);
-    updateBox(style);
+    updateBox(style, el);
     updateLayout(style);
-    updateTable(style, tagName);
-    updateList(style, tagName);
+    updateTable(style, el.tagName);
+    updateList(style, el.tagName);
     updateMisc(style);
     updateEffects(style);
+}
+
+/** Update the header selector label for the hovered element. */
+export function updateHeader(el: HTMLElement): void {
+    const selector = currentDocument().querySelector(
+        '#StyleDetectiveOverlay .StyleDetectiveOverlay__selector',
+    );
+    if (selector) selector.textContent = selectorLabel(el);
 }
 
 /**
@@ -456,7 +474,9 @@ export function updatePanel(style: CSSStyleDeclaration, tagName: string): void {
  * Disabled catalog entries are omitted (available later for a property picker).
  */
 export function createBlock(doc: Document): HTMLDivElement {
-    const header = el(doc, 'h1');
+    const header = el(doc, 'h1', {
+        children: [el(doc, 'span', { className: 'StyleDetectiveOverlay__selector' })],
+    });
 
     const categoryDivs = CSS_CATEGORIES.filter(
         (category) => enabledPropertyNames(category).length > 0,

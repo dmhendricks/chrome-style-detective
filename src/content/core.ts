@@ -5,8 +5,11 @@
  * freeze state. Bundled as a single IIFE by the nested Vite build in vite.config.ts.
  */
 
+import { copyTextToClipboard } from './lib/clipboard';
 import { CSS_CATEGORIES, propertiesFor } from './lib/properties';
 import { createBlock, updateHeader, updatePanel } from './lib/panel';
+
+const FROZEN_CLASS = 'StyleDetectiveOverlay--frozen';
 
 // === Module state ===
 
@@ -284,38 +287,11 @@ async function copyCssDefinition(): Promise<void> {
     }
 
     try {
-        if (navigator.clipboard?.writeText) {
-            await navigator.clipboard.writeText(inspectedCssDefinition);
-        } else {
-            copyTextFallback(inspectedCssDefinition);
-        }
+        await copyTextToClipboard(inspectedCssDefinition);
         flashMessage('CSS definition copied to clipboard');
     } catch {
-        try {
-            copyTextFallback(inspectedCssDefinition);
-            flashMessage('CSS definition copied to clipboard');
-        } catch {
-            flashMessage('Could not copy to clipboard');
-        }
+        flashMessage('Could not copy to clipboard');
     }
-}
-
-/** Legacy copy path for pages where the Clipboard API is unavailable. */
-function copyTextFallback(text: string): void {
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.setAttribute('readonly', '');
-    textarea.style.position = 'fixed';
-    textarea.style.top = '0';
-    textarea.style.left = '0';
-    textarea.style.opacity = '0';
-    document.body.appendChild(textarea);
-    textarea.focus();
-    textarea.select();
-
-    const ok = document.execCommand('copy');
-    document.body.removeChild(textarea);
-    if (!ok) throw new Error('execCommand copy failed');
 }
 
 // === Overlay controller ===
@@ -409,7 +385,10 @@ class StyleDetectiveOverlay {
         const message = document.getElementById('styleDetectiveInsertMessage');
 
         if (block || message) {
-            if (block) document.body.removeChild(block);
+            if (block) {
+                block.classList.remove(FROZEN_CLASS);
+                document.body.removeChild(block);
+            }
             if (message) document.body.removeChild(message);
             this.removeEventListeners();
 
@@ -424,6 +403,7 @@ class StyleDetectiveOverlay {
         const block = currentDocument().getElementById('StyleDetectiveOverlay');
         if (block && this.haveEventListeners) {
             this.removeEventListeners();
+            block.classList.add(FROZEN_CLASS);
 
             return true;
         }
@@ -437,6 +417,7 @@ class StyleDetectiveOverlay {
         if (block && !this.haveEventListeners) {
             // Remove the red outline
             if (outlinedElement) outlinedElement.style.outline = '';
+            block.classList.remove(FROZEN_CLASS);
             this.addEventListeners();
 
             return true;

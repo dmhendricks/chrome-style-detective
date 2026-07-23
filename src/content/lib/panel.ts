@@ -21,23 +21,14 @@ import {
     removeExtraFloat,
     rgbToHex,
 } from './format';
-import { colorSwatch, el, selectorLabel, setValueContent } from './dom';
+import { colorValue, el, selectorLabel, setValueContent } from './dom';
 
 const ID_PREFIX = 'StyleDetectiveOverlay__';
+const ROW_HIDDEN = 'StyleDetectiveOverlay__row--hidden';
+const CATEGORY_HIDDEN = 'StyleDetectiveOverlay__category--hidden';
 
 function currentDocument(): Document {
     return window.document;
-}
-
-/** Build a swatch + hex-text fragment for a colour value. */
-function colorValue(doc: Document, rgb: string): DocumentFragment {
-    const hex = rgbToHex(rgb);
-    const frag = doc.createDocumentFragment();
-
-    frag.appendChild(colorSwatch(doc, hex));
-    frag.appendChild(doc.createTextNode(' ' + hex));
-
-    return frag;
 }
 
 function getCSSProperty(style: CSSStyleDeclaration, property: string): string {
@@ -55,9 +46,21 @@ function rowElement(property: string): HTMLElement | null {
     return currentDocument().getElementById(ID_PREFIX + property);
 }
 
+function setRowVisible(li: HTMLElement, visible: boolean): void {
+    li.classList.toggle(ROW_HIDDEN, !visible);
+}
+
+function setCategoryVisible(div: HTMLElement, visible: boolean): void {
+    div.classList.toggle(CATEGORY_HIDDEN, !visible);
+}
+
 function setCSSProperty(style: CSSStyleDeclaration, property: string): void {
+    const li = rowElement(property);
     const target = valueSpan(property);
-    if (target) setValueContent(target, style.getPropertyValue(property));
+    if (!li || !target) return;
+
+    setValueContent(target, style.getPropertyValue(property));
+    setRowVisible(li, true);
 }
 
 function setCSSPropertyIf(
@@ -71,12 +74,12 @@ function setCSSPropertyIf(
     if (condition) {
         const target = li.lastChild as HTMLElement | null;
         if (target) setValueContent(target, style.getPropertyValue(property));
-        li.style.display = 'block';
+        setRowVisible(li, true);
 
         return 1;
     }
 
-    li.style.display = 'none';
+    setRowVisible(li, false);
 
     return 0;
 }
@@ -87,7 +90,7 @@ function setCSSPropertyValue(property: string, value: string | Node): void {
     if (!li || !target) return;
 
     setValueContent(target, value);
-    li.style.display = 'block';
+    setRowVisible(li, true);
 }
 
 function setCSSPropertyValueIf(property: string, value: string | Node, condition: boolean): number {
@@ -97,29 +100,29 @@ function setCSSPropertyValueIf(property: string, value: string | Node, condition
     if (condition) {
         const target = li.lastChild as HTMLElement | null;
         if (target) setValueContent(target, value);
-        li.style.display = 'block';
+        setRowVisible(li, true);
 
         return 1;
     }
 
-    li.style.display = 'none';
+    setRowVisible(li, false);
 
     return 0;
 }
 
 function hideCSSProperty(property: string): void {
     const li = rowElement(property);
-    if (li) li.style.display = 'none';
+    if (li) setRowVisible(li, false);
 }
 
 function hideCSSCategory(category: string): void {
     const div = currentDocument().getElementById(ID_PREFIX + category);
-    if (div) div.style.display = 'none';
+    if (div) setCategoryVisible(div, false);
 }
 
 function showCSSCategory(category: string): void {
     const div = currentDocument().getElementById(ID_PREFIX + category);
-    if (div) div.style.display = 'block';
+    if (div) setCategoryVisible(div, true);
 }
 
 function isRadiusZero(value: string): boolean {
@@ -157,11 +160,11 @@ function updateFontText(style: CSSStyleDeclaration): void {
 function updateColorBg(style: CSSStyleDeclaration): void {
     const doc = currentDocument();
 
-    setCSSPropertyValue('color', colorValue(doc, getCSSProperty(style, 'color')));
+    setCSSPropertyValue('color', colorValue(doc, rgbToHex(getCSSProperty(style, 'color'))));
 
     setCSSPropertyValueIf(
         'background-color',
-        colorValue(doc, getCSSProperty(style, 'background-color')),
+        colorValue(doc, rgbToHex(getCSSProperty(style, 'background-color'))),
         getCSSProperty(style, 'background-color') != 'transparent',
     );
     setCSSPropertyIf(
@@ -484,6 +487,9 @@ export function createBlock(doc: Document): HTMLDivElement {
         const rows = category.properties.filter(isPropertyEnabled).map((property) =>
             el(doc, 'li', {
                 id: ID_PREFIX + property.name,
+                // Hidden until the first updatePanel pass fills values — avoids
+                // empty-row first paint glitches.
+                className: ROW_HIDDEN,
                 children: [
                     el(doc, 'span', {
                         className: 'StyleDetectiveOverlay__property',
@@ -494,9 +500,16 @@ export function createBlock(doc: Document): HTMLDivElement {
             }),
         );
 
+        // List/Table/Misc/Effects start hidden; updatePanel reveals them when
+        // the hovered element has something to show.
+        const gated = category.key === 'pList' || category.key === 'pTable' ||
+            category.key === 'pMisc' || category.key === 'pEffect';
+
         return el(doc, 'div', {
             id: ID_PREFIX + category.key,
-            className: 'StyleDetectiveOverlay__category',
+            className: gated
+                ? `StyleDetectiveOverlay__category ${CATEGORY_HIDDEN}`
+                : 'StyleDetectiveOverlay__category',
             children: [el(doc, 'h2', { text: category.title }), el(doc, 'ul', { children: rows })],
         });
     });

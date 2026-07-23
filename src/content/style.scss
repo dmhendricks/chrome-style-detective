@@ -43,6 +43,8 @@
     --sd-kbd-bg: #f3f5f8;
     --sd-kbd-border: #c9d0da;
     --sd-kbd-text: #3d4654;
+    --sd-copy-affordance: #888;
+    --sd-copy-affordance-hover: #555;
 
     // Dimensions — width tracks font size (10px → 332/400 base) so larger
     // text gets a proportionally wider panel, still capped to the viewport.
@@ -135,8 +137,8 @@
     }
 
     .StyleDetectiveOverlay__category {
-        // Contain any legacy floats and keep category headers from wrapping
-        // into a previous row's value column on first paint.
+        // flow-root contains the section; visibility is toggled via the
+        // --hidden modifier so inline style.display can't fight !important.
         display: flow-root !important;
         padding: 0 5px !important;
         // Light divider above each group (was list.png)...
@@ -145,6 +147,10 @@
         // ...except the first, which sits directly under the banner.
         &:first-child {
             border-top: 0 !important;
+        }
+
+        &--hidden {
+            display: none !important;
         }
     }
 
@@ -165,10 +171,15 @@
         // Flex instead of float:left on the label — floats were escaping the
         // row when the value span was still empty on first hover, so the next
         // category's h2 wrapped into the value column until a later update.
+        // Visibility uses --hidden so hide/show isn't overridden by !important.
         display: flex !important;
         align-items: flex-start !important;
         position: relative !important;
         padding-left: 10px !important;
+
+        &.StyleDetectiveOverlay__row--hidden {
+            display: none !important;
+        }
 
         // Small square bullet marker (was bullet.png).
         &::before {
@@ -191,8 +202,15 @@
 
         // Property value — sibling span grows/shrinks beside the label.
         + span {
+            display: flex !important;
+            align-items: center !important;
+            flex-wrap: wrap !important;
             flex: 1 1 auto !important;
             min-width: 0 !important;
+            line-height: normal !important;
+            // Flex collapses boundary whitespace between items; preserve the
+            // space after ":" (and within values like "1px solid #…").
+            white-space: pre-wrap !important;
             overflow: hidden !important;
             overflow-wrap: break-word !important;
             word-break: break-word !important;
@@ -250,5 +268,48 @@
         color: var(--sd-label) !important;
         font-size: var(--sd-font-size) !important;
         line-height: 1 !important;
+    }
+
+    .StyleDetectiveOverlay__color-swatch {
+        flex: 0 0 auto !important;
+        box-sizing: border-box !important;
+        width: 8px !important;
+        height: 8px !important;
+        margin-right: 4px !important;
+        border: 1px solid #000 !important;
+    }
+
+    .StyleDetectiveOverlay__color-hash-group {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 4px !important;
+    }
+
+    .StyleDetectiveOverlay__copy-affordance {
+        visibility: hidden !important;
+        cursor: pointer !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        line-height: 1 !important;
+        padding: 0 2px !important;
+        color: var(--sd-copy-affordance) !important;
+        user-select: none !important;
+        flex: 0 0 auto !important;
+
+        svg {
+            width: calc(var(--sd-font-size) * 1.2) !important;
+            height: calc(var(--sd-font-size) * 1.2) !important;
+        }
+    }
+
+    &.StyleDetectiveOverlay--frozen {
+        .StyleDetectiveOverlay__color-hash-group {
+            cursor: pointer !important;
+
+            &:hover .StyleDetectiveOverlay__copy-affordance {
+                visibility: visible !important;
+                color: var(--sd-copy-affordance-hover) !important;
+            }
+        }
     }
 }

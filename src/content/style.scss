@@ -135,6 +135,9 @@
     }
 
     .StyleDetectiveOverlay__category {
+        // Contain any legacy floats and keep category headers from wrapping
+        // into a previous row's value column on first paint.
+        display: flow-root !important;
         padding: 0 5px !important;
         // Light divider above each group (was list.png)...
         border-top: 1px solid var(--sd-divider) !important;
@@ -146,6 +149,7 @@
     }
 
     h2 {
+        clear: both !important;
         padding-top: 6px !important;
         color: var(--sd-heading) !important;
         font-size: calc(var(--sd-font-size) * 1.2) !important;
@@ -158,6 +162,11 @@
     }
 
     li {
+        // Flex instead of float:left on the label — floats were escaping the
+        // row when the value span was still empty on first hover, so the next
+        // category's h2 wrapped into the value column until a later update.
+        display: flex !important;
+        align-items: flex-start !important;
         position: relative !important;
         padding-left: 10px !important;
 
@@ -165,27 +174,25 @@
         &::before {
             content: '' !important;
             position: absolute !important;
-            top: 50% !important;
+            top: calc(var(--sd-font-size) * 0.85) !important;
             left: 0 !important;
             width: 3px !important;
             height: 3px !important;
-            margin-top: -1px !important;
             background: var(--sd-bullet) !important;
         }
     }
 
     .StyleDetectiveOverlay__property {
-        display: block !important;
-        float: left !important;
+        flex: 0 0 var(--sd-label-width) !important;
+        box-sizing: border-box !important;
         width: var(--sd-label-width) !important;
         overflow: hidden !important;
         color: var(--sd-label) !important;
 
-        // Property value — the sibling span. Its own block formatting context
-        // keeps long values wrapping within max-width instead of stretching
-        // the panel.
+        // Property value — sibling span grows/shrinks beside the label.
         + span {
-            display: block !important;
+            flex: 1 1 auto !important;
+            min-width: 0 !important;
             overflow: hidden !important;
             overflow-wrap: break-word !important;
             word-break: break-word !important;

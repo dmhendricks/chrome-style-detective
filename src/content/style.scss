@@ -52,7 +52,8 @@
     --sd-radius: 6px;
     --sd-min-width: min(calc(var(--sd-font-size) * 33.2), var(--sd-max-width));
     --sd-max-width: min(calc(var(--sd-font-size) * 40), calc(100vw - 40px));
-    --sd-label-width: calc(var(--sd-font-size) * 10);
+    --sd-label-width: calc(var(--sd-font-size) * 9);
+    --sd-copy-slot: calc(var(--sd-font-size) * 1.3);
 
     // Reset applied to the panel and every element inside it, so host-page
     // styles for these tags can't bleed in.
@@ -97,7 +98,7 @@
     h1 {
         display: block !important;
         box-sizing: border-box !important;
-        padding: 10px 16px !important;
+        padding: 8px 14px !important;
         line-height: calc(var(--sd-font-size) * 1.6) !important;
         color: #fff !important;
         font-size: calc(var(--sd-font-size) * 1.2) !important;
@@ -131,7 +132,7 @@
     }
 
     &__center {
-        padding: 10px 32px 0 !important;
+        padding: 8px 18px 0 !important;
         overflow: hidden !important;
         background: var(--sd-panel-bg) !important;
     }
@@ -140,7 +141,7 @@
         // flow-root contains the section; visibility is toggled via the
         // --hidden modifier so inline style.display can't fight !important.
         display: flow-root !important;
-        padding: 0 5px !important;
+        padding: 0 !important;
         // Light divider above each group (was list.png)...
         border-top: 1px solid var(--sd-divider) !important;
 
@@ -163,7 +164,7 @@
     }
 
     ul {
-        padding: 5px 5px 10px !important;
+        padding: 4px 0 8px !important;
         list-style: none !important;
     }
 
@@ -175,7 +176,7 @@
         display: flex !important;
         align-items: flex-start !important;
         position: relative !important;
-        padding-left: 10px !important;
+        padding-left: 8px !important;
 
         &.StyleDetectiveOverlay__row--hidden {
             display: none !important;
@@ -222,7 +223,7 @@
         flex-direction: column !important;
         align-items: center !important;
         box-sizing: border-box !important;
-        padding: 8px 14px 10px !important;
+        padding: 8px 12px 10px !important;
         color: var(--sd-label) !important;
         text-align: center !important;
         background: var(--sd-footer-bg) !important;
@@ -271,45 +272,65 @@
     }
 
     .StyleDetectiveOverlay__color-swatch {
+        // Must be non-inline — width/height are ignored on display:inline spans
+        // (that left only the border as a thin vertical line).
+        display: inline-block !important;
         flex: 0 0 auto !important;
         box-sizing: border-box !important;
         width: 8px !important;
         height: 8px !important;
         margin-right: 4px !important;
         border: 1px solid #000 !important;
+        vertical-align: middle !important;
     }
 
-    .StyleDetectiveOverlay__color-hash-group {
+    .StyleDetectiveOverlay__value-group {
+        // Shrink-to-content so the copy icon sits right after the value,
+        // not pinned to the panel's right edge.
         display: inline-flex !important;
         align-items: center !important;
-        gap: 4px !important;
+        flex: 0 1 auto !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        gap: 2px !important;
     }
 
+    .StyleDetectiveOverlay__value-text {
+        flex: 0 1 auto !important;
+        min-width: 0 !important;
+    }
+
+    // Always reserve the copy-icon slot (even when unfrozen) so freeze/unfreeze
+    // and hover don't change panel width.
     .StyleDetectiveOverlay__copy-affordance {
+        display: inline-flex !important;
         visibility: hidden !important;
         cursor: pointer !important;
-        display: inline-flex !important;
         align-items: center !important;
+        justify-content: center !important;
         line-height: 1 !important;
-        padding: 0 2px !important;
+        padding: 0 !important;
         color: var(--sd-copy-affordance) !important;
         user-select: none !important;
-        flex: 0 0 auto !important;
+        flex: 0 0 var(--sd-copy-slot) !important;
+        width: var(--sd-copy-slot) !important;
+        pointer-events: none !important;
 
         svg {
-            width: calc(var(--sd-font-size) * 1.2) !important;
-            height: calc(var(--sd-font-size) * 1.2) !important;
+            width: calc(var(--sd-font-size) * 1.1) !important;
+            height: calc(var(--sd-font-size) * 1.1) !important;
         }
     }
 
     &.StyleDetectiveOverlay--frozen {
-        .StyleDetectiveOverlay__color-hash-group {
+        .StyleDetectiveOverlay__value-group {
             cursor: pointer !important;
+        }
 
-            &:hover .StyleDetectiveOverlay__copy-affordance {
-                visibility: visible !important;
-                color: var(--sd-copy-affordance-hover) !important;
-            }
+        .StyleDetectiveOverlay__value-group:hover .StyleDetectiveOverlay__copy-affordance {
+            visibility: visible !important;
+            pointer-events: auto !important;
+            color: var(--sd-copy-affordance-hover) !important;
         }
     }
 }

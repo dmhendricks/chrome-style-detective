@@ -21,7 +21,7 @@ import {
     removeExtraFloat,
     rgbToHex,
 } from './format';
-import { colorValue, el, selectorLabel, setValueContent } from './dom';
+import { el, selectorLabel, setValueContent } from './dom';
 
 const ID_PREFIX = 'StyleDetectiveOverlay__';
 const ROW_HIDDEN = 'StyleDetectiveOverlay__row--hidden';
@@ -84,7 +84,7 @@ function setCSSPropertyIf(
     return 0;
 }
 
-function setCSSPropertyValue(property: string, value: string | Node): void {
+function setCSSPropertyValue(property: string, value: string): void {
     const li = rowElement(property);
     const target = li?.lastChild as HTMLElement | null;
     if (!li || !target) return;
@@ -93,7 +93,7 @@ function setCSSPropertyValue(property: string, value: string | Node): void {
     setRowVisible(li, true);
 }
 
-function setCSSPropertyValueIf(property: string, value: string | Node, condition: boolean): number {
+function setCSSPropertyValueIf(property: string, value: string, condition: boolean): number {
     const li = rowElement(property);
     if (!li) return 0;
 
@@ -158,13 +158,11 @@ function updateFontText(style: CSSStyleDeclaration): void {
 }
 
 function updateColorBg(style: CSSStyleDeclaration): void {
-    const doc = currentDocument();
-
-    setCSSPropertyValue('color', colorValue(doc, rgbToHex(getCSSProperty(style, 'color'))));
+    setCSSPropertyValue('color', rgbToHex(getCSSProperty(style, 'color')));
 
     setCSSPropertyValueIf(
         'background-color',
-        colorValue(doc, rgbToHex(getCSSProperty(style, 'background-color'))),
+        rgbToHex(getCSSProperty(style, 'background-color')),
         getCSSProperty(style, 'background-color') != 'transparent',
     );
     setCSSPropertyIf(

@@ -251,7 +251,7 @@ function flashMessage(msg: string, options: { persistent?: boolean } = {}): void
 
     p.appendChild(document.createTextNode(msg));
     p.id = 'styleDetectiveInsertMessage';
-    p.style.backgroundColor = '#1f2933';
+    p.style.backgroundColor = '#7a1f1f';
     p.style.color = '#ffffff';
     p.style.position = 'fixed';
     p.style.top = '10px';

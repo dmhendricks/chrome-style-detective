@@ -6,15 +6,39 @@
  * table/list gating), a display `title`, and the ordered list of properties it
  * renders. Keeping this as one typed array is the single source of truth for
  * both panel construction and the generated CSS definition.
+ *
+ * Properties with `enabled: false` are kept in the catalog for a future
+ * user-configurable property picker, but are omitted from the panel and from
+ * the generated CSS definition.
  */
+
+export interface CssProperty {
+    /** CSS property name (as accepted by getPropertyValue). */
+    name: string;
+    /**
+     * When false, the property is hidden from the panel / CSS dump but kept in
+     * the catalog. Defaults to true when omitted.
+     */
+    enabled?: boolean;
+}
 
 export interface CssCategory {
     /** Stable identifier; used in DOM ids and category show/hide logic. */
     key: string;
     /** Human-readable heading shown in the panel. */
     title: string;
-    /** Properties rendered under this category, in display order. */
-    properties: readonly string[];
+    /** Properties under this category, in display order. */
+    properties: readonly CssProperty[];
+}
+
+/** True unless the property was explicitly disabled in the catalog. */
+export function isPropertyEnabled(property: CssProperty): boolean {
+    return property.enabled !== false;
+}
+
+/** Enabled property names for a category (panel + CSS-definition consumers). */
+export function enabledPropertyNames(category: CssCategory): readonly string[] {
+    return category.properties.filter(isPropertyEnabled).map((property) => property.name);
 }
 
 export const CSS_CATEGORIES: readonly CssCategory[] = [
@@ -22,114 +46,137 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
         key: 'pFontText',
         title: 'Font & Text',
         properties: [
-            'font-family',
-            'font-size',
-            'font-style',
-            'font-variant',
-            'font-weight',
-            'letter-spacing',
-            'line-height',
-            'text-decoration',
-            'text-align',
-            'text-indent',
-            'text-transform',
-            'vertical-align',
-            'white-space',
-            'word-spacing',
+            { name: 'font-family' },
+            { name: 'font-size' },
+            { name: 'font-style' },
+            { name: 'font-variant', enabled: false },
+            { name: 'font-weight' },
+            { name: 'letter-spacing' },
+            { name: 'line-height' },
+            { name: 'text-decoration' },
+            { name: 'text-align' },
+            { name: 'text-indent', enabled: false },
+            { name: 'text-transform' },
+            { name: 'vertical-align' },
+            { name: 'white-space' },
+            { name: 'overflow-wrap' },
+            { name: 'word-spacing', enabled: false },
         ],
     },
     {
         key: 'pColorBg',
         title: 'Color & Background',
         properties: [
-            'background-attachment',
-            'background-color',
-            'background-image',
-            'background-position',
-            'background-repeat',
-            'color',
+            { name: 'color' },
+            { name: 'background-color' },
+            { name: 'background-image' },
+            { name: 'background-position' },
+            { name: 'background-size' },
+            { name: 'background-repeat' },
+            { name: 'background-attachment', enabled: false },
         ],
     },
     {
         key: 'pBox',
         title: 'Box',
         properties: [
-            'height',
-            'width',
-            'border',
-            'border-top',
-            'border-right',
-            'border-bottom',
-            'border-left',
-            'margin',
-            'padding',
-            'max-height',
-            'min-height',
-            'max-width',
-            'min-width',
+            { name: 'width' },
+            { name: 'height' },
+            { name: 'min-width' },
+            { name: 'min-height' },
+            { name: 'max-width' },
+            { name: 'max-height' },
+            { name: 'aspect-ratio' },
+            { name: 'margin' },
+            { name: 'padding' },
+            { name: 'border' },
+            { name: 'border-top' },
+            { name: 'border-right' },
+            { name: 'border-bottom' },
+            { name: 'border-left' },
+            { name: 'border-radius' },
+            { name: 'box-sizing' },
+            { name: 'object-fit' },
         ],
     },
     {
-        key: 'pPositioning',
-        title: 'Positioning',
+        key: 'pLayout',
+        title: 'Layout',
         properties: [
-            'position',
-            'top',
-            'bottom',
-            'right',
-            'left',
-            'float',
-            'display',
-            'clear',
-            'z-index',
+            { name: 'display' },
+            { name: 'flex-direction' },
+            { name: 'flex-wrap' },
+            { name: 'justify-content' },
+            { name: 'align-items' },
+            { name: 'gap' },
+            { name: 'position' },
+            { name: 'top' },
+            { name: 'right' },
+            { name: 'bottom' },
+            { name: 'left' },
+            { name: 'z-index' },
+            { name: 'float', enabled: false },
+            { name: 'clear', enabled: false },
         ],
     },
     {
         key: 'pList',
         title: 'List',
-        properties: ['list-style-image', 'list-style-type', 'list-style-position'],
+        properties: [
+            { name: 'list-style-type' },
+            { name: 'list-style-image' },
+            { name: 'list-style-position' },
+        ],
     },
     {
         key: 'pTable',
         title: 'Table',
         properties: [
-            'border-collapse',
-            'border-spacing',
-            'caption-side',
-            'empty-cells',
-            'table-layout',
+            { name: 'border-collapse' },
+            { name: 'border-spacing' },
+            { name: 'caption-side' },
+            { name: 'empty-cells' },
+            { name: 'table-layout' },
         ],
     },
     {
         key: 'pMisc',
         title: 'Miscellaneous',
-        properties: ['overflow', 'cursor', 'visibility'],
+        properties: [
+            { name: 'opacity' },
+            { name: 'overflow' },
+            { name: 'cursor' },
+            { name: 'visibility' },
+        ],
     },
     {
         key: 'pEffect',
         title: 'Effects',
         properties: [
-            'transform',
-            'transition',
-            'outline',
-            'outline-offset',
-            'box-sizing',
-            'resize',
-            'text-shadow',
-            'text-overflow',
-            'word-wrap',
-            'box-shadow',
-            'border-top-left-radius',
-            'border-top-right-radius',
-            'border-bottom-left-radius',
-            'border-bottom-right-radius',
+            { name: 'transform' },
+            { name: 'transition' },
+            { name: 'filter' },
+            { name: 'box-shadow' },
+            { name: 'text-shadow' },
+            { name: 'text-overflow' },
+            // Kept for a future picker; outline is noisy because the inspector
+            // paints its own dashed outline on the hovered element.
+            { name: 'outline', enabled: false },
+            { name: 'outline-offset', enabled: false },
+            { name: 'resize', enabled: false },
+            { name: 'word-wrap', enabled: false },
+            { name: 'border-top-left-radius', enabled: false },
+            { name: 'border-top-right-radius', enabled: false },
+            { name: 'border-bottom-left-radius', enabled: false },
+            { name: 'border-bottom-right-radius', enabled: false },
         ],
     },
 ];
 
-/** Look up a category's property list by key (used by the CSS-definition builder). */
+/** Look up a category's enabled property names by key. */
 export function propertiesFor(key: string): readonly string[] {
-    return CSS_CATEGORIES.find((c) => c.key === key)?.properties ?? [];
+    const category = CSS_CATEGORIES.find((entry) => entry.key === key);
+    return category ? enabledPropertyNames(category) : [];
 }
 
 export const TABLE_TAG_NAMES: readonly string[] = [

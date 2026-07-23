@@ -4,10 +4,16 @@
  * Builds the overlay panel from the typed category data and updates each
  * property row from a hovered element's computed style. All DOM ids are
  * namespaced under `StyleDetectiveOverlay__` so nothing collides with the host
- * page.
+ * page. Only catalog entries with `enabled !== false` are rendered.
  */
 
-import { CSS_CATEGORIES, LIST_TAG_NAMES, TABLE_TAG_NAMES } from './properties';
+import {
+    CSS_CATEGORIES,
+    LIST_TAG_NAMES,
+    TABLE_TAG_NAMES,
+    enabledPropertyNames,
+    isPropertyEnabled,
+} from './properties';
 import { getFileName, isInArray, removeExtraFloat, rgbToHex } from './format';
 import { colorSwatch, el, setValueContent } from './dom';
 
@@ -110,6 +116,10 @@ function showCSSCategory(category: string): void {
     if (div) div.style.display = 'block';
 }
 
+function isRadiusZero(value: string): boolean {
+    return value === '' || value.split(/\s+/).every((part) => part === '0px' || part === '0');
+}
+
 function updateFontText(style: CSSStyleDeclaration): void {
     setCSSProperty(style, 'font-family');
     setCSSProperty(style, 'font-size');
@@ -134,6 +144,7 @@ function updateFontText(style: CSSStyleDeclaration): void {
         getCSSProperty(style, 'vertical-align') != 'baseline',
     );
     setCSSPropertyIf(style, 'white-space', getCSSProperty(style, 'white-space') != 'normal');
+    setCSSPropertyIf(style, 'overflow-wrap', getCSSProperty(style, 'overflow-wrap') != 'normal');
     setCSSPropertyIf(style, 'word-spacing', getCSSProperty(style, 'word-spacing') != 'normal');
 }
 
@@ -161,6 +172,11 @@ function updateColorBg(style: CSSStyleDeclaration): void {
         style,
         'background-position',
         getCSSProperty(style, 'background-position') != '',
+    );
+    setCSSPropertyIf(
+        style,
+        'background-size',
+        getCSSProperty(style, 'background-size') != 'auto',
     );
     setCSSPropertyIf(
         style,
@@ -241,20 +257,51 @@ function updateBox(style: CSSStyleDeclaration): void {
     setCSSPropertyIf(style, 'max-height', getCSSProperty(style, 'max-height') != 'none');
     setCSSPropertyIf(style, 'min-width', getCSSProperty(style, 'min-width') != '0px');
     setCSSPropertyIf(style, 'max-width', getCSSProperty(style, 'max-width') != 'none');
+
+    const borderRadius = getCSSProperty(style, 'border-radius');
+    setCSSPropertyIf(style, 'border-radius', !isRadiusZero(borderRadius));
+
+    setCSSPropertyIf(style, 'box-sizing', getCSSProperty(style, 'box-sizing') != 'content-box');
+    setCSSPropertyIf(style, 'aspect-ratio', getCSSProperty(style, 'aspect-ratio') != 'auto');
+    setCSSPropertyIf(style, 'object-fit', getCSSProperty(style, 'object-fit') != 'fill');
 }
 
-function updatePositioning(style: CSSStyleDeclaration): void {
+function updateLayout(style: CSSStyleDeclaration): void {
+    setCSSProperty(style, 'display');
+
+    const display = getCSSProperty(style, 'display');
+    const isFlex = display === 'flex' || display === 'inline-flex';
+    const isGrid = display === 'grid' || display === 'inline-grid';
+    const isFlexOrGrid = isFlex || isGrid;
+
+    setCSSPropertyIf(style, 'flex-direction', isFlex && getCSSProperty(style, 'flex-direction') != 'row');
+    setCSSPropertyIf(style, 'flex-wrap', isFlex && getCSSProperty(style, 'flex-wrap') != 'nowrap');
+    setCSSPropertyIf(
+        style,
+        'justify-content',
+        isFlexOrGrid && getCSSProperty(style, 'justify-content') != 'normal',
+    );
+    setCSSPropertyIf(
+        style,
+        'align-items',
+        isFlexOrGrid && getCSSProperty(style, 'align-items') != 'normal',
+    );
+    setCSSPropertyIf(
+        style,
+        'gap',
+        isFlexOrGrid &&
+            getCSSProperty(style, 'gap') != 'normal' &&
+            getCSSProperty(style, 'gap') != '0px',
+    );
+
     setCSSPropertyIf(style, 'position', getCSSProperty(style, 'position') != 'static');
     setCSSPropertyIf(style, 'top', getCSSProperty(style, 'top') != 'auto');
     setCSSPropertyIf(style, 'bottom', getCSSProperty(style, 'bottom') != 'auto');
     setCSSPropertyIf(style, 'right', getCSSProperty(style, 'right') != 'auto');
     setCSSPropertyIf(style, 'left', getCSSProperty(style, 'left') != 'auto');
-    setCSSPropertyIf(style, 'float', getCSSProperty(style, 'float') != 'none');
-
-    setCSSProperty(style, 'display');
-
-    setCSSPropertyIf(style, 'clear', getCSSProperty(style, 'clear') != 'none');
     setCSSPropertyIf(style, 'z-index', getCSSProperty(style, 'z-index') != 'auto');
+    setCSSPropertyIf(style, 'float', getCSSProperty(style, 'float') != 'none');
+    setCSSPropertyIf(style, 'clear', getCSSProperty(style, 'clear') != 'none');
 }
 
 function updateTable(style: CSSStyleDeclaration, tagName: string): void {
@@ -317,6 +364,7 @@ function updateList(style: CSSStyleDeclaration, tagName: string): void {
 function updateMisc(style: CSSStyleDeclaration): void {
     let nbProperties = 0;
 
+    nbProperties += setCSSPropertyIf(style, 'opacity', getCSSProperty(style, 'opacity') != '1');
     nbProperties += setCSSPropertyIf(style, 'overflow', getCSSProperty(style, 'overflow') != 'visible');
     nbProperties += setCSSPropertyIf(style, 'cursor', getCSSProperty(style, 'cursor') != 'auto');
     nbProperties += setCSSPropertyIf(
@@ -332,18 +380,23 @@ function updateMisc(style: CSSStyleDeclaration): void {
 function updateEffects(style: CSSStyleDeclaration): void {
     let nbProperties = 0;
 
-    nbProperties += setCSSPropertyIf(style, 'transform', getCSSProperty(style, 'transform') !== '');
-    nbProperties += setCSSPropertyIf(style, 'transition', getCSSProperty(style, 'transition') !== '');
+    nbProperties += setCSSPropertyIf(
+        style,
+        'transform',
+        getCSSProperty(style, 'transform') !== '' && getCSSProperty(style, 'transform') !== 'none',
+    );
+    nbProperties += setCSSPropertyIf(
+        style,
+        'transition',
+        getCSSProperty(style, 'transition') !== '' &&
+            !getCSSProperty(style, 'transition').startsWith('all 0s'),
+    );
+    nbProperties += setCSSPropertyIf(style, 'filter', getCSSProperty(style, 'filter') != 'none');
     nbProperties += setCSSPropertyIf(style, 'outline', getCSSProperty(style, 'outline') !== '');
     nbProperties += setCSSPropertyIf(
         style,
         'outline-offset',
         getCSSProperty(style, 'outline-offset') != '0px',
-    );
-    nbProperties += setCSSPropertyIf(
-        style,
-        'box-sizing',
-        getCSSProperty(style, 'box-sizing') != 'content-box',
     );
     nbProperties += setCSSPropertyIf(style, 'resize', getCSSProperty(style, 'resize') != 'none');
 
@@ -390,7 +443,7 @@ export function updatePanel(style: CSSStyleDeclaration, tagName: string): void {
     updateFontText(style);
     updateColorBg(style);
     updateBox(style);
-    updatePositioning(style);
+    updateLayout(style);
     updateTable(style, tagName);
     updateList(style, tagName);
     updateMisc(style);
@@ -400,18 +453,21 @@ export function updatePanel(style: CSSStyleDeclaration, tagName: string): void {
 /**
  * Build the panel element (header, per-category property lists, footer). Ids are
  * assigned so the update functions above can address each row and category.
+ * Disabled catalog entries are omitted (available later for a property picker).
  */
 export function createBlock(doc: Document): HTMLDivElement {
     const header = el(doc, 'h1');
 
-    const categoryDivs = CSS_CATEGORIES.map((category) => {
-        const rows = category.properties.map((property) =>
+    const categoryDivs = CSS_CATEGORIES.filter(
+        (category) => enabledPropertyNames(category).length > 0,
+    ).map((category) => {
+        const rows = category.properties.filter(isPropertyEnabled).map((property) =>
             el(doc, 'li', {
-                id: ID_PREFIX + property,
+                id: ID_PREFIX + property.name,
                 children: [
                     el(doc, 'span', {
                         className: 'StyleDetectiveOverlay__property',
-                        text: property,
+                        text: property.name,
                     }),
                     el(doc, 'span'),
                 ],

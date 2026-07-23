@@ -90,6 +90,13 @@ function adjustPanelFontSize(delta: number): void {
     persistPanelFontSize();
 }
 
+function resetPanelFontSize(): void {
+    if (panelFontSize === PANEL_FONT_SIZE_DEFAULT) return;
+    panelFontSize = PANEL_FONT_SIZE_DEFAULT;
+    applyPanelFontSize();
+    persistPanelFontSize();
+}
+
 function currentDocument(): Document {
     return window.document;
 }
@@ -114,8 +121,10 @@ function buildCssDefinition(el: HTMLElement, style: CSSStyleDeclaration): string
         ' {\n';
 
     for (const category of CSS_CATEGORIES) {
+        const props = propertiesFor(category.key);
+        if (props.length === 0) continue;
         inspectedCssDefinition += `\n\t/* ${category.title} */\n`;
-        appendCssDefinition(style, propertiesFor(category.key));
+        appendCssDefinition(style, props);
     }
 
     inspectedCssDefinition += '}';
@@ -380,7 +389,7 @@ class StyleDetectiveOverlay {
 
 // === Keymap ===
 
-// Close on [Esc], freeze on [f], CSS definition on [c], font size on [+] / [-].
+// Close on [Esc], freeze on [f], CSS definition on [c], font size on [+] / [-] / [0].
 function keyMap(e: KeyboardEvent): void {
     if (!overlay.isEnabled()) return;
 
@@ -421,6 +430,13 @@ function keyMap(e: KeyboardEvent): void {
     if (e.key === '-' || e.key === '_' || e.key === 'Subtract') {
         e.preventDefault();
         adjustPanelFontSize(-PANEL_FONT_SIZE_STEP);
+        return;
+    }
+
+    // 0 / Numpad0: reset panel font size to the default.
+    if (e.key === '0' || e.code === 'Numpad0') {
+        e.preventDefault();
+        resetPanelFontSize();
     }
 }
 

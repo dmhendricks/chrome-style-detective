@@ -6,13 +6,12 @@
  */
 
 import { CSS_CATEGORIES, propertiesFor } from './lib/properties';
-import { createBlock, updatePanel } from './lib/panel';
-import { selectorLabel } from './lib/dom';
+import { createBlock, updateHeader, updatePanel } from './lib/panel';
 
 // === Module state ===
 
 // Generated CSS text for the element currently being inspected. Updated on every
-// mouseover; read by the [c] key prompt.
+// mouseover; read by the [c] key clipboard copy.
 let inspectedCssDefinition = '';
 let outlinedElement: HTMLElement | null = null;
 
@@ -156,10 +155,7 @@ function onMouseOver(this: HTMLElement, e: MouseEvent): void {
 
     if (!block) return;
 
-    // The header's first child is the selector label; set it as text (no markup).
-    if (block.firstChild) {
-        (block.firstChild as HTMLElement).textContent = selectorLabel(el);
-    }
+    updateHeader(el);
 
     // Outline element
     if (el.tagName != 'body') {
@@ -171,7 +167,7 @@ function onMouseOver(this: HTMLElement, e: MouseEvent): void {
     if (!document.defaultView) return;
     const style = document.defaultView.getComputedStyle(el, null);
 
-    updatePanel(style, el.tagName);
+    updatePanel(style, el);
 
     removeElement('styleDetectiveInsertMessage');
 
@@ -238,27 +234,88 @@ function isElementInViewport(el: HTMLElement): boolean {
 
 // === Notification message ===
 
-// Display the notification message.
-function insertMessage(msg: string): void {
+let flashMessageTimer: ReturnType<typeof setTimeout> | null = null;
+
+// Display a short-lived toast in the top-left of the page.
+function flashMessage(msg: string, options: { persistent?: boolean } = {}): void {
+    removeElement('styleDetectiveInsertMessage');
+    if (flashMessageTimer) {
+        clearTimeout(flashMessageTimer);
+        flashMessageTimer = null;
+    }
+
     const p = document.createElement('p');
 
     p.appendChild(document.createTextNode(msg));
     p.id = 'styleDetectiveInsertMessage';
-    p.style.backgroundColor = '#b40000';
+    p.style.backgroundColor = '#1f2933';
     p.style.color = '#ffffff';
     p.style.position = 'fixed';
     p.style.top = '10px';
     p.style.left = '10px';
-    p.style.zIndex = '9999';
-    p.style.padding = '3px';
+    p.style.zIndex = '2147483647';
+    p.style.padding = '8px 12px';
+    p.style.borderRadius = '6px';
+    p.style.fontFamily = 'Lucida sans, helvetica, sans-serif';
+    p.style.fontSize = '12px';
+    p.style.boxShadow = '0 2px 10px rgba(0,0,0,0.25)';
+    p.style.pointerEvents = 'none';
 
     document.body.appendChild(p);
+
+    if (!options.persistent) {
+        flashMessageTimer = setTimeout(() => {
+            removeElement('styleDetectiveInsertMessage');
+            flashMessageTimer = null;
+        }, 2000);
+    }
 }
 
 // Removes an element from the DOM, used to remove the notification message.
 function removeElement(divid: string): void {
     const n = document.getElementById(divid);
-    if (n) document.body.removeChild(n);
+    if (n) n.parentNode?.removeChild(n);
+}
+
+async function copyCssDefinition(): Promise<void> {
+    if (!inspectedCssDefinition) {
+        flashMessage('Nothing to copy — hover an element first.');
+        return;
+    }
+
+    try {
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(inspectedCssDefinition);
+        } else {
+            copyTextFallback(inspectedCssDefinition);
+        }
+        flashMessage('CSS definition copied to clipboard');
+    } catch {
+        try {
+            copyTextFallback(inspectedCssDefinition);
+            flashMessage('CSS definition copied to clipboard');
+        } catch {
+            flashMessage('Could not copy to clipboard');
+        }
+    }
+}
+
+/** Legacy copy path for pages where the Clipboard API is unavailable. */
+function copyTextFallback(text: string): void {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.top = '0';
+    textarea.style.left = '0';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+
+    const ok = document.execCommand('copy');
+    document.body.removeChild(textarea);
+    if (!ok) throw new Error('execCommand copy failed');
 }
 
 // === Overlay controller ===
@@ -271,7 +328,9 @@ class StyleDetectiveOverlay {
     createBlock(): HTMLElement {
         const block = createBlock(currentDocument());
 
-        insertMessage('Style Detective loaded! Hover any element you want to inspect in the page.');
+        flashMessage('Style Detective loaded! Hover any element you want to inspect in the page.', {
+            persistent: true,
+        });
 
         return block;
     }
@@ -410,12 +469,10 @@ function keyMap(e: KeyboardEvent): void {
         return;
     }
 
-    // c: Show css for selected element. window.prompt should suffice for now.
+    // c: Copy the simple CSS definition for the selected element.
     if (e.key === 'c' || e.key === 'C' || e.keyCode === 67) {
-        window.prompt(
-            'Simple Css Definition :\n\nYou may copy the code below then hit escape to continue.',
-            inspectedCssDefinition,
-        );
+        e.preventDefault();
+        void copyCssDefinition();
         return;
     }
 

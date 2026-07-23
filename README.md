@@ -12,7 +12,14 @@ Features:
 
 ## Installation
 
-The easiest way to install the extension is from the [Chrome Web Store](https://chrome.google.com/webstore/detail/cssviewer/ggfgijbpiheegefliciemofobhmofgce).
+Until a release build is finished, the only way to run this extension is to clone the repo and run:
+
+```bash
+npm install
+npm run build    # production build → dist/
+```
+
+Then open `chrome://extensions`, turn on **Developer mode** (top-right), click **Load Unpacked** and choose the `dist/` directory.
 
 ## Usage
 

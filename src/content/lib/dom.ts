@@ -100,13 +100,6 @@ function isOverlayFrozen(doc: Document): boolean {
     return doc.getElementById(OVERLAY_ID)?.classList.contains(FROZEN_CLASS) ?? false;
 }
 
-function flashCopyAffordance(affordance: HTMLSpanElement, doc: Document): void {
-    affordance.replaceChildren(checkIcon(doc));
-    window.setTimeout(() => {
-        affordance.replaceChildren(clipboardIcon(doc));
-    }, 900);
-}
-
 /** Match #RGB, #RRGGBB, or #RRGGBBAA hex tokens in a property value string. */
 const HEX_COLOR_RE = /#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/g;
 
@@ -136,38 +129,8 @@ function firstHexIn(text: string): string | null {
     return text.match(HEX_COLOR_RE)?.[0] ?? null;
 }
 
-function copyableHexGroup(doc: Document, hex: string, copyValue: string): HTMLSpanElement {
-    const group = doc.createElement('span');
-    group.className = 'StyleDetectiveOverlay__color-hash-group';
-
-    const hash = doc.createElement('span');
-    hash.className = 'StyleDetectiveOverlay__color-hash';
-    hash.textContent = hex;
-
-    const affordance = doc.createElement('span');
-    affordance.className = 'StyleDetectiveOverlay__copy-affordance';
-    affordance.title = 'Copy';
-    affordance.appendChild(clipboardIcon(doc));
-
-    group.append(hash, affordance);
-
-    const onCopy = (e: Event): void => {
-        if (!isOverlayFrozen(doc)) return;
-        e.preventDefault();
-        e.stopPropagation();
-        void copyTextToClipboard(copyValue).then(
-            () => flashCopyAffordance(affordance, doc),
-            () => {},
-        );
-    };
-
-    group.addEventListener('click', onCopy);
-
-    return group;
-}
-
-/** Wrap every hex token in a string with a frozen-mode copy affordance. */
-export function textWithCopyableHex(doc: Document, text: string): DocumentFragment {
+/** Build display nodes for a value, adding a leading swatch when hex is present. */
+function textWithColorSwatches(doc: Document, text: string): DocumentFragment {
     const frag = doc.createDocumentFragment();
     const leadingHex = firstHexIn(text);
 
@@ -185,7 +148,7 @@ export function textWithCopyableHex(doc: Document, text: string): DocumentFragme
             frag.appendChild(doc.createTextNode(text.slice(lastIndex, index)));
         }
 
-        frag.appendChild(copyableHexGroup(doc, hex, text));
+        frag.appendChild(doc.createTextNode(hex));
         lastIndex = index + hex.length;
     }
 
@@ -198,12 +161,45 @@ export function textWithCopyableHex(doc: Document, text: string): DocumentFragme
     return frag;
 }
 
-/**
- * Build a swatch + hex fragment for a colour value. When the panel is frozen,
- * hovering the hex reveals a copy icon; clicking the hex copies it.
- */
-export function colorValue(doc: Document, hex: string): DocumentFragment {
-    return textWithCopyableHex(doc, hex);
+function copyAffordance(doc: Document): HTMLSpanElement {
+    const affordance = doc.createElement('span');
+    affordance.className = 'StyleDetectiveOverlay__copy-affordance';
+    affordance.title = 'Copy';
+    affordance.appendChild(clipboardIcon(doc));
+    affordance.setAttribute('aria-hidden', 'true');
+
+    return affordance;
+}
+
+function wrapCopyableValue(doc: Document, copyValue: string): HTMLSpanElement {
+    const group = doc.createElement('span');
+    group.className = 'StyleDetectiveOverlay__value-group';
+
+    const text = doc.createElement('span');
+    text.className = 'StyleDetectiveOverlay__value-text';
+    text.appendChild(textWithColorSwatches(doc, copyValue));
+
+    const affordance = copyAffordance(doc);
+    group.append(text, affordance);
+
+    const onCopy = (e: Event): void => {
+        if (!isOverlayFrozen(doc)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        void copyTextToClipboard(copyValue).then(
+            () => {
+                affordance.replaceChildren(checkIcon(doc));
+                window.setTimeout(() => {
+                    affordance.replaceChildren(clipboardIcon(doc));
+                }, 900);
+            },
+            () => {},
+        );
+    };
+
+    group.addEventListener('click', onCopy);
+
+    return group;
 }
 
 /**
@@ -219,15 +215,11 @@ export function selectorLabel(el: HTMLElement): string {
 }
 
 /**
- * Replace an element's contents with `" : "` followed by a value that may be a
- * plain string or a Node (e.g. a colour swatch + hex text fragment).
+ * Replace an element's contents with `" : "` followed by a copyable value group.
+ * When frozen, hovering the value reveals a copy icon; clicking copies the full
+ * property value string.
  */
-export function setValueContent(target: HTMLElement, value: string | Node): void {
+export function setValueContent(target: HTMLElement, copyValue: string): void {
     const doc = target.ownerDocument;
-    target.textContent = ' : ';
-    if (typeof value === 'string') {
-        target.appendChild(textWithCopyableHex(doc, value));
-    } else {
-        target.appendChild(value);
-    }
+    target.replaceChildren(doc.createTextNode(' : '), wrapCopyableValue(doc, copyValue));
 }

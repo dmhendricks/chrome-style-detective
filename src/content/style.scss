@@ -18,6 +18,7 @@
 //
 //   #StyleDetectiveOverlay                       floating panel (block)
 //     h1                                        title banner
+//       .StyleDetectiveOverlay__selector         element selector label
 //     &__center                                 body (#id)
 //       .StyleDetectiveOverlay__category         one per property group (.class)
 //         h2                                    group heading
@@ -109,6 +110,18 @@
             transparent 6px
         ) !important;
         border-radius: var(--sd-radius) var(--sd-radius) 0 0 !important;
+        // Wrap long selectors, breaking anywhere so no single token overflows.
+        white-space: normal !important;
+        overflow-wrap: break-word !important;
+        word-break: break-all !important;
+    }
+
+    .StyleDetectiveOverlay__selector {
+        display: block !important;
+        color: #fff !important;
+        font-size: calc(var(--sd-font-size) * 1.2) !important;
+        line-height: calc(var(--sd-font-size) * 1.6) !important;
+        text-align: center !important;
         // Wrap long selectors, breaking anywhere so no single token overflows.
         white-space: normal !important;
         overflow-wrap: break-word !important;

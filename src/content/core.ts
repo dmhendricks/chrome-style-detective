@@ -1,14 +1,16 @@
 /*!
  * Style Detective — content-script entry point.
  *
- * Wires the panel renderer (lib/panel) to document-level hover delegation and
- * manages enable/disable/freeze state. Bundled as a single IIFE by the nested
- * Vite build in vite.config.ts.
+ * Declared in the manifest and loaded dormant on matching pages. The service
+ * worker toggles the overlay via a runtime message. Wires the panel renderer
+ * (lib/panel) to document-level hover delegation and manages enable/disable/
+ * freeze state.
  */
 
 import { copyTextToClipboard } from './lib/clipboard';
 import { CSS_CATEGORIES, propertiesFor } from './lib/properties';
 import { createBlock, collapseSelectorHeader, refreshSelectorOverflow, updateHeader, updatePanel } from './lib/panel';
+import './style.scss';
 
 const FROZEN_CLASS = 'StyleDetectiveOverlay--frozen';
 const DARK_CLASS = 'StyleDetectiveOverlay--dark';
@@ -623,16 +625,25 @@ function keyMap(e: KeyboardEvent): void {
 
 // === Entry point ===
 
-// Toggle the viewer on (re-)injection. Restore font size + theme first so
-// enable() applies them to a freshly created panel.
+// Stay dormant until the service worker asks us to toggle. Prefs load up front
+// so the first enable() already has font size + theme.
 const overlay = new StyleDetectiveOverlay();
+const ready = Promise.all([loadPanelFontSize(), loadPanelTheme()]);
 
-void Promise.all([loadPanelFontSize(), loadPanelTheme()]).then(() => {
-    if (overlay.isEnabled()) {
-        overlay.disable();
-    } else {
-        overlay.enable();
-    }
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message?.type !== 'toggleOverlay') return;
+
+    void ready.then(() => {
+        if (overlay.isEnabled()) {
+            overlay.disable();
+        } else {
+            overlay.enable();
+        }
+        sendResponse({ ok: true, enabled: overlay.isEnabled() });
+    });
+
+    // Keep the message channel open for the async response.
+    return true;
 });
 
 document.onkeydown = keyMap;

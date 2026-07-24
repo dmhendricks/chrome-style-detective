@@ -38,5 +38,5 @@ Keyboard shortcuts while the viewer is active:
 
 ## Known Issues
 
-- The viewer will not activate on tabs that were already open before installation, nor on the Chrome Web Store itself. Reload the tab after installing.
+- The viewer will not activate on tabs that were already open before installation or update, nor on the Chrome Web Store itself. Reload the tab so the content script can attach, then try again.
 - Styling may occasionally conflict with the web site's CSS

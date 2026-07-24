@@ -1,9 +1,12 @@
 /*!
-* Style Detective
-*/
+ * Style Detective — service worker.
+ *
+ * The content script is declared in the manifest and stays dormant on each
+ * page. The toolbar icon / keyboard shortcut only sends a toggle message.
+ */
 
 // Open the options page on install/update.
-chrome.runtime.onInstalled.addListener(function (details) {
+chrome.runtime.onInstalled.addListener((details) => {
     if (details.reason === 'install' || details.reason === 'update') {
         chrome.runtime.openOptionsPage();
     }
@@ -11,44 +14,31 @@ chrome.runtime.onInstalled.addListener(function (details) {
 
 // Content script shortcuts (e.g. H) ask the service worker to open options —
 // openOptionsPage isn't available in content-script contexts.
-chrome.runtime.onMessage.addListener(function (message) {
+chrome.runtime.onMessage.addListener((message) => {
     if (message?.type === 'openOptions') {
         chrome.runtime.openOptionsPage();
     }
 });
 
-// Pages where injection is not allowed / not useful.
+// Pages where the content script is not injected / not useful.
 function isRestrictedUrl(url: string | undefined): boolean {
     return (
         !url ||
-        url.indexOf('https://chrome.google.com') === 0 ||
-        url.indexOf('https://chromewebstore.google.com') === 0 ||
-        url.indexOf('chrome://') === 0 ||
-        url.indexOf('edge://') === 0
+        url.startsWith('https://chrome.google.com') ||
+        url.startsWith('https://chromewebstore.google.com') ||
+        url.startsWith('chrome://') ||
+        url.startsWith('edge://')
     );
 }
 
-const CONTENT_CSS = 'src/content/style.css';
-const CONTENT_JS = 'src/content/core.js';
-
-// Toolbar icon / keyboard shortcut: inject style.css + core.js into
-// the active tab. The content script toggles itself on/off on re-injection.
-// removeCSS first so repeated toggles (or stylesheet updates) don't stack
-// stale rules — e.g. an old float-based layout lingering beside the new flex one.
-chrome.action.onClicked.addListener(function (tab) {
-    if (!tab || !tab.id || isRestrictedUrl(tab.url)) {
+// Toolbar icon / keyboard shortcut: ask the dormant content script to toggle.
+chrome.action.onClicked.addListener((tab) => {
+    if (!tab?.id || isRestrictedUrl(tab.url)) {
         return;
     }
 
-    const target = { tabId: tab.id };
-
-    void chrome.scripting
-        .removeCSS({ target, files: [CONTENT_CSS] })
-        .catch(function () {
-            // No previously injected sheet — fine.
-        })
-        .finally(function () {
-            void chrome.scripting.insertCSS({ target, files: [CONTENT_CSS] });
-            void chrome.scripting.executeScript({ target, files: [CONTENT_JS] });
-        });
+    void chrome.tabs.sendMessage(tab.id, { type: 'toggleOverlay' }).catch(() => {
+        // No content script in this tab yet (e.g. open before install/update) —
+        // reload the page so the declared content_scripts entry can attach.
+    });
 });

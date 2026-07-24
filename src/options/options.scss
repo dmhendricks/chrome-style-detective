@@ -201,7 +201,8 @@ main {
     animation: rise 0.55s ease 0.12s both;
 }
 
-.demo img {
+.demo img,
+.demo video {
     display: block;
     width: 100%;
     max-width: 100%;

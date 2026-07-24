@@ -1,8 +1,9 @@
 /*!
  * Style Detective — content-script entry point.
  *
- * Wires the panel renderer (lib/panel) to hover events and manages enable/disable/
- * freeze state. Bundled as a single IIFE by the nested Vite build in vite.config.ts.
+ * Wires the panel renderer (lib/panel) to document-level hover delegation and
+ * manages enable/disable/freeze state. Bundled as a single IIFE by the nested
+ * Vite build in vite.config.ts.
  */
 
 import { copyTextToClipboard } from './lib/clipboard';
@@ -203,12 +204,21 @@ function buildCssDefinition(el: HTMLElement, style: CSSStyleDeclaration): string
 
 // === Event handlers ===
 
-// True if the element is the panel itself or lives inside it. The panel is
-// appended to document.body, so AddEventListeners() attaches hover handlers to
-// its own children too; without this guard, hovering the panel would re-inspect
-// and reposition it, causing a flicker feedback loop (worst near the right edge,
-// where small width changes flip the panel from one side of the cursor to the
-// other every frame).
+const HOVER_LISTENER_OPTS: AddEventListenerOptions = { capture: true, passive: true };
+
+/** Resolve the element under a mouse event (text nodes → parentElement). */
+function eventTargetElement(e: Event): HTMLElement | null {
+    const target = e.target;
+    if (target instanceof HTMLElement) return target;
+    if (target instanceof Node) return target.parentElement;
+
+    return null;
+}
+
+// True if the element is the panel itself or lives inside it. Without this
+// guard, hovering the panel would re-inspect and reposition it, causing a
+// flicker feedback loop (worst near the right edge, where small width changes
+// flip the panel from one side of the cursor to the other every frame).
 function isInsidePanel(el: HTMLElement | null): boolean {
     return !!el && !!el.closest && el.closest('#StyleDetectiveOverlay') != null;
 }
@@ -288,33 +298,28 @@ function inspectElementUnderCursor(): void {
     positionPanelAtPointer(lastPointer);
 }
 
-function onMouseOver(this: HTMLElement, e: MouseEvent): void {
-    // The hovered element is `this`; alias it for the rest of the handler.
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const el = this;
+function onMouseOver(e: MouseEvent): void {
+    const el = eventTargetElement(e);
+    if (!el || isInsidePanel(el)) return;
 
     inspectElement(el);
-
-    e.stopPropagation();
 }
 
-function onMouseOut(this: HTMLElement, e: MouseEvent): void {
-    if (isInsidePanel(this)) return;
+function onMouseOut(e: MouseEvent): void {
+    const el = eventTargetElement(e);
+    if (!el || isInsidePanel(el)) return;
 
-    this.style.outline = '';
-
-    e.stopPropagation();
+    el.style.outline = '';
 }
 
-function onMouseMove(this: HTMLElement, e: MouseEvent): void {
-    if (isInsidePanel(this)) return;
+function onMouseMove(e: MouseEvent): void {
+    const el = eventTargetElement(e);
+    if (!el || isInsidePanel(el)) return;
 
     // mouseover does not re-fire when the overlay is enabled while the cursor
     // is already over an element, so keep inspecting on mousemove too.
-    inspectElement(this);
+    inspectElement(el);
     positionPanelAtPointer(e);
-
-    e.stopPropagation();
 }
 
 // http://stackoverflow.com/a/7557433
@@ -394,7 +399,7 @@ async function copyCssDefinition(): Promise<void> {
 // === Overlay controller ===
 
 class StyleDetectiveOverlay {
-    // Whether all elements currently have the hover event listeners attached.
+    // Whether the document-level hover listeners are attached.
     haveEventListeners = false;
 
     // Build the panel and show the "loaded" notification.
@@ -408,49 +413,25 @@ class StyleDetectiveOverlay {
         return block;
     }
 
-    // Get all elements within the given element
-    getAllElements(element: Node | null): HTMLElement[] {
-        let elements: HTMLElement[] = [];
-
-        if (element && element.hasChildNodes()) {
-            elements.push(element as HTMLElement);
-
-            const childs = element.childNodes;
-
-            for (let i = 0; i < childs.length; i++) {
-                const child = childs[i]!;
-                if (child.hasChildNodes()) {
-                    elements = elements.concat(this.getAllElements(child));
-                } else if (child.nodeType == 1) {
-                    elements.push(child as HTMLElement);
-                }
-            }
-        }
-
-        return elements;
-    }
-
-    // Add event listeners for all elements in the current document
+    // One capture-phase listener trio on document covers the whole page,
+    // including nodes inserted after enable (SPAs). O(1) vs walking the DOM.
     addEventListeners(): void {
-        const elements = this.getAllElements(currentDocument().body);
+        if (this.haveEventListeners) return;
 
-        for (const element of elements) {
-            element.addEventListener('mouseover', onMouseOver, false);
-            element.addEventListener('mouseout', onMouseOut, false);
-            element.addEventListener('mousemove', onMouseMove, false);
-        }
+        const doc = currentDocument();
+        doc.addEventListener('mouseover', onMouseOver, HOVER_LISTENER_OPTS);
+        doc.addEventListener('mouseout', onMouseOut, HOVER_LISTENER_OPTS);
+        doc.addEventListener('mousemove', onMouseMove, HOVER_LISTENER_OPTS);
         this.haveEventListeners = true;
     }
 
-    // Remove event listeners for all elements in the current document
     removeEventListeners(): void {
-        const elements = this.getAllElements(currentDocument().body);
+        if (!this.haveEventListeners) return;
 
-        for (const element of elements) {
-            element.removeEventListener('mouseover', onMouseOver, false);
-            element.removeEventListener('mouseout', onMouseOut, false);
-            element.removeEventListener('mousemove', onMouseMove, false);
-        }
+        const doc = currentDocument();
+        doc.removeEventListener('mouseover', onMouseOver, HOVER_LISTENER_OPTS);
+        doc.removeEventListener('mouseout', onMouseOut, HOVER_LISTENER_OPTS);
+        doc.removeEventListener('mousemove', onMouseMove, HOVER_LISTENER_OPTS);
         this.haveEventListeners = false;
     }
 

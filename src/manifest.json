@@ -29,7 +29,8 @@
             "run_at": "document_idle"
         }
     ],
-    "permissions": ["storage", "clipboardWrite"],
+    "permissions": ["storage", "clipboardWrite", "scripting", "activeTab"],
+    "host_permissions": ["http://*/*", "https://*/*", "file://*/*"],
     "commands": {
         "_execute_action": {
             "suggested_key": {

@@ -22,16 +22,14 @@
         },
         "default_title": "Style Detective"
     },
-    "permissions": [
-        "scripting",
-        "storage",
-        "clipboardWrite"
+    "content_scripts": [
+        {
+            "matches": ["http://*/*", "https://*/*", "file://*/*"],
+            "js": ["src/content/core.ts"],
+            "run_at": "document_idle"
+        }
     ],
-    "host_permissions": [
-        "http://*/*",
-        "https://*/*",
-        "file://*/*"
-    ],
+    "permissions": ["storage", "clipboardWrite"],
     "commands": {
         "_execute_action": {
             "suggested_key": {

@@ -334,7 +334,10 @@ function isElementInViewport(el: HTMLElement): boolean {
 let flashMessageTimer: ReturnType<typeof setTimeout> | null = null;
 
 // Display a short-lived toast in the top-left of the page.
-function flashMessage(msg: string, options: { persistent?: boolean } = {}): void {
+function flashMessage(
+    msg: string,
+    options: { persistent?: boolean; tone?: 'default' | 'success' } = {},
+): void {
     removeElement('styleDetectiveInsertMessage');
     if (flashMessageTimer) {
         clearTimeout(flashMessageTimer);
@@ -345,7 +348,7 @@ function flashMessage(msg: string, options: { persistent?: boolean } = {}): void
 
     p.appendChild(document.createTextNode(msg));
     p.id = 'styleDetectiveInsertMessage';
-    p.style.backgroundColor = '#7a1f1f';
+    p.style.backgroundColor = options.tone === 'success' ? '#1f5c3a' : '#7a1f1f';
     p.style.color = '#ffffff';
     p.style.position = 'fixed';
     p.style.top = '10px';
@@ -382,7 +385,7 @@ async function copyCssDefinition(): Promise<void> {
 
     try {
         await copyTextToClipboard(inspectedCssDefinition);
-        flashMessage('CSS definition copied to clipboard');
+        flashMessage('CSS definition copied to clipboard', { tone: 'success' });
     } catch {
         flashMessage('Could not copy to clipboard');
     }

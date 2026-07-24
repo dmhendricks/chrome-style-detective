@@ -217,9 +217,12 @@ export function selectorLabel(el: HTMLElement): string {
 /**
  * Replace an element's contents with `" : "` followed by a copyable value group.
  * When frozen, hovering the value reveals a copy icon; clicking copies the full
- * property value string.
+ * property value string. Skips the DOM rebuild when the value is unchanged.
  */
 export function setValueContent(target: HTMLElement, copyValue: string): void {
+    if (target.dataset.sdValue === copyValue) return;
+
     const doc = target.ownerDocument;
+    target.dataset.sdValue = copyValue;
     target.replaceChildren(doc.createTextNode(' : '), wrapCopyableValue(doc, copyValue));
 }

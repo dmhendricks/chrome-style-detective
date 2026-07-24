@@ -49,6 +49,8 @@
     --sd-copy-affordance-hover: #555;
     --sd-swatch-border: #000;
     --sd-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+    --sd-scrollbar-thumb: #9a9a9a;
+    --sd-scrollbar-track: #e8e8e8;
 
     &.StyleDetectiveOverlay--dark {
         --sd-text: #d8dee8;
@@ -67,6 +69,8 @@
         --sd-copy-affordance-hover: #e8edf4;
         --sd-swatch-border: #6b7585;
         --sd-shadow: 0 4px 20px rgba(0, 0, 0, 0.55);
+        --sd-scrollbar-thumb: #7a8494;
+        --sd-scrollbar-track: #252d3a;
     }
 
     // Dimensions — width tracks font size (10px → 332/400 base) so larger
@@ -102,14 +106,16 @@
     }
 
     display: none;
+    // Shown as flex (see core.ts) so the body scrolls between a fixed banner
+    // and footer instead of scrolling the whole panel.
+    flex-direction: column !important;
     position: absolute !important;
     min-width: var(--sd-min-width) !important;
     max-width: var(--sd-max-width) !important;
     // Never grow taller than the viewport (less a strip at the bottom for the
-    // browser's link-URL preview); a long property list scrolls internally
-    // instead of overflowing off-screen.
+    // browser's link-URL preview); a long property list scrolls in &__center.
     max-height: calc(100vh - 25px) !important;
-    overflow-y: auto !important;
+    overflow: hidden !important;
     color: var(--sd-text) !important;
     background: var(--sd-panel-bg) !important;
     border-radius: var(--sd-radius) !important;
@@ -120,6 +126,7 @@
     // to two lines; when frozen, an overflowing header can be clicked to expand.
     h1 {
         display: block !important;
+        flex: 0 0 auto !important;
         box-sizing: border-box !important;
         padding: 8px 14px !important;
         line-height: calc(var(--sd-font-size) * 1.6) !important;
@@ -168,9 +175,27 @@
     }
 
     &__center {
-        padding: 8px 18px 0 !important;
-        overflow: hidden !important;
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        padding: 8px 18px !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
         background: var(--sd-panel-bg) !important;
+        scrollbar-width: thin !important;
+        scrollbar-color: var(--sd-scrollbar-thumb) var(--sd-scrollbar-track) !important;
+
+        &::-webkit-scrollbar {
+            width: 8px !important;
+        }
+
+        &::-webkit-scrollbar-track {
+            background: var(--sd-scrollbar-track) !important;
+        }
+
+        &::-webkit-scrollbar-thumb {
+            background: var(--sd-scrollbar-thumb) !important;
+            border-radius: 4px !important;
+        }
     }
 
     .StyleDetectiveOverlay__category {
@@ -256,6 +281,7 @@
 
     &__footer {
         display: flex !important;
+        flex: 0 0 auto !important;
         flex-direction: column !important;
         align-items: center !important;
         box-sizing: border-box !important;

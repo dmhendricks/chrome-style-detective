@@ -14,15 +14,13 @@ import './style.scss';
 
 const FROZEN_CLASS = 'StyleDetectiveOverlay--frozen';
 const DARK_CLASS = 'StyleDetectiveOverlay--dark';
+const HIGHLIGHT_ID = 'StyleDetectiveHighlight';
 
 // === Module state ===
 
-// Generated CSS text for the element currently being inspected. Updated when
-// the hovered element changes; read by the [c] key clipboard copy.
-let inspectedCssDefinition = '';
-let outlinedElement: HTMLElement | null = null;
 // Last element that received a full panel update. Used to skip redundant
-// inspect work while the cursor moves within the same target.
+// inspect work while the cursor moves within the same target, and as the
+// source for a lazily built CSS definition when the user presses [c].
 let inspectedElement: HTMLElement | null = null;
 
 // Last known pointer position so we can inspect the element under the cursor
@@ -182,18 +180,9 @@ function currentDocument(): Document {
 
 // === CSS definition ===
 
-// Appends `property: value;` lines for every property in `props` to the running
-// CSS definition string.
-function appendCssDefinition(style: CSSStyleDeclaration, props: readonly string[]): void {
-    for (const property of props) {
-        inspectedCssDefinition += '\t' + property + ': ' + style.getPropertyValue(property) + ';\n';
-    }
-}
-
-// Build the full "simple CSS definition" string for the hovered element, walking
-// every category in display order.
+/** Build a simple CSS definition string for an element (used only on copy). */
 function buildCssDefinition(el: HTMLElement, style: CSSStyleDeclaration): string {
-    inspectedCssDefinition =
+    let css =
         el.tagName.toLowerCase() +
         (el.id === '' ? '' : ' #' + el.id) +
         (el.className === '' ? '' : ' .' + el.className) +
@@ -202,13 +191,15 @@ function buildCssDefinition(el: HTMLElement, style: CSSStyleDeclaration): string
     for (const category of CSS_CATEGORIES) {
         const props = propertiesFor(category.key);
         if (props.length === 0) continue;
-        inspectedCssDefinition += `\n\t/* ${category.title} */\n`;
-        appendCssDefinition(style, props);
+
+        css += `\n\t/* ${category.title} */\n`;
+        for (const property of props) {
+            css += '\t' + property + ': ' + style.getPropertyValue(property) + ';\n';
+        }
     }
 
-    inspectedCssDefinition += '}';
-
-    return inspectedCssDefinition;
+    css += '}';
+    return css;
 }
 
 // === Event handlers ===
@@ -232,6 +223,69 @@ function isInsidePanel(el: HTMLElement | null): boolean {
     return !!el && !!el.closest && el.closest('#StyleDetectiveOverlay') != null;
 }
 
+/** Our highlight box — never mutates the host element's styles. */
+function ensureHighlight(): HTMLElement {
+    const doc = currentDocument();
+    let box = doc.getElementById(HIGHLIGHT_ID);
+    if (!box) {
+        box = doc.createElement('div');
+        box.id = HIGHLIGHT_ID;
+        box.setAttribute('aria-hidden', 'true');
+        doc.body.appendChild(box);
+    }
+    return box;
+}
+
+function clearHighlight(): void {
+    const box = currentDocument().getElementById(HIGHLIGHT_ID);
+    if (box) box.style.display = 'none';
+}
+
+function removeHighlight(): void {
+    removeElement(HIGHLIGHT_ID);
+}
+
+/** Position a dashed box over `el` using viewport coordinates. */
+function highlightElement(el: HTMLElement): void {
+    if (el.tagName === 'BODY' || el.tagName === 'HTML') {
+        clearHighlight();
+        return;
+    }
+
+    const box = ensureHighlight();
+    const rect = el.getBoundingClientRect();
+    box.style.display = 'block';
+    box.style.top = `${rect.top}px`;
+    box.style.left = `${rect.left}px`;
+    box.style.width = `${Math.max(0, rect.width)}px`;
+    box.style.height = `${Math.max(0, rect.height)}px`;
+}
+
+/** Keep the fixed highlight box aligned after scroll/resize (including while frozen). */
+function syncHighlightToInspected(): void {
+    if (inspectedElement?.isConnected) {
+        highlightElement(inspectedElement);
+    } else {
+        clearHighlight();
+    }
+}
+
+const HIGHLIGHT_LAYOUT_OPTS: AddEventListenerOptions = { capture: true, passive: true };
+
+function addHighlightLayoutListeners(): void {
+    const win = currentDocument().defaultView;
+    if (!win) return;
+    win.addEventListener('scroll', syncHighlightToInspected, HIGHLIGHT_LAYOUT_OPTS);
+    win.addEventListener('resize', syncHighlightToInspected, HIGHLIGHT_LAYOUT_OPTS);
+}
+
+function removeHighlightLayoutListeners(): void {
+    const win = currentDocument().defaultView;
+    if (!win) return;
+    win.removeEventListener('scroll', syncHighlightToInspected, HIGHLIGHT_LAYOUT_OPTS);
+    win.removeEventListener('resize', syncHighlightToInspected, HIGHLIGHT_LAYOUT_OPTS);
+}
+
 function inspectElement(el: HTMLElement): void {
     if (isInsidePanel(el)) return;
     // Same target as last full update — skip computed-style + panel rebuild.
@@ -244,15 +298,7 @@ function inspectElement(el: HTMLElement): void {
     if (!block) return;
 
     updateHeader(el);
-
-    // Outline element
-    if (el.tagName != 'body') {
-        if (outlinedElement && outlinedElement !== el) {
-            outlinedElement.style.outline = '';
-        }
-        el.style.outline = '1px dashed #f00';
-        outlinedElement = el;
-    }
+    highlightElement(el);
 
     // Updating CSS properties
     if (!document.defaultView) return;
@@ -262,7 +308,6 @@ function inspectElement(el: HTMLElement): void {
 
     removeElement('styleDetectiveInsertMessage');
 
-    buildCssDefinition(el, style);
     inspectedElement = el;
 }
 
@@ -343,11 +388,12 @@ function onMouseOut(e: MouseEvent): void {
     const el = eventTargetElement(e);
     if (!el || isInsidePanel(el)) return;
 
-    el.style.outline = '';
     // Allow a full re-inspect if the pointer returns to this element (e.g. after
-    // briefly entering the overlay panel, which clears the outline).
-    if (el === inspectedElement) inspectedElement = null;
-    if (el === outlinedElement) outlinedElement = null;
+    // briefly entering the overlay panel).
+    if (el === inspectedElement) {
+        inspectedElement = null;
+        clearHighlight();
+    }
 }
 
 function onMouseMove(e: MouseEvent): void {
@@ -358,6 +404,8 @@ function onMouseMove(e: MouseEvent): void {
     // is already over an element, so inspect on mousemove too — but only when
     // the target element changed (see inspectElement gate).
     inspectElement(el);
+    // Keep the highlight glued under scroll/layout even when the target is unchanged.
+    if (el === inspectedElement) highlightElement(el);
     schedulePanelPosition(e);
 }
 
@@ -422,13 +470,21 @@ function removeElement(divid: string): void {
 }
 
 async function copyCssDefinition(): Promise<void> {
-    if (!inspectedCssDefinition) {
+    const el = inspectedElement;
+    if (!el || !el.isConnected) {
         flashMessage('Nothing to copy — hover an element first.');
         return;
     }
 
+    const view = currentDocument().defaultView;
+    if (!view) {
+        flashMessage('Could not copy to clipboard');
+        return;
+    }
+
     try {
-        await copyTextToClipboard(inspectedCssDefinition);
+        const css = buildCssDefinition(el, view.getComputedStyle(el, null));
+        await copyTextToClipboard(css);
         flashMessage('CSS definition copied to clipboard', { tone: 'success' });
     } catch {
         flashMessage('Could not copy to clipboard');
@@ -490,6 +546,7 @@ class StyleDetectiveOverlay {
             applyPanelFontSize();
             applyPanelTheme();
             this.addEventListeners();
+            addHighlightLayoutListeners();
             inspectElementUnderCursor();
             // Pointer may land after async font-size load; re-check once layout settles.
             requestAnimationFrame(() => inspectElementUnderCursor());
@@ -513,8 +570,9 @@ class StyleDetectiveOverlay {
             }
             if (message) document.body.removeChild(message);
             this.removeEventListeners();
+            removeHighlightLayoutListeners();
+            removeHighlight();
             inspectedElement = null;
-            outlinedElement = null;
 
             return true;
         }
@@ -541,9 +599,7 @@ class StyleDetectiveOverlay {
     unfreeze(): boolean {
         const block = currentDocument().getElementById('StyleDetectiveOverlay');
         if (block && !this.haveEventListeners) {
-            // Remove the red outline
-            if (outlinedElement) outlinedElement.style.outline = '';
-            outlinedElement = null;
+            clearHighlight();
             inspectedElement = null;
             block.classList.remove(FROZEN_CLASS);
             collapseSelectorHeader();
@@ -566,7 +622,6 @@ function keyMap(e: KeyboardEvent): void {
 
     // ESC: Close the css viewer.
     if (e.key === 'Escape' || e.keyCode === 27) {
-        if (outlinedElement) outlinedElement.style.outline = '';
         overlay.disable();
         return;
     }

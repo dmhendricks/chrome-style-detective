@@ -18,6 +18,24 @@ const FROZEN_CLASS = 'StyleDetectiveOverlay--frozen';
 let inspectedCssDefinition = '';
 let outlinedElement: HTMLElement | null = null;
 
+// Last known pointer position so we can inspect the element under the cursor
+// when the overlay is enabled without waiting for the next mousemove/mouseover.
+let lastPointer: { clientX: number; clientY: number; pageX: number; pageY: number } | null =
+    null;
+
+document.addEventListener(
+    'mousemove',
+    (e) => {
+        lastPointer = {
+            clientX: e.clientX,
+            clientY: e.clientY,
+            pageX: e.pageX,
+            pageY: e.pageY,
+        };
+    },
+    { capture: true, passive: true },
+);
+
 // Panel body font size (px). +/- keys adjust this within [MIN, MAX]; applied as
 // --sd-font-size on #StyleDetectiveOverlay so headings/labels scale with it.
 // Persisted in chrome.storage.local so the last size is restored on next open.
@@ -146,11 +164,7 @@ function isInsidePanel(el: HTMLElement | null): boolean {
     return !!el && !!el.closest && el.closest('#StyleDetectiveOverlay') != null;
 }
 
-function onMouseOver(this: HTMLElement, e: MouseEvent): void {
-    // The hovered element is `this`; alias it for the rest of the handler.
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const el = this;
-
+function inspectElement(el: HTMLElement): void {
     if (isInsidePanel(el)) return;
 
     const document = currentDocument();
@@ -174,22 +188,10 @@ function onMouseOver(this: HTMLElement, e: MouseEvent): void {
 
     removeElement('styleDetectiveInsertMessage');
 
-    e.stopPropagation();
-
     buildCssDefinition(el, style);
 }
 
-function onMouseOut(this: HTMLElement, e: MouseEvent): void {
-    if (isInsidePanel(this)) return;
-
-    this.style.outline = '';
-
-    e.stopPropagation();
-}
-
-function onMouseMove(this: HTMLElement, e: MouseEvent): void {
-    if (isInsidePanel(this)) return;
-
+function positionPanelAtPointer(e: { pageX: number; pageY: number }): void {
     const block = currentDocument().getElementById('StyleDetectiveOverlay');
 
     if (!block) return;
@@ -219,6 +221,43 @@ function onMouseMove(this: HTMLElement, e: MouseEvent): void {
 
     // adapt block top to screen offset
     if (!isElementInViewport(block)) block.style.top = window.pageYOffset + 20 + 'px';
+}
+
+/** Populate and position the panel for whatever is under the current cursor. */
+function inspectElementUnderCursor(): void {
+    if (!lastPointer) return;
+
+    const document = currentDocument();
+    const el = document.elementFromPoint(lastPointer.clientX, lastPointer.clientY);
+
+    if (!el || !(el instanceof HTMLElement) || isInsidePanel(el)) return;
+
+    inspectElement(el);
+    positionPanelAtPointer(lastPointer);
+}
+
+function onMouseOver(this: HTMLElement, e: MouseEvent): void {
+    // The hovered element is `this`; alias it for the rest of the handler.
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const el = this;
+
+    inspectElement(el);
+
+    e.stopPropagation();
+}
+
+function onMouseOut(this: HTMLElement, e: MouseEvent): void {
+    if (isInsidePanel(this)) return;
+
+    this.style.outline = '';
+
+    e.stopPropagation();
+}
+
+function onMouseMove(this: HTMLElement, e: MouseEvent): void {
+    if (isInsidePanel(this)) return;
+
+    positionPanelAtPointer(e);
 
     e.stopPropagation();
 }
@@ -371,6 +410,7 @@ class StyleDetectiveOverlay {
             document.body.appendChild(this.createBlock());
             applyPanelFontSize();
             this.addEventListeners();
+            inspectElementUnderCursor();
 
             return true;
         }
@@ -419,6 +459,7 @@ class StyleDetectiveOverlay {
             if (outlinedElement) outlinedElement.style.outline = '';
             block.classList.remove(FROZEN_CLASS);
             this.addEventListeners();
+            inspectElementUnderCursor();
 
             return true;
         }

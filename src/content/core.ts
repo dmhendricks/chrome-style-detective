@@ -481,7 +481,8 @@ class StyleDetectiveOverlay {
 
 // === Keymap ===
 
-// Close on [Esc], freeze on [f], CSS definition on [c], font size on [+] / [-] / [0].
+// Close on [Esc], freeze on [f], CSS definition on [c], help on [h],
+// font size on [+] / [-] / [0].
 function keyMap(e: KeyboardEvent): void {
     if (!overlay.isEnabled()) return;
 
@@ -506,6 +507,13 @@ function keyMap(e: KeyboardEvent): void {
     if (e.key === 'c' || e.key === 'C' || e.keyCode === 67) {
         e.preventDefault();
         void copyCssDefinition();
+        return;
+    }
+
+    // h: Open the options / help page.
+    if (e.key === 'h' || e.key === 'H' || e.keyCode === 72) {
+        e.preventDefault();
+        void chrome.runtime.sendMessage({ type: 'openOptions' });
         return;
     }
 

@@ -248,7 +248,7 @@ function positionPanelAtPointer(e: { pageX: number; pageY: number }): void {
 
     if (!block) return;
 
-    block.style.display = 'block';
+    block.style.display = 'flex';
 
     const pageWidth = window.innerWidth;
     // Keep the panel clear of the browser's link-URL preview, which the browser

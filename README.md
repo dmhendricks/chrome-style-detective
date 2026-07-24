@@ -2,7 +2,7 @@
 
 A simple CSS property viewer for Google Chrome. Hover any element on a page to inspect its computed styles in a floating panel. Forked from [miled/cssviewer](https://github.com/miled/cssviewer) and modernized.
 
-![Style Detective](store/demo.webp)
+<video src="store/demo.mp4" autoplay loop muted playsinline width="800"></video>
 
 Features:
 

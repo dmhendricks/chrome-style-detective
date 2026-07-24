@@ -32,6 +32,8 @@ Keyboard shortcuts while the viewer is active:
 - `C` to copy a simple CSS definition for the selected element to the clipboard
 - `+` / `-` to increase or decrease the panel font size
 - `0` to reset the panel font size
+- `M` to Toggle light/dark mode for overlay panel
+- `H` to display the help page
 - `Esc` to close the viewer
 
 ## Known Issues

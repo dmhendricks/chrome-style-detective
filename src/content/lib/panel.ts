@@ -29,23 +29,26 @@ const CATEGORY_HIDDEN = 'StyleDetectiveOverlay__category--hidden';
 const HEADER_EXPANDABLE = 'StyleDetectiveOverlay__header--expandable';
 const HEADER_EXPANDED = 'StyleDetectiveOverlay__header--expanded';
 
+/** Cached DOM nodes for a property row, filled once in createBlock(). */
+interface PropertyRow {
+    li: HTMLElement;
+    value: HTMLElement;
+}
+
+const propertyRows = new Map<string, PropertyRow>();
+const categoryElements = new Map<string, HTMLElement>();
+
+function clearPanelCache(): void {
+    propertyRows.clear();
+    categoryElements.clear();
+}
+
 function currentDocument(): Document {
     return window.document;
 }
 
 function getCSSProperty(style: CSSStyleDeclaration, property: string): string {
     return style.getPropertyValue(property);
-}
-
-// The row for a property is an <li> whose last child holds the value span.
-function valueSpan(property: string): HTMLElement | null {
-    const li = currentDocument().getElementById(ID_PREFIX + property);
-
-    return (li?.lastChild as HTMLElement | null) ?? null;
-}
-
-function rowElement(property: string): HTMLElement | null {
-    return currentDocument().getElementById(ID_PREFIX + property);
 }
 
 function setRowVisible(li: HTMLElement, visible: boolean): void {
@@ -57,12 +60,11 @@ function setCategoryVisible(div: HTMLElement, visible: boolean): void {
 }
 
 function setCSSProperty(style: CSSStyleDeclaration, property: string): void {
-    const li = rowElement(property);
-    const target = valueSpan(property);
-    if (!li || !target) return;
+    const row = propertyRows.get(property);
+    if (!row) return;
 
-    setValueContent(target, style.getPropertyValue(property));
-    setRowVisible(li, true);
+    setValueContent(row.value, style.getPropertyValue(property));
+    setRowVisible(row.li, true);
 }
 
 function setCSSPropertyIf(
@@ -70,60 +72,57 @@ function setCSSPropertyIf(
     property: string,
     condition: boolean,
 ): number {
-    const li = rowElement(property);
-    if (!li) return 0;
+    const row = propertyRows.get(property);
+    if (!row) return 0;
 
     if (condition) {
-        const target = li.lastChild as HTMLElement | null;
-        if (target) setValueContent(target, style.getPropertyValue(property));
-        setRowVisible(li, true);
+        setValueContent(row.value, style.getPropertyValue(property));
+        setRowVisible(row.li, true);
 
         return 1;
     }
 
-    setRowVisible(li, false);
+    setRowVisible(row.li, false);
 
     return 0;
 }
 
 function setCSSPropertyValue(property: string, value: string): void {
-    const li = rowElement(property);
-    const target = li?.lastChild as HTMLElement | null;
-    if (!li || !target) return;
+    const row = propertyRows.get(property);
+    if (!row) return;
 
-    setValueContent(target, value);
-    setRowVisible(li, true);
+    setValueContent(row.value, value);
+    setRowVisible(row.li, true);
 }
 
 function setCSSPropertyValueIf(property: string, value: string, condition: boolean): number {
-    const li = rowElement(property);
-    if (!li) return 0;
+    const row = propertyRows.get(property);
+    if (!row) return 0;
 
     if (condition) {
-        const target = li.lastChild as HTMLElement | null;
-        if (target) setValueContent(target, value);
-        setRowVisible(li, true);
+        setValueContent(row.value, value);
+        setRowVisible(row.li, true);
 
         return 1;
     }
 
-    setRowVisible(li, false);
+    setRowVisible(row.li, false);
 
     return 0;
 }
 
 function hideCSSProperty(property: string): void {
-    const li = rowElement(property);
-    if (li) setRowVisible(li, false);
+    const row = propertyRows.get(property);
+    if (row) setRowVisible(row.li, false);
 }
 
 function hideCSSCategory(category: string): void {
-    const div = currentDocument().getElementById(ID_PREFIX + category);
+    const div = categoryElements.get(category);
     if (div) setCategoryVisible(div, false);
 }
 
 function showCSSCategory(category: string): void {
-    const div = currentDocument().getElementById(ID_PREFIX + category);
+    const div = categoryElements.get(category);
     if (div) setCategoryVisible(div, true);
 }
 
@@ -555,11 +554,13 @@ export function updateHeader(el: HTMLElement): void {
 }
 
 /**
- * Build the panel element (header, per-category property lists, footer). Ids are
- * assigned so the update functions above can address each row and category.
- * Disabled catalog entries are omitted (available later for a property picker).
+ * Build the panel element (header, per-category property lists, footer).
+ * Property/category nodes are cached for O(1) updates (no getElementById per
+ * row). Disabled catalog entries are omitted (available later for a picker).
  */
 export function createBlock(doc: Document): HTMLDivElement {
+    clearPanelCache();
+
     const selector = el(doc, 'span', { className: 'StyleDetectiveOverlay__selector' });
     const header = el(doc, 'h1', { children: [selector] });
     header.addEventListener('click', () => toggleSelectorExpanded(header));
@@ -567,8 +568,9 @@ export function createBlock(doc: Document): HTMLDivElement {
     const categoryDivs = CSS_CATEGORIES.filter(
         (category) => enabledPropertyNames(category).length > 0,
     ).map((category) => {
-        const rows = category.properties.filter(isPropertyEnabled).map((property) =>
-            el(doc, 'li', {
+        const rows = category.properties.filter(isPropertyEnabled).map((property) => {
+            const value = el(doc, 'span');
+            const li = el(doc, 'li', {
                 id: ID_PREFIX + property.name,
                 // Hidden until the first updatePanel pass fills values — avoids
                 // empty-row first paint glitches.
@@ -578,23 +580,32 @@ export function createBlock(doc: Document): HTMLDivElement {
                         className: 'StyleDetectiveOverlay__property',
                         text: property.name,
                     }),
-                    el(doc, 'span'),
+                    value,
                 ],
-            }),
-        );
+            });
+            propertyRows.set(property.name, { li, value });
+
+            return li;
+        });
 
         // List/Table/Misc/Effects start hidden; updatePanel reveals them when
         // the hovered element has something to show.
-        const gated = category.key === 'pList' || category.key === 'pTable' ||
-            category.key === 'pMisc' || category.key === 'pEffect';
+        const gated =
+            category.key === 'pList' ||
+            category.key === 'pTable' ||
+            category.key === 'pMisc' ||
+            category.key === 'pEffect';
 
-        return el(doc, 'div', {
+        const categoryDiv = el(doc, 'div', {
             id: ID_PREFIX + category.key,
             className: gated
                 ? `StyleDetectiveOverlay__category ${CATEGORY_HIDDEN}`
                 : 'StyleDetectiveOverlay__category',
             children: [el(doc, 'h2', { text: category.title }), el(doc, 'ul', { children: rows })],
         });
+        categoryElements.set(category.key, categoryDiv);
+
+        return categoryDiv;
     });
 
     const center = el(doc, 'div', { id: 'StyleDetectiveOverlay__center', children: categoryDivs });

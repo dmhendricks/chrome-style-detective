@@ -630,20 +630,34 @@ function keyMap(e: KeyboardEvent): void {
 const overlay = new StyleDetectiveOverlay();
 const ready = Promise.all([loadPanelFontSize(), loadPanelTheme()]);
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-    if (message?.type !== 'toggleOverlay') return;
+// Guard against double boot when the service worker injects the same file into
+// a tab that already has the declared content script (or a prior fallback).
+const BOOT_FLAG = '__styleDetectiveBooted__';
+const bootRoot = globalThis as typeof globalThis & { [BOOT_FLAG]?: boolean };
 
-    void ready.then(() => {
-        if (overlay.isEnabled()) {
-            overlay.disable();
-        } else {
-            overlay.enable();
-        }
-        sendResponse({ ok: true, enabled: overlay.isEnabled() });
+if (!bootRoot[BOOT_FLAG]) {
+    bootRoot[BOOT_FLAG] = true;
+
+    chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+        if (message?.type !== 'toggleOverlay') return;
+
+        void ready
+            .then(() => {
+                if (overlay.isEnabled()) {
+                    overlay.disable();
+                } else {
+                    overlay.enable();
+                }
+                sendResponse({ ok: true, enabled: overlay.isEnabled() });
+            })
+            .catch((err: unknown) => {
+                console.error('[Style Detective] toggle failed', err);
+                sendResponse({ ok: false, error: String(err) });
+            });
+
+        // Keep the message channel open for the async response.
+        return true;
     });
 
-    // Keep the message channel open for the async response.
-    return true;
-});
-
-document.onkeydown = keyMap;
+    document.onkeydown = keyMap;
+}

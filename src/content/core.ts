@@ -176,6 +176,9 @@ function inspectElement(el: HTMLElement): void {
 
     // Outline element
     if (el.tagName != 'body') {
+        if (outlinedElement && outlinedElement !== el) {
+            outlinedElement.style.outline = '';
+        }
         el.style.outline = '1px dashed #f00';
         outlinedElement = el;
     }
@@ -257,6 +260,9 @@ function onMouseOut(this: HTMLElement, e: MouseEvent): void {
 function onMouseMove(this: HTMLElement, e: MouseEvent): void {
     if (isInsidePanel(this)) return;
 
+    // mouseover does not re-fire when the overlay is enabled while the cursor
+    // is already over an element, so keep inspecting on mousemove too.
+    inspectElement(this);
     positionPanelAtPointer(e);
 
     e.stopPropagation();
@@ -411,6 +417,8 @@ class StyleDetectiveOverlay {
             applyPanelFontSize();
             this.addEventListeners();
             inspectElementUnderCursor();
+            // Pointer may land after async font-size load; re-check once layout settles.
+            requestAnimationFrame(() => inspectElementUnderCursor());
 
             return true;
         }

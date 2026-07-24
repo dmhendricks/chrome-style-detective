@@ -20,6 +20,7 @@
 //     h1                                        title banner
 //       .StyleDetectiveOverlay__selector         element selector label
 //       (--header-expandable / --header-expanded modifiers on h1)
+//       (--frozen / --dark modifiers on the block)
 //     &__center                                 body (#id)
 //       .StyleDetectiveOverlay__category         one per property group (.class)
 //         h2                                    group heading
@@ -31,7 +32,7 @@
 //         .StyleDetectiveOverlay__shortcut       one kbd + label pair
 
 #StyleDetectiveOverlay {
-    // Palette
+    // Palette (light default; --dark modifier overrides below)
     --sd-text: #555;
     --sd-panel-bg: #fff;
     --sd-label: #888;
@@ -46,6 +47,27 @@
     --sd-kbd-text: #3d4654;
     --sd-copy-affordance: #888;
     --sd-copy-affordance-hover: #555;
+    --sd-swatch-border: #000;
+    --sd-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+
+    &.StyleDetectiveOverlay--dark {
+        --sd-text: #d8dee8;
+        --sd-panel-bg: #1a1f28;
+        --sd-label: #9aa6b8;
+        --sd-heading: #8fb86a;
+        --sd-banner-bg: #4169e1;
+        --sd-banner-stripe: rgba(255, 255, 255, 0.14);
+        --sd-bullet: #f87575;
+        --sd-divider: #2a3340;
+        --sd-footer-bg: #141920;
+        --sd-kbd-bg: #252d3a;
+        --sd-kbd-border: #3a4556;
+        --sd-kbd-text: #e8edf4;
+        --sd-copy-affordance: #9aa6b8;
+        --sd-copy-affordance-hover: #e8edf4;
+        --sd-swatch-border: #6b7585;
+        --sd-shadow: 0 4px 20px rgba(0, 0, 0, 0.55);
+    }
 
     // Dimensions — width tracks font size (10px → 332/400 base) so larger
     // text gets a proportionally wider panel, still capped to the viewport.
@@ -91,7 +113,7 @@
     color: var(--sd-text) !important;
     background: var(--sd-panel-bg) !important;
     border-radius: var(--sd-radius) !important;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25) !important;
+    box-shadow: var(--sd-shadow) !important;
 
     // Title banner. CSS-drawn (replaces the old fixed-height header PNG): a
     // solid red base with a diagonal stripe overlay. Long selectors are clamped
@@ -294,7 +316,7 @@
         width: 8px !important;
         height: 8px !important;
         margin-right: 4px !important;
-        border: 1px solid #000 !important;
+        border: 1px solid var(--sd-swatch-border) !important;
         vertical-align: middle !important;
     }
 

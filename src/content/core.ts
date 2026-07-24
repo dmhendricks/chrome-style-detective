@@ -10,6 +10,7 @@ import { CSS_CATEGORIES, propertiesFor } from './lib/properties';
 import { createBlock, collapseSelectorHeader, refreshSelectorOverflow, updateHeader, updatePanel } from './lib/panel';
 
 const FROZEN_CLASS = 'StyleDetectiveOverlay--frozen';
+const DARK_CLASS = 'StyleDetectiveOverlay--dark';
 
 // === Module state ===
 
@@ -115,6 +116,54 @@ function resetPanelFontSize(): void {
     panelFontSize = PANEL_FONT_SIZE_DEFAULT;
     applyPanelFontSize();
     persistPanelFontSize();
+}
+
+// Panel color theme. Follows Chrome's light/dark preference until the user
+// presses [m] once; after that the choice is stored in chrome.storage.local
+// and used instead of the system preference.
+const PANEL_THEME_STORAGE_KEY = 'panelTheme';
+type PanelTheme = 'light' | 'dark';
+let panelTheme: PanelTheme = 'light';
+let panelThemeUserSet = false;
+
+function systemPanelTheme(): PanelTheme {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function applyPanelTheme(): void {
+    const block = currentDocument().getElementById('StyleDetectiveOverlay');
+    if (block) {
+        block.classList.toggle(DARK_CLASS, panelTheme === 'dark');
+    }
+}
+
+function persistPanelTheme(): void {
+    void chrome.storage.local.set({ [PANEL_THEME_STORAGE_KEY]: panelTheme });
+}
+
+async function loadPanelTheme(): Promise<void> {
+    const stored = await chrome.storage.local.get(PANEL_THEME_STORAGE_KEY);
+    const value = stored[PANEL_THEME_STORAGE_KEY];
+    if (value === 'dark' || value === 'light') {
+        panelTheme = value;
+        panelThemeUserSet = true;
+        return;
+    }
+
+    panelTheme = systemPanelTheme();
+    // Stay in sync with Chrome until the user picks an explicit theme.
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+        if (panelThemeUserSet) return;
+        panelTheme = systemPanelTheme();
+        applyPanelTheme();
+    });
+}
+
+function togglePanelTheme(): void {
+    panelTheme = panelTheme === 'dark' ? 'light' : 'dark';
+    panelThemeUserSet = true;
+    applyPanelTheme();
+    persistPanelTheme();
 }
 
 function currentDocument(): Document {
@@ -415,6 +464,7 @@ class StyleDetectiveOverlay {
         if (!block) {
             document.body.appendChild(this.createBlock());
             applyPanelFontSize();
+            applyPanelTheme();
             this.addEventListeners();
             inspectElementUnderCursor();
             // Pointer may land after async font-size load; re-check once layout settles.
@@ -482,7 +532,7 @@ class StyleDetectiveOverlay {
 // === Keymap ===
 
 // Close on [Esc], freeze on [f], CSS definition on [c], help on [h],
-// font size on [+] / [-] / [0].
+// theme on [m], font size on [+] / [-] / [0].
 function keyMap(e: KeyboardEvent): void {
     if (!overlay.isEnabled()) return;
 
@@ -517,6 +567,13 @@ function keyMap(e: KeyboardEvent): void {
         return;
     }
 
+    // m: Toggle light / dark panel theme.
+    if (e.key === 'm' || e.key === 'M' || e.keyCode === 77) {
+        e.preventDefault();
+        togglePanelTheme();
+        return;
+    }
+
     // + / = / NumpadAdd: increase panel font size.
     if (e.key === '+' || e.key === '=' || e.key === 'Add') {
         e.preventDefault();
@@ -540,11 +597,11 @@ function keyMap(e: KeyboardEvent): void {
 
 // === Entry point ===
 
-// Toggle the viewer on (re-)injection. Restore the last font size first so
-// enable() applies it to a freshly created panel.
+// Toggle the viewer on (re-)injection. Restore font size + theme first so
+// enable() applies them to a freshly created panel.
 const overlay = new StyleDetectiveOverlay();
 
-void loadPanelFontSize().then(() => {
+void Promise.all([loadPanelFontSize(), loadPanelTheme()]).then(() => {
     if (overlay.isEnabled()) {
         overlay.disable();
     } else {

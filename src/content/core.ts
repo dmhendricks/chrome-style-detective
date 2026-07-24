@@ -15,15 +15,22 @@ const DARK_CLASS = 'StyleDetectiveOverlay--dark';
 
 // === Module state ===
 
-// Generated CSS text for the element currently being inspected. Updated on every
-// mouseover; read by the [c] key clipboard copy.
+// Generated CSS text for the element currently being inspected. Updated when
+// the hovered element changes; read by the [c] key clipboard copy.
 let inspectedCssDefinition = '';
 let outlinedElement: HTMLElement | null = null;
+// Last element that received a full panel update. Used to skip redundant
+// inspect work while the cursor moves within the same target.
+let inspectedElement: HTMLElement | null = null;
 
 // Last known pointer position so we can inspect the element under the cursor
 // when the overlay is enabled without waiting for the next mousemove/mouseover.
 let lastPointer: { clientX: number; clientY: number; pageX: number; pageY: number } | null =
     null;
+
+// Coalesce panel repositioning to one layout pass per animation frame.
+let pendingPanelPointer: { pageX: number; pageY: number } | null = null;
+let panelPositionFrame: number | null = null;
 
 document.addEventListener(
     'mousemove',
@@ -225,6 +232,9 @@ function isInsidePanel(el: HTMLElement | null): boolean {
 
 function inspectElement(el: HTMLElement): void {
     if (isInsidePanel(el)) return;
+    // Same target as last full update — skip computed-style + panel rebuild.
+    // Positioning still runs separately so the overlay follows the cursor.
+    if (el === inspectedElement) return;
 
     const document = currentDocument();
     const block = document.getElementById('StyleDetectiveOverlay');
@@ -251,6 +261,7 @@ function inspectElement(el: HTMLElement): void {
     removeElement('styleDetectiveInsertMessage');
 
     buildCssDefinition(el, style);
+    inspectedElement = el;
 }
 
 function positionPanelAtPointer(e: { pageX: number; pageY: number }): void {
@@ -285,6 +296,27 @@ function positionPanelAtPointer(e: { pageX: number; pageY: number }): void {
     if (!isElementInViewport(block)) block.style.top = window.pageYOffset + 20 + 'px';
 }
 
+/** Queue a panel reposition for the next animation frame (last pointer wins). */
+function schedulePanelPosition(e: { pageX: number; pageY: number }): void {
+    pendingPanelPointer = { pageX: e.pageX, pageY: e.pageY };
+    if (panelPositionFrame !== null) return;
+
+    panelPositionFrame = requestAnimationFrame(() => {
+        panelPositionFrame = null;
+        const pointer = pendingPanelPointer;
+        pendingPanelPointer = null;
+        if (pointer) positionPanelAtPointer(pointer);
+    });
+}
+
+function cancelScheduledPanelPosition(): void {
+    if (panelPositionFrame !== null) {
+        cancelAnimationFrame(panelPositionFrame);
+        panelPositionFrame = null;
+    }
+    pendingPanelPointer = null;
+}
+
 /** Populate and position the panel for whatever is under the current cursor. */
 function inspectElementUnderCursor(): void {
     if (!lastPointer) return;
@@ -310,6 +342,10 @@ function onMouseOut(e: MouseEvent): void {
     if (!el || isInsidePanel(el)) return;
 
     el.style.outline = '';
+    // Allow a full re-inspect if the pointer returns to this element (e.g. after
+    // briefly entering the overlay panel, which clears the outline).
+    if (el === inspectedElement) inspectedElement = null;
+    if (el === outlinedElement) outlinedElement = null;
 }
 
 function onMouseMove(e: MouseEvent): void {
@@ -317,9 +353,10 @@ function onMouseMove(e: MouseEvent): void {
     if (!el || isInsidePanel(el)) return;
 
     // mouseover does not re-fire when the overlay is enabled while the cursor
-    // is already over an element, so keep inspecting on mousemove too.
+    // is already over an element, so inspect on mousemove too — but only when
+    // the target element changed (see inspectElement gate).
     inspectElement(el);
-    positionPanelAtPointer(e);
+    schedulePanelPosition(e);
 }
 
 // http://stackoverflow.com/a/7557433
@@ -432,6 +469,7 @@ class StyleDetectiveOverlay {
         doc.removeEventListener('mouseover', onMouseOver, HOVER_LISTENER_OPTS);
         doc.removeEventListener('mouseout', onMouseOut, HOVER_LISTENER_OPTS);
         doc.removeEventListener('mousemove', onMouseMove, HOVER_LISTENER_OPTS);
+        cancelScheduledPanelPosition();
         this.haveEventListeners = false;
     }
 
@@ -473,6 +511,8 @@ class StyleDetectiveOverlay {
             }
             if (message) document.body.removeChild(message);
             this.removeEventListeners();
+            inspectedElement = null;
+            outlinedElement = null;
 
             return true;
         }
@@ -501,6 +541,8 @@ class StyleDetectiveOverlay {
         if (block && !this.haveEventListeners) {
             // Remove the red outline
             if (outlinedElement) outlinedElement.style.outline = '';
+            outlinedElement = null;
+            inspectedElement = null;
             block.classList.remove(FROZEN_CLASS);
             collapseSelectorHeader();
             this.addEventListeners();

@@ -96,7 +96,7 @@ function checkIcon(doc: Document): SVGSVGElement {
     return svg;
 }
 
-function isOverlayFrozen(doc: Document): boolean {
+export function isOverlayFrozen(doc: Document = document): boolean {
     return doc.getElementById(OVERLAY_ID)?.classList.contains(FROZEN_CLASS) ?? false;
 }
 

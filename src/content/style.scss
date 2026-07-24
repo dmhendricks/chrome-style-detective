@@ -19,6 +19,7 @@
 //   #StyleDetectiveOverlay                       floating panel (block)
 //     h1                                        title banner
 //       .StyleDetectiveOverlay__selector         element selector label
+//       (--header-expandable / --header-expanded modifiers on h1)
 //     &__center                                 body (#id)
 //       .StyleDetectiveOverlay__category         one per property group (.class)
 //         h2                                    group heading
@@ -93,8 +94,8 @@
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25) !important;
 
     // Title banner. CSS-drawn (replaces the old fixed-height header PNG): a
-    // solid red base with a diagonal stripe overlay. Being drawn rather than a
-    // fixed image, it grows to fit selectors that wrap to multiple lines.
+    // solid red base with a diagonal stripe overlay. Long selectors are clamped
+    // to two lines; when frozen, an overflowing header can be clicked to expand.
     h1 {
         display: block !important;
         box-sizing: border-box !important;
@@ -120,15 +121,28 @@
     }
 
     .StyleDetectiveOverlay__selector {
-        display: block !important;
+        // -webkit-box + line-clamp caps tall Tailwind class dumps to 2 lines.
+        display: -webkit-box !important;
+        -webkit-box-orient: vertical !important;
+        -webkit-line-clamp: 2 !important;
+        overflow: hidden !important;
         color: #fff !important;
         font-size: calc(var(--sd-font-size) * 1.2) !important;
         line-height: calc(var(--sd-font-size) * 1.6) !important;
         text-align: center !important;
-        // Wrap long selectors, breaking anywhere so no single token overflows.
         white-space: normal !important;
         overflow-wrap: break-word !important;
         word-break: break-all !important;
+    }
+
+    .StyleDetectiveOverlay__header--expanded .StyleDetectiveOverlay__selector {
+        display: block !important;
+        -webkit-line-clamp: unset !important;
+        // Cap expanded height so a huge class list scrolls inside the banner
+        // instead of dominating the whole panel again.
+        max-height: calc(var(--sd-font-size) * 1.6 * 8) !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
     }
 
     &__center {
@@ -331,6 +345,11 @@
             visibility: visible !important;
             pointer-events: auto !important;
             color: var(--sd-copy-affordance-hover) !important;
+        }
+
+        .StyleDetectiveOverlay__header--expandable,
+        .StyleDetectiveOverlay__header--expanded {
+            cursor: pointer !important;
         }
     }
 }

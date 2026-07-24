@@ -7,7 +7,7 @@
 
 import { copyTextToClipboard } from './lib/clipboard';
 import { CSS_CATEGORIES, propertiesFor } from './lib/properties';
-import { createBlock, updateHeader, updatePanel } from './lib/panel';
+import { createBlock, collapseSelectorHeader, refreshSelectorOverflow, updateHeader, updatePanel } from './lib/panel';
 
 const FROZEN_CLASS = 'StyleDetectiveOverlay--frozen';
 
@@ -444,6 +444,8 @@ class StyleDetectiveOverlay {
         if (block && this.haveEventListeners) {
             this.removeEventListeners();
             block.classList.add(FROZEN_CLASS);
+            // Refresh title / expandable cue now that click-to-expand is active.
+            requestAnimationFrame(() => refreshSelectorOverflow());
 
             return true;
         }
@@ -458,6 +460,7 @@ class StyleDetectiveOverlay {
             // Remove the red outline
             if (outlinedElement) outlinedElement.style.outline = '';
             block.classList.remove(FROZEN_CLASS);
+            collapseSelectorHeader();
             this.addEventListeners();
             inspectElementUnderCursor();
 

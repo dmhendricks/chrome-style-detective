@@ -21,11 +21,13 @@ import {
     removeExtraFloat,
     rgbToHex,
 } from './format';
-import { el, selectorLabel, setValueContent } from './dom';
+import { el, isOverlayFrozen, selectorLabel, setValueContent } from './dom';
 
 const ID_PREFIX = 'StyleDetectiveOverlay__';
 const ROW_HIDDEN = 'StyleDetectiveOverlay__row--hidden';
 const CATEGORY_HIDDEN = 'StyleDetectiveOverlay__category--hidden';
+const HEADER_EXPANDABLE = 'StyleDetectiveOverlay__header--expandable';
+const HEADER_EXPANDED = 'StyleDetectiveOverlay__header--expanded';
 
 function currentDocument(): Document {
     return window.document;
@@ -461,12 +463,95 @@ export function updatePanel(style: CSSStyleDeclaration, el: HTMLElement): void {
     updateEffects(style);
 }
 
+function panelHeader(): HTMLElement | null {
+    return currentDocument().querySelector('#StyleDetectiveOverlay > h1');
+}
+
+function panelSelector(): HTMLElement | null {
+    return currentDocument().querySelector('#StyleDetectiveOverlay .StyleDetectiveOverlay__selector');
+}
+
+/** Collapse the header and mark whether the clamped text overflows (clickable when frozen). */
+export function refreshSelectorOverflow(): void {
+    const header = panelHeader();
+    const selector = panelSelector();
+    if (!header || !selector) return;
+
+    header.classList.remove(HEADER_EXPANDED);
+    // Measure against the clamped box; +1 avoids float-rounding false positives.
+    const overflowing = selector.scrollHeight > selector.clientHeight + 1;
+    header.classList.toggle(HEADER_EXPANDABLE, overflowing);
+
+    if (!overflowing) {
+        header.title = '';
+    } else if (isOverlayFrozen()) {
+        header.title = 'Click to expand';
+    } else {
+        header.title = '';
+    }
+}
+
+/** Collapse an expanded selector (e.g. on unfreeze / new hover). */
+export function collapseSelectorHeader(): void {
+    const header = panelHeader();
+    if (!header) return;
+    header.classList.remove(HEADER_EXPANDED);
+    refreshSelectorOverflow();
+}
+
+function keepOverlayInViewport(): void {
+    const block = currentDocument().getElementById('StyleDetectiveOverlay');
+    if (!block) return;
+
+    const MARGIN = 8;
+    const BOTTOM_MARGIN = 40;
+    const rect = block.getBoundingClientRect();
+
+    let dx = 0;
+    let dy = 0;
+
+    if (rect.right > window.innerWidth - MARGIN) {
+        dx = window.innerWidth - MARGIN - rect.right;
+    }
+    if (rect.left + dx < MARGIN) {
+        dx = MARGIN - rect.left;
+    }
+    if (rect.bottom > window.innerHeight - BOTTOM_MARGIN) {
+        dy = window.innerHeight - BOTTOM_MARGIN - rect.bottom;
+    }
+    if (rect.top + dy < MARGIN) {
+        dy = MARGIN - rect.top;
+    }
+
+    if (dx !== 0) block.style.left = `${block.offsetLeft + dx}px`;
+    if (dy !== 0) block.style.top = `${block.offsetTop + dy}px`;
+}
+
+function toggleSelectorExpanded(header: HTMLElement): void {
+    if (!isOverlayFrozen()) return;
+    if (
+        !header.classList.contains(HEADER_EXPANDABLE) &&
+        !header.classList.contains(HEADER_EXPANDED)
+    ) {
+        return;
+    }
+
+    const expanding = !header.classList.contains(HEADER_EXPANDED);
+    header.classList.toggle(HEADER_EXPANDED, expanding);
+    header.title = expanding ? 'Click to collapse' : 'Click to expand';
+    keepOverlayInViewport();
+}
+
 /** Update the header selector label for the hovered element. */
 export function updateHeader(el: HTMLElement): void {
-    const selector = currentDocument().querySelector(
-        '#StyleDetectiveOverlay .StyleDetectiveOverlay__selector',
-    );
-    if (selector) selector.textContent = selectorLabel(el);
+    const header = panelHeader();
+    const selector = panelSelector();
+    if (!selector) return;
+
+    selector.textContent = selectorLabel(el);
+    // New element → collapse; measure overflow after the clamped layout settles.
+    header?.classList.remove(HEADER_EXPANDED);
+    requestAnimationFrame(() => refreshSelectorOverflow());
 }
 
 /**
@@ -475,9 +560,9 @@ export function updateHeader(el: HTMLElement): void {
  * Disabled catalog entries are omitted (available later for a property picker).
  */
 export function createBlock(doc: Document): HTMLDivElement {
-    const header = el(doc, 'h1', {
-        children: [el(doc, 'span', { className: 'StyleDetectiveOverlay__selector' })],
-    });
+    const selector = el(doc, 'span', { className: 'StyleDetectiveOverlay__selector' });
+    const header = el(doc, 'h1', { children: [selector] });
+    header.addEventListener('click', () => toggleSelectorExpanded(header));
 
     const categoryDivs = CSS_CATEGORIES.filter(
         (category) => enabledPropertyNames(category).length > 0,

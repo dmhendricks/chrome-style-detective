@@ -159,8 +159,8 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
             { name: 'box-shadow' },
             { name: 'text-shadow' },
             { name: 'text-overflow' },
-            // Kept for a future picker; outline is noisy because the inspector
-            // paints its own dashed outline on the hovered element.
+            // Kept for a future picker; outline is noisy beside the inspector's
+            // own dashed highlight box over the hovered element.
             { name: 'outline', enabled: false },
             { name: 'outline-offset', enabled: false },
             { name: 'resize', enabled: false },

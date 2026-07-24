@@ -16,6 +16,7 @@
 // many of are .classes and are written out (.StyleDetectiveOverlay__category) since
 // &__ would compile to an #id. Rules mirror the panel's DOM:
 //
+//   #StyleDetectiveHighlight                  dashed box over hovered element
 //   #StyleDetectiveOverlay                       floating panel (block)
 //     h1                                        title banner
 //       .StyleDetectiveOverlay__selector         element selector label
@@ -30,6 +31,21 @@
 //     &__footer                                 footer (#id)
 //       .StyleDetectiveOverlay__shortcuts        shortcut chip row
 //         .StyleDetectiveOverlay__shortcut       one kbd + label pair
+
+// Hover highlight — owned by us so we never mutate the host element's outline.
+#StyleDetectiveHighlight {
+    display: none;
+    position: fixed !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 1px dashed #f00 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    pointer-events: none !important;
+    // Below the panel (9999) and toast; above ordinary page content.
+    z-index: 9998 !important;
+}
 
 #StyleDetectiveOverlay {
     // Palette (light default; --dark modifier overrides below)
@@ -47,7 +63,6 @@
     --sd-kbd-text: #3d4654;
     --sd-copy-affordance: #888;
     --sd-copy-affordance-hover: #555;
-    --sd-swatch-border: #000;
     --sd-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
     --sd-scrollbar-thumb: #9a9a9a;
     --sd-scrollbar-track: #e8e8e8;
@@ -67,7 +82,6 @@
         --sd-kbd-text: #e8edf4;
         --sd-copy-affordance: #6b7585;
         --sd-copy-affordance-hover: #b8c0cc;
-        --sd-swatch-border: #6b7585;
         --sd-shadow: 0 4px 20px rgba(0, 0, 0, 0.55);
         --sd-scrollbar-thumb: #7a8494;
         --sd-scrollbar-track: #252d3a;
@@ -334,16 +348,17 @@
     }
 
     .StyleDetectiveOverlay__color-swatch {
-        // Must be non-inline — width/height are ignored on display:inline spans
-        // (that left only the border as a thin vertical line).
-        display: inline-block !important;
+        // Match value text size (1em). Flex centers geometrically, but cap-height
+        // glyphs read higher — nudge up so the swatch sits mid-line optically.
+        display: block !important;
         flex: 0 0 auto !important;
+        align-self: center !important;
         box-sizing: border-box !important;
-        width: 8px !important;
-        height: 8px !important;
-        margin-right: 4px !important;
-        border: 1px solid var(--sd-swatch-border) !important;
-        vertical-align: middle !important;
+        width: 1em !important;
+        height: 1em !important;
+        border: 1px solid #555 !important;
+        border-radius: 2px !important;
+        transform: translateY(-0.04em) !important;
     }
 
     .StyleDetectiveOverlay__value-group {
@@ -358,8 +373,12 @@
     }
 
     .StyleDetectiveOverlay__value-text {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 4px !important;
         flex: 0 1 auto !important;
         min-width: 0 !important;
+        line-height: 1 !important;
     }
 
     // Always reserve the copy-icon slot (even when unfrozen) so freeze/unfreeze

@@ -18,6 +18,15 @@ const copyLicense: Plugin = {
   },
 };
 
+// Stamp the options page with the extension version from manifest.json so the
+// badge stays in sync without a runtime script (MV3 pages block inline JS).
+const injectManifestVersion: Plugin = {
+  name: 'inject-manifest-version',
+  transformIndexHtml(html) {
+    return html.replaceAll('%MANIFEST_VERSION%', manifest.version);
+  },
+};
+
 // The content script is injected at runtime via chrome.scripting.executeScript
 // ({ files: [...] }), which only accepts a plain classic .js file. crxjs can't
 // produce that (it matches web_accessible_resource entries to on-disk source
@@ -81,7 +90,12 @@ const contentScript: Plugin = {
 };
 
 export default defineConfig({
-  plugins: [crx({ manifest: manifest as unknown as ManifestV3Export }), contentScript, copyLicense],
+  plugins: [
+    crx({ manifest: manifest as unknown as ManifestV3Export }),
+    injectManifestVersion,
+    contentScript,
+    copyLicense,
+  ],
   css: {
     preprocessorOptions: {
       scss: { quietDeps: true },

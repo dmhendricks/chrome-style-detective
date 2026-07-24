@@ -9,6 +9,14 @@ chrome.runtime.onInstalled.addListener(function (details) {
     }
 });
 
+// Content script shortcuts (e.g. H) ask the service worker to open options —
+// openOptionsPage isn't available in content-script contexts.
+chrome.runtime.onMessage.addListener(function (message) {
+    if (message?.type === 'openOptions') {
+        chrome.runtime.openOptionsPage();
+    }
+});
+
 // Pages where injection is not allowed / not useful.
 function isRestrictedUrl(url: string | undefined): boolean {
     return (

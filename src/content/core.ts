@@ -1,9 +1,10 @@
 /*!
  * Style Detective — content-script entry point.
  *
- * Declared in the manifest and loaded dormant on matching pages. The service
- * worker toggles the overlay via a runtime message. One OverlayController owns
- * prefs, listeners, highlight, and inspect state; this module only boots it.
+ * Declared in the manifest (all_frames) and loaded dormant on matching pages
+ * and iframes. The service worker broadcasts a toggle; each frame owns its
+ * OverlayController (prefs, listeners, highlight, inspect). This module only
+ * boots that controller.
  */
 
 import { copyTextToClipboard } from './lib/clipboard';
@@ -132,11 +133,20 @@ function buildCssDefinition(el: HTMLElement, style: CSSStyleDeclaration): string
  * and panel positioning. Construct once per content-script boot.
  */
 class OverlayController {
+    /** Distinguishes this frame's controller when broadcasting overlay claims. */
+    private readonly instanceId = crypto.randomUUID();
+
+    /** Tab-wide arm state (synced via the service worker). */
+    private armed = false;
+
     // --- inspect / pointer ---
     private inspectedElement: HTMLElement | null = null;
     private lastPointer: Pointer | null = null;
+    /** False after the cursor leaves this frame (e.g. into an iframe). */
+    private pointerInFrame = false;
     private pendingPanelPointer: { pageX: number; pageY: number } | null = null;
     private panelPositionFrame: number | null = null;
+    private claimFrame: number | null = null;
 
     // --- listener flags ---
     private haveHoverListeners = false;
@@ -152,12 +162,21 @@ class OverlayController {
 
     // Stable handler identities for add/removeEventListener.
     private readonly onPointerTrack = (e: MouseEvent): void => {
+        this.pointerInFrame = true;
         this.lastPointer = {
             clientX: e.clientX,
             clientY: e.clientY,
             pageX: e.pageX,
             pageY: e.pageY,
         };
+    };
+
+    private readonly onPointerLeaveFrame = (): void => {
+        // Entering a child browsing context (iframe) leaves this document —
+        // drop the stale point so enable()/rAF can't revive a pane here and
+        // steal the claim from the frame that actually has the cursor.
+        this.pointerInFrame = false;
+        this.lastPointer = null;
     };
 
     private readonly onMouseOver = (e: MouseEvent): void => {
@@ -199,17 +218,23 @@ class OverlayController {
     }
 
     /**
-     * Remember the pointer while dormant so enable() can inspect immediately.
-     * Bound once for the content-script lifetime.
+     * Remember the pointer while dormant so enable() can inspect immediately
+     * when the cursor is still in this frame. Cleared on mouseleave so iframes
+     * don't keep a stale point that steals the pane on arm.
      */
     startPointerTracking(): void {
         if (this.trackingPointer) return;
         document.addEventListener('mousemove', this.onPointerTrack, POINTER_TRACK_OPTS);
+        document.documentElement.addEventListener(
+            'mouseleave',
+            this.onPointerLeaveFrame,
+            POINTER_TRACK_OPTS,
+        );
         this.trackingPointer = true;
     }
 
     isEnabled(): boolean {
-        return document.getElementById(OVERLAY_ID) !== null;
+        return this.armed;
     }
 
     /** True while hover listeners are attached (false when frozen). */
@@ -217,26 +242,49 @@ class OverlayController {
         return this.haveHoverListeners;
     }
 
-    enable(): boolean {
-        if (document.getElementById(OVERLAY_ID)) return false;
+    /** Apply the tab-wide armed flag from the service worker. */
+    setArmed(armed: boolean): void {
+        if (armed) this.enable();
+        else this.disable();
+    }
 
-        document.body.appendChild(this.createPanel());
-        this.applyPanelFontSize();
-        this.applyPanelTheme();
+    /**
+     * Another frame claimed the visible pane — hide ours but stay armed so
+     * the next hover here can take over again.
+     */
+    onOverlayClaim(instanceId: string): void {
+        if (instanceId === this.instanceId) return;
+        this.park();
+    }
+
+    enable(): boolean {
+        if (this.armed) return false;
+
+        this.armed = true;
         this.addHoverListeners();
         this.addKeyListeners();
         this.addHighlightLayoutListeners();
-        this.inspectElementUnderCursor();
-        requestAnimationFrame(() => this.inspectElementUnderCursor());
+        // Only the frame that currently has the cursor should open a pane.
+        // Other frames often still had a stale lastPointer from earlier
+        // iframe hops, which claimed + parked the real one (flicker/close).
+        if (this.pointerInFrame) {
+            this.inspectElementUnderCursor();
+            requestAnimationFrame(() => {
+                if (this.armed && this.pointerInFrame) this.inspectElementUnderCursor();
+            });
+        }
 
         return true;
     }
 
     disable(): boolean {
+        const wasArmed = this.armed;
         const block = document.getElementById(OVERLAY_ID);
         const message = document.getElementById(TOAST_ID);
 
-        if (!block && !message) return false;
+        this.armed = false;
+
+        if (!wasArmed && !block && !message) return false;
 
         if (block) {
             block.classList.remove(FROZEN_CLASS);
@@ -249,13 +297,18 @@ class OverlayController {
         this.removeHighlightLayoutListeners();
         this.removeHighlight();
         this.inspectedElement = null;
+        this.cancelScheduledPanelPosition();
+        if (this.claimFrame !== null) {
+            cancelAnimationFrame(this.claimFrame);
+            this.claimFrame = null;
+        }
 
         return true;
     }
 
     freeze(): boolean {
         const block = document.getElementById(OVERLAY_ID);
-        if (!block || !this.haveHoverListeners) return false;
+        if (!this.armed || !block || !this.haveHoverListeners) return false;
 
         this.removeHoverListeners();
         block.classList.add(FROZEN_CLASS);
@@ -266,7 +319,7 @@ class OverlayController {
 
     unfreeze(): boolean {
         const block = document.getElementById(OVERLAY_ID);
-        if (!block || this.haveHoverListeners) return false;
+        if (!this.armed || !block || this.haveHoverListeners) return false;
 
         this.clearHighlight();
         this.inspectedElement = null;
@@ -346,10 +399,25 @@ class OverlayController {
 
     private createPanel(): HTMLElement {
         const block = createBlock(document);
-        this.flashMessage(
-            'Style Detective loaded! Hover any element you want to inspect in the page.',
-            { persistent: true },
-        );
+        // One toast for the tab — nested frames would otherwise stack N banners.
+        if (window === window.top) {
+            this.flashMessage(
+                'Style Detective loaded! Hover any element you want to inspect in the page.',
+                { persistent: true },
+            );
+        }
+        return block;
+    }
+
+    /** Create the panel on first use in this frame. */
+    private ensurePanel(): HTMLElement {
+        let block = document.getElementById(OVERLAY_ID);
+        if (!block) {
+            block = this.createPanel();
+            document.body.appendChild(block);
+            this.applyPanelFontSize();
+            this.applyPanelTheme();
+        }
         return block;
     }
 
@@ -446,13 +514,56 @@ class OverlayController {
 
     // --- inspect / position ---
 
+    /** Tell sibling frames to hide their pane; coalesce to one message per frame. */
+    private claimOverlay(): void {
+        if (this.claimFrame !== null) return;
+
+        this.claimFrame = requestAnimationFrame(() => {
+            this.claimFrame = null;
+            void chrome.runtime
+                .sendMessage({ type: 'overlayClaim', instanceId: this.instanceId })
+                .catch(() => {
+                    // Service worker may be asleep mid-navigation.
+                });
+        });
+    }
+
+    /**
+     * Hide the panel and highlight without disabling this frame. Restores hover
+     * tracking if we were frozen so a later hover can reclaim the pane.
+     */
+    private park(): void {
+        const block = document.getElementById(OVERLAY_ID);
+        if (!block && !this.inspectedElement) return;
+
+        if (block) {
+            const wasFrozen = block.classList.contains(FROZEN_CLASS);
+            block.classList.remove(FROZEN_CLASS);
+            block.style.display = 'none';
+            if (wasFrozen && !this.haveHoverListeners) {
+                collapseSelectorHeader();
+                this.addHoverListeners();
+            }
+        }
+
+        this.clearHighlight();
+        this.inspectedElement = null;
+        this.cancelScheduledPanelPosition();
+        if (this.claimFrame !== null) {
+            cancelAnimationFrame(this.claimFrame);
+            this.claimFrame = null;
+        }
+        // Another frame has the cursor — don't keep a point that could re-claim.
+        this.pointerInFrame = false;
+        this.lastPointer = null;
+    }
+
     private inspectElement(el: HTMLElement): void {
-        if (isInsidePanel(el)) return;
+        if (!this.armed || isInsidePanel(el)) return;
         if (el === this.inspectedElement) return;
 
-        const block = document.getElementById(OVERLAY_ID);
-        if (!block) return;
-
+        this.ensurePanel();
+        this.claimOverlay();
         updateHeader(el);
         this.highlightElement(el);
 
@@ -465,9 +576,10 @@ class OverlayController {
     }
 
     private positionPanelAtPointer(e: { pageX: number; pageY: number }): void {
-        const block = document.getElementById(OVERLAY_ID);
-        if (!block) return;
+        if (!this.armed) return;
 
+        const block = this.ensurePanel();
+        this.claimOverlay();
         block.style.display = 'flex';
 
         const pageWidth = window.innerWidth;
@@ -510,7 +622,7 @@ class OverlayController {
     }
 
     private inspectElementUnderCursor(): void {
-        if (!this.lastPointer) return;
+        if (!this.pointerInFrame || !this.lastPointer) return;
 
         const el = document.elementFromPoint(this.lastPointer.clientX, this.lastPointer.clientY);
         if (!el || !(el instanceof HTMLElement) || isInsidePanel(el)) return;
@@ -540,21 +652,26 @@ class OverlayController {
 
     private addKeyListeners(): void {
         if (this.haveKeyListeners) return;
-        document.addEventListener('keydown', this.onKeyDown);
+        // Capture so Esc still reaches us before page handlers when possible.
+        document.addEventListener('keydown', this.onKeyDown, true);
         this.haveKeyListeners = true;
     }
 
     private removeKeyListeners(): void {
         if (!this.haveKeyListeners) return;
-        document.removeEventListener('keydown', this.onKeyDown);
+        document.removeEventListener('keydown', this.onKeyDown, true);
         this.haveKeyListeners = false;
     }
 
     private handleKey(e: KeyboardEvent): void {
-        if (!this.isEnabled()) return;
+        if (!this.armed) return;
 
         if (e.key === 'Escape') {
-            this.disable();
+            e.preventDefault();
+            // Disarm every frame in the tab — local disable only closes this frame.
+            void chrome.runtime.sendMessage({ type: 'disarmOverlay' }).catch(() => {
+                this.disable();
+            });
             return;
         }
 
@@ -634,22 +751,27 @@ if (!bootRoot[BOOT_FLAG]) {
     controller.startPointerTracking();
 
     chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-        if (message?.type !== 'toggleOverlay') return;
+        if (message?.type === 'pingOverlay') {
+            sendResponse({ ok: true });
+            return;
+        }
 
-        void ready
-            .then(() => {
-                if (controller.isEnabled()) {
-                    controller.disable();
-                } else {
-                    controller.enable();
-                }
-                sendResponse({ ok: true, enabled: controller.isEnabled() });
-            })
-            .catch((err: unknown) => {
-                console.error('[Style Detective] toggle failed', err);
-                sendResponse({ ok: false, error: String(err) });
-            });
+        if (message?.type === 'overlayClaim' && typeof message.instanceId === 'string') {
+            controller.onOverlayClaim(message.instanceId);
+            return;
+        }
 
-        return true;
+        if (message?.type === 'setOverlayArmed' && typeof message.armed === 'boolean') {
+            void ready
+                .then(() => {
+                    controller.setArmed(message.armed);
+                    sendResponse({ ok: true, enabled: controller.isEnabled() });
+                })
+                .catch((err: unknown) => {
+                    console.error('[Style Detective] setArmed failed', err);
+                    sendResponse({ ok: false, error: String(err) });
+                });
+            return true;
+        }
     });
 }

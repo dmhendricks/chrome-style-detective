@@ -118,9 +118,9 @@
         --sd-scrollbar-track: #252d3a;
     }
 
-    // Dimensions — width tracks font size (10px → 332/400 base) so larger
+    // Dimensions — width tracks font size (11px → 365/440 base) so larger
     // text gets a proportionally wider panel, still capped to the viewport.
-    --sd-font-size: 10px;
+    --sd-font-size: 11px;
     --sd-radius: 6px;
     --sd-min-width: min(calc(var(--sd-font-size) * 33.2), var(--sd-max-width));
     --sd-max-width: min(calc(var(--sd-font-size) * 40), calc(100vw - 40px));

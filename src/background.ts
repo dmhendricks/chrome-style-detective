@@ -7,20 +7,23 @@
  * (not just the focused frame). A claim/yield broadcast keeps one visible pane.
  */
 
-const ARMED_KEY_PREFIX = 'sdArmed:';
-
-function armedKey(tabId: number): string {
-    return `${ARMED_KEY_PREFIX}${tabId}`;
-}
+import { armedStorageKey, parseSessionArmed } from './shared/prefs';
 
 async function getTabArmed(tabId: number): Promise<boolean> {
-    const key = armedKey(tabId);
+    const key = armedStorageKey(tabId);
     const stored = await chrome.storage.session.get(key);
-    return stored[key] === true;
+    const raw = stored[key];
+    const armed = parseSessionArmed(raw);
+    // Heal non-boolean leftovers so session state stays clean.
+    if (raw !== undefined && raw !== armed) {
+        if (armed) await chrome.storage.session.set({ [key]: true });
+        else await chrome.storage.session.remove(key);
+    }
+    return armed;
 }
 
 async function setTabArmed(tabId: number, armed: boolean): Promise<void> {
-    const key = armedKey(tabId);
+    const key = armedStorageKey(tabId);
     if (armed) {
         await chrome.storage.session.set({ [key]: true });
     } else {
@@ -105,12 +108,12 @@ chrome.runtime.onInstalled.addListener((details) => {
 // Drop stale armed flags when the tab navigates or closes.
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
     if (changeInfo.status === 'loading') {
-        void chrome.storage.session.remove(armedKey(tabId));
+        void chrome.storage.session.remove(armedStorageKey(tabId));
     }
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {
-    void chrome.storage.session.remove(armedKey(tabId));
+    void chrome.storage.session.remove(armedStorageKey(tabId));
 });
 
 chrome.runtime.onMessage.addListener((message, sender) => {

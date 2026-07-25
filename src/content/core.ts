@@ -28,15 +28,22 @@ import {
 } from './lib/panel';
 import { formatClassesForCopy, parseClassTokens } from './lib/classes';
 import {
+    clampPanelFontSize,
     loadClassesExpanded,
+    loadPanelFontSize,
     loadPanelThemePreference,
     loadUtilityFirstExtras,
     parseClassesExpanded,
+    parsePanelFontSize,
     parsePanelTheme,
     parseUtilityFirstExtras,
     resolvePanelTheme,
+    savePanelFontSize,
     type PanelThemePreference,
     CLASSES_EXPANDED_KEY,
+    PANEL_FONT_SIZE_DEFAULT,
+    PANEL_FONT_SIZE_KEY,
+    PANEL_FONT_SIZE_STEP,
     PANEL_THEME_KEY,
     UTILITY_FIRST_EXTRAS_KEY,
 } from '../shared/prefs';
@@ -49,20 +56,10 @@ const OVERLAY_ID = 'StyleDetectiveOverlay';
 const TOAST_ID = 'StyleDetectiveToast';
 const TOAST_SUCCESS_CLASS = 'StyleDetectiveToast--success';
 
-const PANEL_FONT_SIZE_DEFAULT = 10;
-const PANEL_FONT_SIZE_MIN = 8;
-const PANEL_FONT_SIZE_MAX = 18;
-const PANEL_FONT_SIZE_STEP = 1;
-const PANEL_FONT_SIZE_STORAGE_KEY = 'panelFontSize';
-
 type Pointer = { clientX: number; clientY: number; pageX: number; pageY: number };
 
 const HOVER_LISTENER_OPTS: AddEventListenerOptions = { capture: true, passive: true };
 const HIGHLIGHT_LAYOUT_OPTS: AddEventListenerOptions = { capture: true, passive: true };
-
-function clampPanelFontSize(size: number): number {
-    return Math.min(PANEL_FONT_SIZE_MAX, Math.max(PANEL_FONT_SIZE_MIN, size));
-}
 
 function systemPrefersDark(): boolean {
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -222,7 +219,7 @@ class OverlayController {
             this.flashMessage(message, { tone: tone ?? 'default' });
         });
         await Promise.all([
-            this.loadPanelFontSize(),
+            this.loadPanelFontSizePref(),
             this.loadPanelThemePref(),
             this.loadUtilityFirstExtrasPref(),
             this.loadClassesExpandedPref(),
@@ -341,12 +338,8 @@ class OverlayController {
 
     // --- prefs ---
 
-    private async loadPanelFontSize(): Promise<void> {
-        const stored = await chrome.storage.local.get(PANEL_FONT_SIZE_STORAGE_KEY);
-        const value = stored[PANEL_FONT_SIZE_STORAGE_KEY];
-        if (typeof value === 'number' && Number.isFinite(value)) {
-            this.panelFontSize = clampPanelFontSize(Math.round(value));
-        }
+    private async loadPanelFontSizePref(): Promise<void> {
+        this.panelFontSize = await loadPanelFontSize();
     }
 
     private async loadPanelThemePref(): Promise<void> {
@@ -387,6 +380,15 @@ class OverlayController {
             if (classesExpandedChange) {
                 setClassesExpanded(parseClassesExpanded(classesExpandedChange.newValue));
             }
+
+            const fontSizeChange = changes[PANEL_FONT_SIZE_KEY];
+            if (fontSizeChange) {
+                const next = parsePanelFontSize(fontSizeChange.newValue);
+                if (next !== this.panelFontSize) {
+                    this.panelFontSize = next;
+                    this.applyPanelFontSize();
+                }
+            }
         });
     }
 
@@ -424,14 +426,14 @@ class OverlayController {
         if (next === this.panelFontSize) return;
         this.panelFontSize = next;
         this.applyPanelFontSize();
-        void chrome.storage.local.set({ [PANEL_FONT_SIZE_STORAGE_KEY]: this.panelFontSize });
+        void savePanelFontSize(this.panelFontSize);
     }
 
     private resetPanelFontSize(): void {
         if (this.panelFontSize === PANEL_FONT_SIZE_DEFAULT) return;
         this.panelFontSize = PANEL_FONT_SIZE_DEFAULT;
         this.applyPanelFontSize();
-        void chrome.storage.local.set({ [PANEL_FONT_SIZE_STORAGE_KEY]: this.panelFontSize });
+        void savePanelFontSize(this.panelFontSize);
     }
 
     // --- panel DOM ---

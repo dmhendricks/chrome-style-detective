@@ -11,12 +11,12 @@ function copyTextFallback(text: string): void {
     textarea.style.top = '0';
     textarea.style.left = '0';
     textarea.style.opacity = '0';
-    document.body.appendChild(textarea);
+    document.body.append(textarea);
     textarea.focus();
     textarea.select();
 
     const ok = document.execCommand('copy');
-    document.body.removeChild(textarea);
+    textarea.remove();
     if (!ok) throw new Error('execCommand copy failed');
 }
 

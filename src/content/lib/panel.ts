@@ -43,10 +43,6 @@ function clearPanelCache(): void {
     categoryElements.clear();
 }
 
-function currentDocument(): Document {
-    return window.document;
-}
-
 function getCSSProperty(style: CSSStyleDeclaration, property: string): string {
     return style.getPropertyValue(property);
 }
@@ -463,11 +459,11 @@ export function updatePanel(style: CSSStyleDeclaration, el: HTMLElement): void {
 }
 
 function panelHeader(): HTMLElement | null {
-    return currentDocument().querySelector('#StyleDetectiveOverlay > h1');
+    return document.querySelector('#StyleDetectiveOverlay > h1');
 }
 
 function panelSelector(): HTMLElement | null {
-    return currentDocument().querySelector('#StyleDetectiveOverlay .StyleDetectiveOverlay__selector');
+    return document.querySelector('#StyleDetectiveOverlay .StyleDetectiveOverlay__selector');
 }
 
 /** Collapse the header and mark whether the clamped text overflows (clickable when frozen). */
@@ -499,7 +495,7 @@ export function collapseSelectorHeader(): void {
 }
 
 function keepOverlayInViewport(): void {
-    const block = currentDocument().getElementById('StyleDetectiveOverlay');
+    const block = document.getElementById('StyleDetectiveOverlay');
     if (!block) return;
 
     const MARGIN = 8;

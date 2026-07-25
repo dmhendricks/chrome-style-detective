@@ -19,6 +19,13 @@ import {
 
 const utilityFirstToggle = document.querySelector<HTMLInputElement>('#utilityFirstExtras');
 const themeRadios = document.querySelectorAll<HTMLInputElement>('input[name="panelTheme"]');
+const storeRateLink = document.querySelector<HTMLAnchorElement>('#storeRateLink');
+
+/** Listing URL from the installed extension id (stable after Chrome Web Store publish). */
+function wireStoreRateLink(): void {
+    if (!storeRateLink) return;
+    storeRateLink.href = `https://chromewebstore.google.com/detail/${chrome.runtime.id}`;
+}
 
 async function syncUtilityFirstFromStorage(): Promise<void> {
     if (!utilityFirstToggle) return;
@@ -70,3 +77,4 @@ void syncUtilityFirstFromStorage();
 wireUtilityFirstToggle();
 void syncThemeFromStorage();
 wireThemeRadios();
+wireStoreRateLink();

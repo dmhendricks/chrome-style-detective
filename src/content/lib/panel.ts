@@ -14,6 +14,8 @@ import {
     resolveProperty,
     type InspectContext,
 } from './properties';
+import { countChipRows, formatClassesForCopy, parseClassTokens } from './classes';
+import { copyTextToClipboard } from './clipboard';
 import { el, isOverlayFrozen, keepOverlayInViewport, selectorLabel, setValueContent } from './dom';
 
 const ID_PREFIX = 'StyleDetectiveOverlay__';
@@ -21,6 +23,10 @@ const ROW_HIDDEN = 'StyleDetectiveOverlay__row--hidden';
 const CATEGORY_HIDDEN = 'StyleDetectiveOverlay__category--hidden';
 const HEADER_EXPANDABLE = 'StyleDetectiveOverlay__header--expandable';
 const HEADER_EXPANDED = 'StyleDetectiveOverlay__header--expanded';
+const CLASSES_HIDDEN = 'StyleDetectiveOverlay__classes--hidden';
+const CLASSES_COLLAPSED = 'StyleDetectiveOverlay__classes--collapsed';
+
+type CopyNotifier = (message: string, tone?: 'default' | 'success') => void;
 
 /** Cached DOM nodes for a property row, filled once in createBlock(). */
 interface PropertyRow {
@@ -31,9 +37,242 @@ interface PropertyRow {
 const propertyRows = new Map<string, PropertyRow>();
 const categoryElements = new Map<string, HTMLElement>();
 
+let classesRoot: HTMLElement | null = null;
+let classesToggle: HTMLButtonElement | null = null;
+let classesCopyAll: HTMLButtonElement | null = null;
+let classesChips: HTMLElement | null = null;
+let shortcutsContainer: HTMLElement | null = null;
+let utilityFirstExtrasEnabled = false;
+let classesExpanded = false;
+let classesShowAllChips = false;
+let currentClassTokens: readonly string[] = [];
+let copyNotifier: CopyNotifier | null = null;
+
 function clearPanelCache(): void {
     propertyRows.clear();
     categoryElements.clear();
+    classesRoot = null;
+    classesToggle = null;
+    classesCopyAll = null;
+    classesChips = null;
+    shortcutsContainer = null;
+}
+
+/** Wire overlay copy feedback (toast) for class chip actions. */
+export function setClassesCopyNotifier(notifier: CopyNotifier | null): void {
+    copyNotifier = notifier;
+}
+
+/** Show or hide utility-first class tools and refresh footer shortcuts. */
+export function setUtilityFirstExtrasEnabled(enabled: boolean): void {
+    utilityFirstExtrasEnabled = enabled;
+    if (!enabled) hideClassesPanel();
+    rebuildFooterShortcuts();
+}
+
+function notifyCopy(message: string, tone: 'default' | 'success' = 'success'): void {
+    copyNotifier?.(message, tone);
+}
+
+async function copyClassText(text: string, message: string): Promise<void> {
+    try {
+        await copyTextToClipboard(text);
+        notifyCopy(message, 'success');
+    } catch {
+        notifyCopy('Could not copy to clipboard', 'default');
+    }
+}
+
+function setClassesPanelVisible(visible: boolean): void {
+    classesRoot?.classList.toggle(CLASSES_HIDDEN, !visible);
+}
+
+function hideClassesPanel(): void {
+    setClassesPanelVisible(false);
+    currentClassTokens = [];
+}
+
+function renderClassChips(doc: Document): void {
+    if (!classesChips) return;
+
+    const tokens = currentClassTokens;
+    classesChips.replaceChildren();
+    if (tokens.length === 0) return;
+
+    const appendTokenChip = (token: string): void => {
+        const chip = el(doc, 'button', {
+            className: 'StyleDetectiveOverlay__class-chip',
+            text: token,
+        });
+        chip.type = 'button';
+        chip.title = `Copy ${token}`;
+        chip.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            void copyClassText(token, `Copied ${token}`);
+        });
+        classesChips!.appendChild(chip);
+    };
+
+    const appendMoreChip = (hiddenCount: number): void => {
+        const more = el(doc, 'button', {
+            className: 'StyleDetectiveOverlay__class-chip StyleDetectiveOverlay__class-chip--more',
+            text: `+${hiddenCount} more`,
+        });
+        more.type = 'button';
+        more.title = 'Show all classes';
+        more.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            classesShowAllChips = true;
+            renderClassChips(doc);
+        });
+        classesChips!.appendChild(more);
+    };
+
+    const paint = (visibleCount: number, withMore: boolean): void => {
+        classesChips!.replaceChildren();
+        for (let i = 0; i < visibleCount; i++) {
+            const token = tokens[i];
+            if (token !== undefined) appendTokenChip(token);
+        }
+        if (withMore) appendMoreChip(tokens.length - visibleCount);
+    };
+
+    if (classesShowAllChips) {
+        paint(tokens.length, false);
+        return;
+    }
+
+    // Prefer showing every chip when it fits on two wrap lines.
+    paint(tokens.length, false);
+    if (countChipRows(classesChips) <= 2) return;
+
+    // Binary-search the largest prefix that still fits in two lines with "+N more".
+    let lo = 1;
+    let hi = tokens.length - 1;
+    let best = 1;
+    while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        paint(mid, true);
+        if (countChipRows(classesChips) <= 2) {
+            best = mid;
+            lo = mid + 1;
+        } else {
+            hi = mid - 1;
+        }
+    }
+    paint(best, true);
+}
+
+function refreshClassesChrome(doc: Document): void {
+    if (!classesToggle || !classesCopyAll) return;
+
+    const count = currentClassTokens.length;
+    const chevron = classesExpanded ? '▴' : '▾';
+    classesToggle.textContent = `Classes (${count}) ${chevron}`;
+    classesToggle.setAttribute('aria-expanded', classesExpanded ? 'true' : 'false');
+    classesCopyAll.disabled = count === 0;
+
+    classesRoot?.classList.toggle(CLASSES_COLLAPSED, !classesExpanded);
+    if (classesExpanded) renderClassChips(doc);
+}
+
+/** Update the class chip panel for the hovered element (utility-first extras only). */
+export function updateClassesPanel(target: HTMLElement): void {
+    if (!utilityFirstExtrasEnabled || !classesRoot) {
+        hideClassesPanel();
+        return;
+    }
+
+    const doc = classesRoot.ownerDocument;
+    currentClassTokens = parseClassTokens(target);
+    if (currentClassTokens.length === 0) {
+        hideClassesPanel();
+        return;
+    }
+
+    classesExpanded = false;
+    classesShowAllChips = false;
+    setClassesPanelVisible(true);
+    refreshClassesChrome(doc);
+}
+
+function createClassesSection(doc: Document): HTMLElement {
+    classesToggle = el(doc, 'button', {
+        className: 'StyleDetectiveOverlay__classes-toggle',
+        text: 'Classes',
+    });
+    classesToggle.type = 'button';
+    classesToggle.setAttribute('aria-expanded', 'false');
+
+    classesCopyAll = el(doc, 'button', {
+        className: 'StyleDetectiveOverlay__classes-copy-all',
+        text: 'Copy all',
+    });
+    classesCopyAll.type = 'button';
+    classesCopyAll.title = 'Copy all classes on this element';
+
+    classesChips = el(doc, 'div', { className: 'StyleDetectiveOverlay__class-chips' });
+
+    const head = el(doc, 'div', {
+        className: 'StyleDetectiveOverlay__classes-head',
+        children: [classesToggle, classesCopyAll],
+    });
+
+    const body = el(doc, 'div', {
+        className: 'StyleDetectiveOverlay__classes-body',
+        children: [classesChips],
+    });
+
+    classesToggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        classesExpanded = !classesExpanded;
+        if (!classesExpanded) classesShowAllChips = false;
+        refreshClassesChrome(doc);
+    });
+
+    classesCopyAll.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const text = formatClassesForCopy(currentClassTokens);
+        if (text === '') return;
+        void copyClassText(text, 'Classes copied to clipboard');
+    });
+
+    classesRoot = el(doc, 'div', {
+        id: 'StyleDetectiveOverlay__classes',
+        className: `StyleDetectiveOverlay__classes ${CLASSES_HIDDEN} ${CLASSES_COLLAPSED}`,
+        children: [head, body],
+    });
+
+    return classesRoot;
+}
+
+function makeShortcut(doc: Document, key: string, label: string): HTMLElement {
+    return el(doc, 'span', {
+        className: 'StyleDetectiveOverlay__shortcut',
+        children: [
+            el(doc, 'kbd', { text: key }),
+            el(doc, 'span', {
+                className: 'StyleDetectiveOverlay__shortcut-label',
+                text: label,
+            }),
+        ],
+    });
+}
+
+function rebuildFooterShortcuts(): void {
+    if (!shortcutsContainer) return;
+    const doc = shortcutsContainer.ownerDocument;
+    const items: Array<[string, string]> = [
+        ['F', 'Freeze'],
+        ['C', 'Copy'],
+        ['+/−', 'Zoom'],
+        ['S', 'Settings'],
+        ['Esc', 'Close'],
+    ];
+    shortcutsContainer.replaceChildren(...items.map(([key, label]) => makeShortcut(doc, key, label)));
 }
 
 function setRowVisible(li: HTMLElement, visible: boolean): void {
@@ -150,7 +389,11 @@ export function updateHeader(el: HTMLElement): void {
     const selector = panelSelector();
     if (!selector) return;
 
-    selector.textContent = selectorLabel(el);
+    // With utility-first extras, classes live in the Classes row — keep the
+    // banner to tag + id so it stays short and readable.
+    selector.textContent = selectorLabel(el, {
+        includeClasses: !utilityFirstExtrasEnabled,
+    });
     // New element → collapse; measure overflow after the clamped layout settles.
     header?.classList.remove(HEADER_EXPANDED);
     requestAnimationFrame(() => refreshSelectorOverflow());
@@ -207,37 +450,21 @@ export function createBlock(doc: Document): HTMLDivElement {
     });
 
     const center = el(doc, 'div', { id: 'StyleDetectiveOverlay__center', children: categoryDivs });
-
-    const shortcut = (key: string, label: string) =>
-        el(doc, 'span', {
-            className: 'StyleDetectiveOverlay__shortcut',
-            children: [
-                el(doc, 'kbd', { text: key }),
-                el(doc, 'span', {
-                    className: 'StyleDetectiveOverlay__shortcut-label',
-                    text: label,
-                }),
-            ],
-        });
+    const classesSection = createClassesSection(doc);
 
     const footer = el(doc, 'div', {
         id: 'StyleDetectiveOverlay__footer',
         children: [
             el(doc, 'div', {
                 className: 'StyleDetectiveOverlay__shortcuts',
-                children: [
-                    shortcut('F', 'Freeze'),
-                    shortcut('C', 'Copy'),
-                    shortcut('+/−', 'Zoom'),
-                    shortcut('S', 'Settings'),
-                    shortcut('Esc', 'Close'),
-                ],
             }),
         ],
     });
+    shortcutsContainer = footer.querySelector('.StyleDetectiveOverlay__shortcuts');
+    rebuildFooterShortcuts();
 
     return el(doc, 'div', {
         id: 'StyleDetectiveOverlay',
-        children: [header, center, footer],
+        children: [header, classesSection, center, footer],
     });
 }

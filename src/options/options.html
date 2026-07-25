@@ -81,6 +81,29 @@
                             </label>
                         </div>
                     </li>
+                    <li class="settings__row">
+                        <div class="settings__copy">
+                            <label class="settings__label" for="utilityFirstExtras"
+                                >Utility-first extras</label
+                            >
+                            <p class="settings__hint" id="utilityFirstExtras-hint">
+                                Show a Classes row with chips for <strong>Tailwind</strong> and other utility-first
+                                markup. Off by default so ordinary CSS pages stay uncluttered.
+                                <kbd>Shift+C</kbd> always copies classes, even when this is off.
+                            </p>
+                        </div>
+                        <label class="switch">
+                            <input
+                                type="checkbox"
+                                id="utilityFirstExtras"
+                                role="switch"
+                                aria-describedby="utilityFirstExtras-hint"
+                            />
+                            <span class="switch__track" aria-hidden="true">
+                                <span class="switch__thumb"></span>
+                            </span>
+                        </label>
+                    </li>
                 </ul>
             </section>
 
@@ -93,7 +116,9 @@
                         page.
                     </li>
                     <li>Hover any element to inspect its computed CSS in the floating panel.</li>
+                    <!--
                     <li>Works on <code>http</code>, <code>https</code>, and local pages.</li>
+                    -->
                 </ol>
                 <p class="shortcut-customize">
                     To customize the toggle shortcut, paste
@@ -111,6 +136,10 @@
                     <li>
                         <kbd>C</kbd>
                         <span>Copy the selected element's CSS to the clipboard</span>
+                    </li>
+                    <li>
+                        <kbd>Shift+C</kbd>
+                        <span>Copy the element's classes to the clipboard</span>
                     </li>
                     <li>
                         <kbd>+/−</kbd>

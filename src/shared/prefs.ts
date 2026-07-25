@@ -32,3 +32,21 @@ export function resolvePanelTheme(
     if (preference === 'system') return systemIsDark ? 'dark' : 'light';
     return preference;
 }
+
+/** Opt-in utility / class tools (see docs/tailwind.md). Default: off. */
+export const UTILITY_FIRST_EXTRAS_KEY = 'utilityFirstExtras';
+
+export const UTILITY_FIRST_EXTRAS_DEFAULT = false;
+
+export function parseUtilityFirstExtras(value: unknown): boolean {
+    return value === true;
+}
+
+export async function loadUtilityFirstExtras(): Promise<boolean> {
+    const stored = await chrome.storage.local.get(UTILITY_FIRST_EXTRAS_KEY);
+    return parseUtilityFirstExtras(stored[UTILITY_FIRST_EXTRAS_KEY]);
+}
+
+export async function saveUtilityFirstExtras(enabled: boolean): Promise<void> {
+    await chrome.storage.local.set({ [UTILITY_FIRST_EXTRAS_KEY]: enabled });
+}

@@ -247,9 +247,16 @@ export function elementClassName(el: Element): string {
 /**
  * Build the `<tag> #id .class` selector label shown in the panel header and used
  * for the CSS-definition selector line. Text nodes only — no markup injection.
+ *
+ * When `includeClasses` is false (utility-first extras), omit class tokens so the
+ * Classes chip row owns that information.
  */
-export function selectorLabel(el: HTMLElement): string {
-    const className = elementClassName(el);
+export function selectorLabel(
+    el: HTMLElement,
+    options: { includeClasses?: boolean } = {},
+): string {
+    const includeClasses = options.includeClasses !== false;
+    const className = includeClasses ? elementClassName(el) : '';
 
     return (
         el.tagName +

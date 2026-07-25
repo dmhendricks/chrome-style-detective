@@ -5,6 +5,10 @@
  * no DOM work (see dom.ts for the colour-swatch element built from `rgbToHex`).
  */
 
+import { converter, parse } from 'culori';
+
+const toRgb = converter('rgb');
+
 /** Convert a 0–255 channel to a two-digit uppercase hex pair. */
 export function decToHex(nb: number): string {
     // Clamp to a whole byte so a fractional or out-of-range value (e.g. an
@@ -22,38 +26,30 @@ export interface RgbaColor {
 }
 
 /**
- * Parse an `rgb()`/`rgba()` computed color (comma- or space-separated) into
- * channels. Returns null if the string isn't a usable rgb color.
+ * Parse a CSS color string into sRGB channels (0–255) plus alpha.
+ * Accepts rgb/rgba, hex, named colors, hsl, lab, oklch, color(), etc.
  */
 export function parseCssColor(str: string): RgbaColor | null {
-    const start = str.indexOf('(');
-    const end = str.indexOf(')');
-    if (start < 0 || end < 0) return null;
+    const parsed = parse(str.trim());
+    if (!parsed) return null;
 
-    const body = str.slice(start + 1, end).trim();
-    // "101, 108, 118, 0.067" or "101 108 118 / 0.067"
-    const parts = body.includes(',')
-        ? body.split(',').map((part) => part.trim())
-        : body
-              .replace('/', ' ')
-              .split(/\s+/)
-              .filter(Boolean);
+    const rgb = toRgb(parsed);
+    if (rgb?.r == null || rgb.g == null || rgb.b == null) return null;
 
-    if (parts.length < 3) return null;
+    const a = rgb.alpha ?? 1;
+    if (!Number.isFinite(a)) return null;
 
-    const r = Number(parts[0]);
-    const g = Number(parts[1]);
-    const b = Number(parts[2]);
-    const a = parts[3] !== undefined ? Number(parts[3]) : 1;
-
-    if (![r, g, b, a].every((n) => Number.isFinite(n))) return null;
-
-    return { r, g, b, a };
+    return {
+        r: Math.max(0, Math.min(255, Math.round(rgb.r * 255))),
+        g: Math.max(0, Math.min(255, Math.round(rgb.g * 255))),
+        b: Math.max(0, Math.min(255, Math.round(rgb.b * 255))),
+        a,
+    };
 }
 
 /**
- * Convert an `rgb()`/`rgba()` string to a `#RRGGBB` hex string. Pure black is
- * remapped to white so a swatch stays visible against the panel background.
+ * Convert a CSS color string to a `#RRGGBB` hex string. Pure black is remapped
+ * to white so a swatch stays visible against the panel background.
  */
 export function rgbToHex(str: string): string {
     const color = parseCssColor(str);

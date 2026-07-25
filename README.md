@@ -1,12 +1,12 @@
 # Style Detective Chrome Extension
 
-A modern rewrite of the popular [CSS Viewer](https://github.com/miled/cssviewer) extension. Hover any element on a page to inspect its computed styles in a floating panel.
+A modern rewrite of the popular [CSS Viewer](https://github.com/miled/cssviewer) extension. Hover over any element on a page to inspect its computed styles in a floating panel.
 
-![Style Detective](store/demo.webp)
+![Style Detective](store/screenshot-1280x800-01.png)
 
 Features:
 
-- Hover any element to view its CSS properties in a floating panel
+- Hover over any element to view its CSS properties in a floating panel
 - Freeze the panel in place to inspect it
 - Copy an element's style to clipboard, or freeze the panel to copy individual property values
 - Keyboard shortcut to toggle the viewer (`Alt+Shift+S`; macOS: `Option+Shift+S`)
@@ -29,7 +29,7 @@ Then open `chrome://extensions`, turn on **Developer mode** (top-right), click *
 
 ## Usage
 
-Click the toolbar icon (or press `Alt+Shift+S` (Windows) or `Option+Shift+S` (macOS)) to enable or disable the viewer on the current page. While enabled, hover any element to inspect it.
+Click the toolbar icon (or press `Alt+Shift+S` (Windows) or `Option+Shift+S` (macOS)) to enable or disable the viewer on the current page. While enabled, hover over any element to inspect it.
 
 You can customize the toggle shortcut at `chrome://extensions/shortcuts`.
 
@@ -43,8 +43,3 @@ Keyboard shortcuts while the viewer is active:
 - `Esc` to close the viewer
 
 With **Utility-first extras** enabled in settings, a **Classes** row also appears on elements that have a `class` attribute (expanded by default; expand/collapse is saved and shared across tabs). Click a chip or **Copy all** to copy classes.
-
-## Known Issues
-
-- The viewer will not activate on the Chrome Web Store, `chrome://` pages, or similar restricted tabs (a small popup explains why). On normal sites that were open before install/update, reload the tab so the content script can attach, then try again.
-- Styling may occasionally conflict with the web site's CSS

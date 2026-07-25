@@ -3,7 +3,8 @@
  *
  * Single source of truth for panel rows and the generated CSS definition.
  * Each property can declare how to format its value and when it is visible;
- * panel.ts runs one update loop over this catalog.
+ * panel.ts and copy both run visibility through `resolveProperty` over this
+ * catalog (copy omits defaults / `panelOnly` rows).
  *
  * Properties with `enabled: false` stay in the catalog for a future picker but
  * are omitted from the panel and CSS dump.

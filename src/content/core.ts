@@ -9,7 +9,12 @@
 
 import { copyTextToClipboard } from './lib/clipboard';
 import { elementClassName, keepOverlayInViewport } from './lib/dom';
-import { CSS_CATEGORIES, propertiesFor } from './lib/properties';
+import {
+    CSS_CATEGORIES,
+    isPropertyEnabled,
+    resolveProperty,
+    type InspectContext,
+} from './lib/properties';
 import {
     createBlock,
     collapseSelectorHeader,
@@ -75,7 +80,11 @@ function removeElement(id: string): void {
     if (n) n.parentNode?.removeChild(n);
 }
 
-/** Build a simple CSS definition string for an element (used only on copy). */
+/**
+ * Build a CSS definition for copy. Only includes properties that would appear
+ * in the panel (same `when` / `hideDefault` visibility), omits `panelOnly`
+ * rows, and skips tag-gated categories that don't match the element.
+ */
 function buildCssDefinition(el: HTMLElement, style: CSSStyleDeclaration): string {
     const className = elementClassName(el);
     let css =
@@ -84,14 +93,30 @@ function buildCssDefinition(el: HTMLElement, style: CSSStyleDeclaration): string
         (className === '' ? '' : ' .' + className) +
         ' {\n';
 
-    for (const category of CSS_CATEGORIES) {
-        const props = propertiesFor(category.key);
-        if (props.length === 0) continue;
+    const ctx: InspectContext = {
+        style,
+        el,
+        get: (property) => style.getPropertyValue(property),
+    };
 
-        css += `\n\t/* ${category.title} */\n`;
-        for (const property of props) {
-            css += '\t' + property + ': ' + style.getPropertyValue(property) + ';\n';
+    for (const category of CSS_CATEGORIES) {
+        if (category.tags && !category.tags.includes(el.tagName)) continue;
+
+        let categoryCss = '';
+        for (const property of category.properties) {
+            if (!isPropertyEnabled(property) || property.panelOnly) continue;
+
+            const resolved = resolveProperty(property, ctx);
+            if (!resolved.visible) continue;
+
+            // Prefer synthesized values (margin/padding/border shorthands, etc.).
+            // Skip panel `format` helpers — they can be display-only (e.g. filename).
+            const value = property.value ? resolved.value : ctx.get(property.name);
+            categoryCss += '\t' + property.name + ': ' + value + ';\n';
         }
+
+        if (categoryCss === '') continue;
+        css += `\n\t/* ${category.title} */\n` + categoryCss;
     }
 
     css += '}';

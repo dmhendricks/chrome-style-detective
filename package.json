@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.8.0",
   "type": "module",
-  "description": "A simple CSS property viewer for Google Chrome.",
+  "description": "Hover over any HTML element to inspect its computed CSS in a floating panel.",
   "license": "GPL-2.0",
   "scripts": {
     "dev": "vite build --watch --mode development",

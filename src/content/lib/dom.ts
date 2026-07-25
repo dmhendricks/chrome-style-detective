@@ -203,14 +203,24 @@ function wrapCopyableValue(doc: Document, copyValue: string): HTMLSpanElement {
 }
 
 /**
+ * Element class attribute as a plain string. HTMLElement.className is a string,
+ * but SVGElement.className is an SVGAnimatedString — never concatenate that.
+ */
+export function elementClassName(el: Element): string {
+    return el.getAttribute('class') ?? '';
+}
+
+/**
  * Build the `<tag> #id .class` selector label shown in the panel header and used
  * for the CSS-definition selector line. Text nodes only — no markup injection.
  */
 export function selectorLabel(el: HTMLElement): string {
+    const className = elementClassName(el);
+
     return (
         el.tagName +
         (el.id === '' ? '' : ' #' + el.id) +
-        (el.className === '' ? '' : ' .' + el.className)
+        (className === '' ? '' : ' .' + className)
     );
 }
 

@@ -134,28 +134,28 @@ function updateFontText(style: CSSStyleDeclaration): void {
     setCSSProperty(style, 'font-family');
     setCSSProperty(style, 'font-size');
 
-    setCSSPropertyIf(style, 'font-weight', getCSSProperty(style, 'font-weight') != '400');
-    setCSSPropertyIf(style, 'font-variant', getCSSProperty(style, 'font-variant') != 'normal');
-    setCSSPropertyIf(style, 'font-style', getCSSProperty(style, 'font-style') != 'normal');
+    setCSSPropertyIf(style, 'font-weight', getCSSProperty(style, 'font-weight') !== '400');
+    setCSSPropertyIf(style, 'font-variant', getCSSProperty(style, 'font-variant') !== 'normal');
+    setCSSPropertyIf(style, 'font-style', getCSSProperty(style, 'font-style') !== 'normal');
 
-    setCSSPropertyIf(style, 'letter-spacing', getCSSProperty(style, 'letter-spacing') != 'normal');
-    setCSSPropertyIf(style, 'line-height', getCSSProperty(style, 'line-height') != 'normal');
+    setCSSPropertyIf(style, 'letter-spacing', getCSSProperty(style, 'letter-spacing') !== 'normal');
+    setCSSPropertyIf(style, 'line-height', getCSSProperty(style, 'line-height') !== 'normal');
     setCSSPropertyIf(
         style,
         'text-decoration',
-        getCSSProperty(style, 'text-decoration') != 'none',
+        getCSSProperty(style, 'text-decoration') !== 'none',
     );
-    setCSSPropertyIf(style, 'text-align', getCSSProperty(style, 'text-align') != 'start');
-    setCSSPropertyIf(style, 'text-indent', getCSSProperty(style, 'text-indent') != '0px');
-    setCSSPropertyIf(style, 'text-transform', getCSSProperty(style, 'text-transform') != 'none');
+    setCSSPropertyIf(style, 'text-align', getCSSProperty(style, 'text-align') !== 'start');
+    setCSSPropertyIf(style, 'text-indent', getCSSProperty(style, 'text-indent') !== '0px');
+    setCSSPropertyIf(style, 'text-transform', getCSSProperty(style, 'text-transform') !== 'none');
     setCSSPropertyIf(
         style,
         'vertical-align',
-        getCSSProperty(style, 'vertical-align') != 'baseline',
+        getCSSProperty(style, 'vertical-align') !== 'baseline',
     );
-    setCSSPropertyIf(style, 'white-space', getCSSProperty(style, 'white-space') != 'normal');
-    setCSSPropertyIf(style, 'overflow-wrap', getCSSProperty(style, 'overflow-wrap') != 'normal');
-    setCSSPropertyIf(style, 'word-spacing', getCSSProperty(style, 'word-spacing') != 'normal');
+    setCSSPropertyIf(style, 'white-space', getCSSProperty(style, 'white-space') !== 'normal');
+    setCSSPropertyIf(style, 'overflow-wrap', getCSSProperty(style, 'overflow-wrap') !== 'normal');
+    setCSSPropertyIf(style, 'word-spacing', getCSSProperty(style, 'word-spacing') !== 'normal');
 }
 
 function updateColorBg(style: CSSStyleDeclaration): void {
@@ -164,38 +164,38 @@ function updateColorBg(style: CSSStyleDeclaration): void {
     setCSSPropertyValueIf(
         'background-color',
         rgbToHex(getCSSProperty(style, 'background-color')),
-        getCSSProperty(style, 'background-color') != 'transparent',
+        getCSSProperty(style, 'background-color') !== 'transparent',
     );
     setCSSPropertyIf(
         style,
         'background-attachment',
-        getCSSProperty(style, 'background-attachment') != 'scroll',
+        getCSSProperty(style, 'background-attachment') !== 'scroll',
     );
     setCSSPropertyValueIf(
         'background-image',
         getFileName(getCSSProperty(style, 'background-image')),
-        getCSSProperty(style, 'background-image') != 'none',
+        getCSSProperty(style, 'background-image') !== 'none',
     );
     setCSSPropertyIf(
         style,
         'background-position',
-        getCSSProperty(style, 'background-position') != '',
+        getCSSProperty(style, 'background-position') !== '',
     );
     setCSSPropertyIf(
         style,
         'background-size',
-        getCSSProperty(style, 'background-size') != 'auto',
+        getCSSProperty(style, 'background-size') !== 'auto',
     );
     setCSSPropertyIf(
         style,
         'background-repeat',
-        getCSSProperty(style, 'background-repeat') != 'repeat',
+        getCSSProperty(style, 'background-repeat') !== 'repeat',
     );
 }
 
 function updateBox(style: CSSStyleDeclaration, el: HTMLElement): void {
-    setCSSPropertyIf(style, 'height', removeExtraFloat(getCSSProperty(style, 'height')) != 'auto');
-    setCSSPropertyIf(style, 'width', removeExtraFloat(getCSSProperty(style, 'width')) != 'auto');
+    setCSSPropertyIf(style, 'height', removeExtraFloat(getCSSProperty(style, 'height')) !== 'auto');
+    setCSSPropertyIf(style, 'width', removeExtraFloat(getCSSProperty(style, 'width')) !== 'auto');
 
     // Rendered box ratio (from layout), not only the CSS aspect-ratio property.
     const rect = el.getBoundingClientRect();
@@ -215,10 +215,10 @@ function updateBox(style: CSSStyleDeclaration, el: HTMLElement): void {
     const borderLeft = border('left');
 
     if (
-        borderTop == borderBottom &&
-        borderBottom == borderRight &&
-        borderRight == borderLeft &&
-        getCSSProperty(style, 'border-top-style') != 'none'
+        borderTop === borderBottom &&
+        borderBottom === borderRight &&
+        borderRight === borderLeft &&
+        getCSSProperty(style, 'border-top-style') !== 'none'
     ) {
         setCSSPropertyValue('border', borderTop);
 
@@ -230,22 +230,22 @@ function updateBox(style: CSSStyleDeclaration, el: HTMLElement): void {
         setCSSPropertyValueIf(
             'border-top',
             borderTop,
-            getCSSProperty(style, 'border-top-style') != 'none',
+            getCSSProperty(style, 'border-top-style') !== 'none',
         );
         setCSSPropertyValueIf(
             'border-bottom',
             borderBottom,
-            getCSSProperty(style, 'border-bottom-style') != 'none',
+            getCSSProperty(style, 'border-bottom-style') !== 'none',
         );
         setCSSPropertyValueIf(
             'border-right',
             borderRight,
-            getCSSProperty(style, 'border-right-style') != 'none',
+            getCSSProperty(style, 'border-right-style') !== 'none',
         );
         setCSSPropertyValueIf(
             'border-left',
             borderLeft,
-            getCSSProperty(style, 'border-left-style') != 'none',
+            getCSSProperty(style, 'border-left-style') !== 'none',
         );
 
         hideCSSProperty('border');
@@ -256,26 +256,26 @@ function updateBox(style: CSSStyleDeclaration, el: HTMLElement): void {
             .map((side) => {
                 const v = removeExtraFloat(getCSSProperty(style, side));
 
-                return v == '0px' ? '0' : v;
+                return v === '0px' ? '0' : v;
             })
             .join(' ');
 
     const margin = shorthand(['margin-top', 'margin-right', 'margin-bottom', 'margin-left']);
-    setCSSPropertyValueIf('margin', margin, margin != '0 0 0 0');
+    setCSSPropertyValueIf('margin', margin, margin !== '0 0 0 0');
 
     const padding = shorthand(['padding-top', 'padding-right', 'padding-bottom', 'padding-left']);
-    setCSSPropertyValueIf('padding', padding, padding != '0 0 0 0');
+    setCSSPropertyValueIf('padding', padding, padding !== '0 0 0 0');
 
-    setCSSPropertyIf(style, 'min-height', getCSSProperty(style, 'min-height') != '0px');
-    setCSSPropertyIf(style, 'max-height', getCSSProperty(style, 'max-height') != 'none');
-    setCSSPropertyIf(style, 'min-width', getCSSProperty(style, 'min-width') != '0px');
-    setCSSPropertyIf(style, 'max-width', getCSSProperty(style, 'max-width') != 'none');
+    setCSSPropertyIf(style, 'min-height', getCSSProperty(style, 'min-height') !== '0px');
+    setCSSPropertyIf(style, 'max-height', getCSSProperty(style, 'max-height') !== 'none');
+    setCSSPropertyIf(style, 'min-width', getCSSProperty(style, 'min-width') !== '0px');
+    setCSSPropertyIf(style, 'max-width', getCSSProperty(style, 'max-width') !== 'none');
 
     const borderRadius = getCSSProperty(style, 'border-radius');
     setCSSPropertyIf(style, 'border-radius', !isRadiusZero(borderRadius));
 
-    setCSSPropertyIf(style, 'box-sizing', getCSSProperty(style, 'box-sizing') != 'content-box');
-    setCSSPropertyIf(style, 'object-fit', getCSSProperty(style, 'object-fit') != 'fill');
+    setCSSPropertyIf(style, 'box-sizing', getCSSProperty(style, 'box-sizing') !== 'content-box');
+    setCSSPropertyIf(style, 'object-fit', getCSSProperty(style, 'object-fit') !== 'fill');
 }
 
 function updateLayout(style: CSSStyleDeclaration): void {
@@ -286,34 +286,34 @@ function updateLayout(style: CSSStyleDeclaration): void {
     const isGrid = display === 'grid' || display === 'inline-grid';
     const isFlexOrGrid = isFlex || isGrid;
 
-    setCSSPropertyIf(style, 'flex-direction', isFlex && getCSSProperty(style, 'flex-direction') != 'row');
-    setCSSPropertyIf(style, 'flex-wrap', isFlex && getCSSProperty(style, 'flex-wrap') != 'nowrap');
+    setCSSPropertyIf(style, 'flex-direction', isFlex && getCSSProperty(style, 'flex-direction') !== 'row');
+    setCSSPropertyIf(style, 'flex-wrap', isFlex && getCSSProperty(style, 'flex-wrap') !== 'nowrap');
     setCSSPropertyIf(
         style,
         'justify-content',
-        isFlexOrGrid && getCSSProperty(style, 'justify-content') != 'normal',
+        isFlexOrGrid && getCSSProperty(style, 'justify-content') !== 'normal',
     );
     setCSSPropertyIf(
         style,
         'align-items',
-        isFlexOrGrid && getCSSProperty(style, 'align-items') != 'normal',
+        isFlexOrGrid && getCSSProperty(style, 'align-items') !== 'normal',
     );
     setCSSPropertyIf(
         style,
         'gap',
         isFlexOrGrid &&
-            getCSSProperty(style, 'gap') != 'normal' &&
-            getCSSProperty(style, 'gap') != '0px',
+            getCSSProperty(style, 'gap') !== 'normal' &&
+            getCSSProperty(style, 'gap') !== '0px',
     );
 
-    setCSSPropertyIf(style, 'position', getCSSProperty(style, 'position') != 'static');
-    setCSSPropertyIf(style, 'top', getCSSProperty(style, 'top') != 'auto');
-    setCSSPropertyIf(style, 'bottom', getCSSProperty(style, 'bottom') != 'auto');
-    setCSSPropertyIf(style, 'right', getCSSProperty(style, 'right') != 'auto');
-    setCSSPropertyIf(style, 'left', getCSSProperty(style, 'left') != 'auto');
-    setCSSPropertyIf(style, 'z-index', getCSSProperty(style, 'z-index') != 'auto');
-    setCSSPropertyIf(style, 'float', getCSSProperty(style, 'float') != 'none');
-    setCSSPropertyIf(style, 'clear', getCSSProperty(style, 'clear') != 'none');
+    setCSSPropertyIf(style, 'position', getCSSProperty(style, 'position') !== 'static');
+    setCSSPropertyIf(style, 'top', getCSSProperty(style, 'top') !== 'auto');
+    setCSSPropertyIf(style, 'bottom', getCSSProperty(style, 'bottom') !== 'auto');
+    setCSSPropertyIf(style, 'right', getCSSProperty(style, 'right') !== 'auto');
+    setCSSPropertyIf(style, 'left', getCSSProperty(style, 'left') !== 'auto');
+    setCSSPropertyIf(style, 'z-index', getCSSProperty(style, 'z-index') !== 'auto');
+    setCSSPropertyIf(style, 'float', getCSSProperty(style, 'float') !== 'none');
+    setCSSPropertyIf(style, 'clear', getCSSProperty(style, 'clear') !== 'none');
 }
 
 function updateTable(style: CSSStyleDeclaration, tagName: string): void {
@@ -323,27 +323,27 @@ function updateTable(style: CSSStyleDeclaration, tagName: string): void {
         nbProperties += setCSSPropertyIf(
             style,
             'border-collapse',
-            getCSSProperty(style, 'border-collapse') != 'separate',
+            getCSSProperty(style, 'border-collapse') !== 'separate',
         );
         nbProperties += setCSSPropertyIf(
             style,
             'border-spacing',
-            getCSSProperty(style, 'border-spacing') != '0px 0px',
+            getCSSProperty(style, 'border-spacing') !== '0px 0px',
         );
         nbProperties += setCSSPropertyIf(
             style,
             'caption-side',
-            getCSSProperty(style, 'caption-side') != 'top',
+            getCSSProperty(style, 'caption-side') !== 'top',
         );
         nbProperties += setCSSPropertyIf(
             style,
             'empty-cells',
-            getCSSProperty(style, 'empty-cells') != 'show',
+            getCSSProperty(style, 'empty-cells') !== 'show',
         );
         nbProperties += setCSSPropertyIf(
             style,
             'table-layout',
-            getCSSProperty(style, 'table-layout') != 'auto',
+            getCSSProperty(style, 'table-layout') !== 'auto',
         );
 
         if (nbProperties > 0) showCSSCategory('pTable');
@@ -359,7 +359,7 @@ function updateList(style: CSSStyleDeclaration, tagName: string): void {
 
         const listStyleImage = getCSSProperty(style, 'list-style-image');
 
-        if (listStyleImage == 'none') {
+        if (listStyleImage === 'none') {
             setCSSProperty(style, 'list-style-type');
             hideCSSProperty('list-style-image');
         } else {
@@ -376,13 +376,13 @@ function updateList(style: CSSStyleDeclaration, tagName: string): void {
 function updateMisc(style: CSSStyleDeclaration): void {
     let nbProperties = 0;
 
-    nbProperties += setCSSPropertyIf(style, 'opacity', getCSSProperty(style, 'opacity') != '1');
-    nbProperties += setCSSPropertyIf(style, 'overflow', getCSSProperty(style, 'overflow') != 'visible');
-    nbProperties += setCSSPropertyIf(style, 'cursor', getCSSProperty(style, 'cursor') != 'auto');
+    nbProperties += setCSSPropertyIf(style, 'opacity', getCSSProperty(style, 'opacity') !== '1');
+    nbProperties += setCSSPropertyIf(style, 'overflow', getCSSProperty(style, 'overflow') !== 'visible');
+    nbProperties += setCSSPropertyIf(style, 'cursor', getCSSProperty(style, 'cursor') !== 'auto');
     nbProperties += setCSSPropertyIf(
         style,
         'visibility',
-        getCSSProperty(style, 'visibility') != 'visible',
+        getCSSProperty(style, 'visibility') !== 'visible',
     );
 
     if (nbProperties > 0) showCSSCategory('pMisc');
@@ -403,47 +403,47 @@ function updateEffects(style: CSSStyleDeclaration): void {
         getCSSProperty(style, 'transition') !== '' &&
             !getCSSProperty(style, 'transition').startsWith('all 0s'),
     );
-    nbProperties += setCSSPropertyIf(style, 'filter', getCSSProperty(style, 'filter') != 'none');
+    nbProperties += setCSSPropertyIf(style, 'filter', getCSSProperty(style, 'filter') !== 'none');
     nbProperties += setCSSPropertyIf(style, 'outline', getCSSProperty(style, 'outline') !== '');
     nbProperties += setCSSPropertyIf(
         style,
         'outline-offset',
-        getCSSProperty(style, 'outline-offset') != '0px',
+        getCSSProperty(style, 'outline-offset') !== '0px',
     );
-    nbProperties += setCSSPropertyIf(style, 'resize', getCSSProperty(style, 'resize') != 'none');
+    nbProperties += setCSSPropertyIf(style, 'resize', getCSSProperty(style, 'resize') !== 'none');
 
     nbProperties += setCSSPropertyIf(
         style,
         'text-shadow',
-        getCSSProperty(style, 'text-shadow') != 'none',
+        getCSSProperty(style, 'text-shadow') !== 'none',
     );
     nbProperties += setCSSPropertyIf(
         style,
         'text-overflow',
-        getCSSProperty(style, 'text-overflow') != 'clip',
+        getCSSProperty(style, 'text-overflow') !== 'clip',
     );
-    nbProperties += setCSSPropertyIf(style, 'word-wrap', getCSSProperty(style, 'word-wrap') != 'normal');
-    nbProperties += setCSSPropertyIf(style, 'box-shadow', getCSSProperty(style, 'box-shadow') != 'none');
+    nbProperties += setCSSPropertyIf(style, 'word-wrap', getCSSProperty(style, 'word-wrap') !== 'normal');
+    nbProperties += setCSSPropertyIf(style, 'box-shadow', getCSSProperty(style, 'box-shadow') !== 'none');
 
     nbProperties += setCSSPropertyIf(
         style,
         'border-top-left-radius',
-        getCSSProperty(style, 'border-top-left-radius') != '0px',
+        getCSSProperty(style, 'border-top-left-radius') !== '0px',
     );
     nbProperties += setCSSPropertyIf(
         style,
         'border-top-right-radius',
-        getCSSProperty(style, 'border-top-right-radius') != '0px',
+        getCSSProperty(style, 'border-top-right-radius') !== '0px',
     );
     nbProperties += setCSSPropertyIf(
         style,
         'border-bottom-left-radius',
-        getCSSProperty(style, 'border-bottom-left-radius') != '0px',
+        getCSSProperty(style, 'border-bottom-left-radius') !== '0px',
     );
     nbProperties += setCSSPropertyIf(
         style,
         'border-bottom-right-radius',
-        getCSSProperty(style, 'border-bottom-right-radius') != '0px',
+        getCSSProperty(style, 'border-bottom-right-radius') !== '0px',
     );
 
     if (nbProperties > 0) showCSSCategory('pEffect');

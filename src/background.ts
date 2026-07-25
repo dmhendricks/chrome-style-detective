@@ -38,26 +38,60 @@ async function ensureContentScripts(tabId: number): Promise<void> {
     const cssFiles = entry?.css ?? [];
     if (jsFiles.length === 0) return;
 
-    const target: chrome.scripting.InjectionTarget = { tabId, allFrames: true };
+    const inject = async (allFrames: boolean): Promise<void> => {
+        const target: chrome.scripting.InjectionTarget = { tabId, allFrames };
+        if (cssFiles.length > 0) {
+            await chrome.scripting.insertCSS({ target, files: cssFiles }).catch(() => {});
+        }
+        await chrome.scripting.executeScript({ target, files: jsFiles });
+    };
 
-    if (cssFiles.length > 0) {
-        await chrome.scripting.insertCSS({ target, files: cssFiles }).catch(() => {});
+    try {
+        await inject(true);
+    } catch (err) {
+        // Ad / sandboxed iframes can make allFrames injection fail on busy sites.
+        console.warn('[Style Detective] allFrames inject failed, trying main frame', err);
+        await inject(false);
     }
-    await chrome.scripting.executeScript({ target, files: jsFiles });
+}
+
+/** CRX loaders import the real content script async — wait until a frame answers. */
+async function waitForOverlay(tabId: number, attempts = 40, delayMs = 50): Promise<boolean> {
+    for (let i = 0; i < attempts; i++) {
+        try {
+            await chrome.tabs.sendMessage(tabId, { type: 'pingOverlay' });
+            return true;
+        } catch {
+            await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+    }
+    return false;
 }
 
 async function toggleOverlay(tabId: number): Promise<void> {
-    let injected = false;
+    let coldInject = false;
 
     try {
-        // Probe: throws when no frame has a listener yet.
         await chrome.tabs.sendMessage(tabId, { type: 'pingOverlay' });
     } catch {
         await ensureContentScripts(tabId);
-        injected = true;
+        coldInject = true;
     }
 
-    const currentlyArmed = injected ? false : await getTabArmed(tabId);
+    if (!(await waitForOverlay(tabId))) {
+        console.warn('[Style Detective] content script did not become ready');
+        return;
+    }
+
+    // After a cold inject, session storage may still say "armed" from a prior
+    // failed toggle (message raced the async loader). Always turn on so the
+    // first successful click after inject is visible.
+    if (coldInject) {
+        await setTabArmed(tabId, true);
+        return;
+    }
+
+    const currentlyArmed = await getTabArmed(tabId);
     await setTabArmed(tabId, !currentlyArmed);
 }
 

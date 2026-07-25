@@ -36,9 +36,12 @@ Keyboard shortcuts while the viewer is active:
 
 - `F` to freeze or unfreeze the panel in place
 - `C` to copy a simple CSS definition for the selected element to the clipboard
+- `Shift+C` to copy the element's classes (space-separated)
 - `+` / `-` to increase or decrease the panel font size (`0` / zero resets to default)
 - `S` to open the settings page
 - `Esc` to close the viewer
+
+With **Utility-first extras** enabled in settings, a **Classes** row also appears on elements that have a `class` attribute — expand it to see chips; click a chip or **Copy all** to copy classes.
 
 ## Known Issues
 

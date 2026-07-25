@@ -1,27 +1,60 @@
 /*!
- * Shared preference keys and helpers for options page + content script.
+ * Shared preference keys, Zod schemas, and helpers for options + content script.
  * Keep storage key names and defaults in one place so they do not drift.
+ *
+ * chrome.storage values are untyped across versions — schemas parse unknown
+ * payloads and heal bad writes back to defaults (see docs/deferred-backlog P1d).
  */
+
+import { z } from 'zod';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Read a local storage key, parse with Zod, and rewrite the default when the
+ * stored value is present but invalid. Missing keys stay missing (return default).
+ */
+async function loadLocalPref<T>(
+    key: string,
+    schema: z.ZodType<T>,
+    defaultValue: T,
+): Promise<T> {
+    const stored = await chrome.storage.local.get(key);
+    if (!(key in stored)) return defaultValue;
+
+    const result = schema.safeParse(stored[key]);
+    if (result.success) return result.data;
+
+    await chrome.storage.local.set({ [key]: defaultValue });
+    return defaultValue;
+}
+
+// ---------------------------------------------------------------------------
+// Panel theme
+// ---------------------------------------------------------------------------
 
 /** Overlay panel color scheme. Default: follow OS. */
 export const PANEL_THEME_KEY = 'panelTheme';
 
-export type PanelThemePreference = 'light' | 'dark' | 'system';
+export const panelThemeSchema = z.enum(['light', 'dark', 'system']);
+
+export type PanelThemePreference = z.infer<typeof panelThemeSchema>;
 
 export const PANEL_THEME_DEFAULT: PanelThemePreference = 'system';
 
 export function parsePanelTheme(value: unknown): PanelThemePreference {
-    if (value === 'light' || value === 'dark' || value === 'system') return value;
-    return PANEL_THEME_DEFAULT;
+    const result = panelThemeSchema.safeParse(value);
+    return result.success ? result.data : PANEL_THEME_DEFAULT;
 }
 
 export async function loadPanelThemePreference(): Promise<PanelThemePreference> {
-    const stored = await chrome.storage.local.get(PANEL_THEME_KEY);
-    return parsePanelTheme(stored[PANEL_THEME_KEY]);
+    return loadLocalPref(PANEL_THEME_KEY, panelThemeSchema, PANEL_THEME_DEFAULT);
 }
 
 export async function savePanelThemePreference(theme: PanelThemePreference): Promise<void> {
-    await chrome.storage.local.set({ [PANEL_THEME_KEY]: theme });
+    await chrome.storage.local.set({ [PANEL_THEME_KEY]: panelThemeSchema.parse(theme) });
 }
 
 /** Resolve a stored preference to the concrete scheme applied to the overlay. */
@@ -33,23 +66,88 @@ export function resolvePanelTheme(
     return preference;
 }
 
+// ---------------------------------------------------------------------------
+// Panel font size
+// ---------------------------------------------------------------------------
+
+export const PANEL_FONT_SIZE_KEY = 'panelFontSize';
+
+export const PANEL_FONT_SIZE_DEFAULT = 11;
+export const PANEL_FONT_SIZE_MIN = 8;
+export const PANEL_FONT_SIZE_MAX = 18;
+export const PANEL_FONT_SIZE_STEP = 1;
+
+export const panelFontSizeSchema = z
+    .number()
+    .finite()
+    .transform((n) => Math.round(n))
+    .pipe(z.number().int().min(PANEL_FONT_SIZE_MIN).max(PANEL_FONT_SIZE_MAX));
+
+export function clampPanelFontSize(size: number): number {
+    return Math.min(PANEL_FONT_SIZE_MAX, Math.max(PANEL_FONT_SIZE_MIN, size));
+}
+
+export function parsePanelFontSize(value: unknown): number {
+    const result = panelFontSizeSchema.safeParse(value);
+    return result.success ? result.data : PANEL_FONT_SIZE_DEFAULT;
+}
+
+export async function loadPanelFontSize(): Promise<number> {
+    const stored = await chrome.storage.local.get(PANEL_FONT_SIZE_KEY);
+    if (!(PANEL_FONT_SIZE_KEY in stored)) return PANEL_FONT_SIZE_DEFAULT;
+
+    const raw = stored[PANEL_FONT_SIZE_KEY];
+    const result = panelFontSizeSchema.safeParse(raw);
+    if (result.success) {
+        // Heal out-of-band writes that still clamp (e.g. float → int).
+        if (raw !== result.data) {
+            await chrome.storage.local.set({ [PANEL_FONT_SIZE_KEY]: result.data });
+        }
+        return result.data;
+    }
+
+    await chrome.storage.local.set({ [PANEL_FONT_SIZE_KEY]: PANEL_FONT_SIZE_DEFAULT });
+    return PANEL_FONT_SIZE_DEFAULT;
+}
+
+export async function savePanelFontSize(size: number): Promise<void> {
+    const next = panelFontSizeSchema.parse(size);
+    await chrome.storage.local.set({ [PANEL_FONT_SIZE_KEY]: next });
+}
+
+// ---------------------------------------------------------------------------
+// Utility-first extras
+// ---------------------------------------------------------------------------
+
 /** Opt-in utility / class tools (see docs/tailwind.md). Default: off. */
 export const UTILITY_FIRST_EXTRAS_KEY = 'utilityFirstExtras';
+
+export const utilityFirstExtrasSchema = z.boolean();
 
 export const UTILITY_FIRST_EXTRAS_DEFAULT = false;
 
 export function parseUtilityFirstExtras(value: unknown): boolean {
-    return value === true;
+    const result = utilityFirstExtrasSchema.safeParse(value);
+    return result.success ? result.data : UTILITY_FIRST_EXTRAS_DEFAULT;
 }
 
 export async function loadUtilityFirstExtras(): Promise<boolean> {
-    const stored = await chrome.storage.local.get(UTILITY_FIRST_EXTRAS_KEY);
-    return parseUtilityFirstExtras(stored[UTILITY_FIRST_EXTRAS_KEY]);
+    return loadLocalPref(
+        UTILITY_FIRST_EXTRAS_KEY,
+        utilityFirstExtrasSchema,
+        UTILITY_FIRST_EXTRAS_DEFAULT,
+    );
 }
 
 export async function saveUtilityFirstExtras(enabled: boolean): Promise<void> {
-    await chrome.storage.local.set({ [UTILITY_FIRST_EXTRAS_KEY]: enabled });
+    await chrome.storage.local.set({
+        [UTILITY_FIRST_EXTRAS_KEY]: utilityFirstExtrasSchema.parse(enabled),
+    });
 }
+
+// ---------------------------------------------------------------------------
+// Classes row expand/collapse
+// ---------------------------------------------------------------------------
 
 /**
  * Classes row expand/collapse (utility-first extras). Default: expanded.
@@ -57,19 +155,40 @@ export async function saveUtilityFirstExtras(enabled: boolean): Promise<void> {
  */
 export const CLASSES_EXPANDED_KEY = 'classesExpanded';
 
+export const classesExpandedSchema = z.boolean();
+
 export const CLASSES_EXPANDED_DEFAULT = true;
 
 export function parseClassesExpanded(value: unknown): boolean {
-    if (value === false) return false;
-    if (value === true) return true;
-    return CLASSES_EXPANDED_DEFAULT;
+    const result = classesExpandedSchema.safeParse(value);
+    return result.success ? result.data : CLASSES_EXPANDED_DEFAULT;
 }
 
 export async function loadClassesExpanded(): Promise<boolean> {
-    const stored = await chrome.storage.local.get(CLASSES_EXPANDED_KEY);
-    return parseClassesExpanded(stored[CLASSES_EXPANDED_KEY]);
+    return loadLocalPref(CLASSES_EXPANDED_KEY, classesExpandedSchema, CLASSES_EXPANDED_DEFAULT);
 }
 
 export async function saveClassesExpanded(expanded: boolean): Promise<void> {
-    await chrome.storage.local.set({ [CLASSES_EXPANDED_KEY]: expanded });
+    await chrome.storage.local.set({
+        [CLASSES_EXPANDED_KEY]: classesExpandedSchema.parse(expanded),
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Session: per-tab armed flag (service worker)
+// ---------------------------------------------------------------------------
+
+/** Session storage prefix: `sdArmed:<tabId>` → boolean. */
+export const ARMED_KEY_PREFIX = 'sdArmed:';
+
+export const sessionArmedSchema = z.boolean();
+
+export function armedStorageKey(tabId: number): string {
+    return `${ARMED_KEY_PREFIX}${tabId}`;
+}
+
+/** Parse a session armed value; anything other than a boolean is treated as false. */
+export function parseSessionArmed(value: unknown): boolean {
+    const result = sessionArmedSchema.safeParse(value);
+    return result.success ? result.data : false;
 }

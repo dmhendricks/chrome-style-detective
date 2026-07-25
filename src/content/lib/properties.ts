@@ -9,7 +9,14 @@
  * are omitted from the panel and CSS dump.
  */
 
-import { formatAspectRatio, getFileName, removeExtraFloat, rgbToHex } from './format';
+import {
+    formatAspectRatio,
+    getFileName,
+    removeExtraFloat,
+    rgbToHex,
+    textContrast,
+    type ContrastTone,
+} from './format';
 
 /** Per-hover context passed to format / value / when callbacks. */
 export interface InspectContext {
@@ -21,11 +28,18 @@ export interface InspectContext {
 export interface CssProperty {
     /** CSS property name (as accepted by getPropertyValue), and panel row id. */
     name: string;
+    /** Row label in the panel; defaults to `name`. */
+    label?: string;
     /**
      * When false, the property is hidden from the panel / CSS dump but kept in
      * the catalog. Defaults to true when omitted.
      */
     enabled?: boolean;
+    /**
+     * Panel-only synthetic row (e.g. contrast). Shown in the overlay but omitted
+     * from the copied CSS definition.
+     */
+    panelOnly?: boolean;
     /**
      * Hide the row when the raw computed value equals this string (or is in
      * this list). Compared before `format` / `value`.
@@ -37,6 +51,8 @@ export interface CssProperty {
     value?: (ctx: InspectContext) => string;
     /** Extra visibility gate; combined with hideDefault when both are set. */
     when?: (ctx: InspectContext) => boolean;
+    /** Optional pill shown beside the value (e.g. WCAG AA). */
+    badge?: (ctx: InspectContext) => { text: string; tone: ContrastTone } | null;
 }
 
 export interface CssCategory {
@@ -57,9 +73,11 @@ export function isPropertyEnabled(property: CssProperty): boolean {
     return property.enabled !== false;
 }
 
-/** Enabled property names for a category (panel + CSS-definition consumers). */
+/** Enabled real CSS property names for a category (CSS-definition consumers). */
 export function enabledPropertyNames(category: CssCategory): readonly string[] {
-    return category.properties.filter(isPropertyEnabled).map((property) => property.name);
+    return category.properties
+        .filter((property) => isPropertyEnabled(property) && !property.panelOnly)
+        .map((property) => property.name);
 }
 
 export const TABLE_TAG_NAMES: readonly string[] = [
@@ -155,6 +173,20 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
                 name: 'background-color',
                 hideDefault: 'transparent',
                 format: (raw) => rgbToHex(raw),
+            },
+            {
+                name: 'contrast',
+                label: 'contrast',
+                panelOnly: true,
+                when: (ctx) => textContrast(ctx.get('color'), ctx.get('background-color')) != null,
+                value: (ctx) => {
+                    const result = textContrast(ctx.get('color'), ctx.get('background-color'));
+                    return result ? `${result.ratio.toFixed(2)}:1` : '';
+                },
+                badge: (ctx) => {
+                    const result = textContrast(ctx.get('color'), ctx.get('background-color'));
+                    return result ? { text: result.label, tone: result.tone } : null;
+                },
             },
             {
                 name: 'background-image',
@@ -388,7 +420,11 @@ export function propertiesFor(key: string): readonly string[] {
 export function resolveProperty(
     property: CssProperty,
     ctx: InspectContext,
-): { value: string; visible: boolean } {
+): {
+    value: string;
+    visible: boolean;
+    badge: { text: string; tone: ContrastTone } | null;
+} {
     const raw = property.value ? property.value(ctx) : ctx.get(property.name);
 
     let visible = true;
@@ -409,5 +445,7 @@ export function resolveProperty(
     const value =
         property.value || !property.format ? raw : property.format(ctx.get(property.name), ctx);
 
-    return { value, visible };
+    const badge = visible && property.badge ? property.badge(ctx) : null;
+
+    return { value, visible, badge };
 }

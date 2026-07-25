@@ -9,6 +9,37 @@
 
 import { armedStorageKey, parseSessionArmed } from './shared/prefs';
 
+const ACTION_TITLE_DEFAULT = 'Style Detective';
+const ACTION_TITLE_ARMED = 'Style Detective is on — click to turn off';
+
+const ACTION_ICON_DEFAULT: Record<string, string> = {
+    '16': 'images/16.png',
+    '32': 'images/32.png',
+    '48': 'images/48.png',
+};
+
+const ACTION_ICON_ARMED: Record<string, string> = {
+    '16': 'images/16-active.png',
+    '32': 'images/32-active.png',
+    '48': 'images/48-active.png',
+};
+
+/** Per-tab toolbar icon + tooltip so only the armed tab looks active. */
+async function syncActionUi(tabId: number, armed: boolean): Promise<void> {
+    try {
+        await chrome.action.setIcon({
+            tabId,
+            path: armed ? ACTION_ICON_ARMED : ACTION_ICON_DEFAULT,
+        });
+        await chrome.action.setTitle({
+            tabId,
+            title: armed ? ACTION_TITLE_ARMED : ACTION_TITLE_DEFAULT,
+        });
+    } catch {
+        // Tab may already be closed or restricted.
+    }
+}
+
 async function getTabArmed(tabId: number): Promise<boolean> {
     const key = armedStorageKey(tabId);
     const stored = await chrome.storage.session.get(key);
@@ -29,6 +60,8 @@ async function setTabArmed(tabId: number, armed: boolean): Promise<void> {
     } else {
         await chrome.storage.session.remove(key);
     }
+
+    await syncActionUi(tabId, armed);
 
     await chrome.tabs.sendMessage(tabId, { type: 'setOverlayArmed', armed }).catch(() => {
         // No receivers during navigation / restricted frames.
@@ -108,7 +141,7 @@ chrome.runtime.onInstalled.addListener((details) => {
 // Drop stale armed flags when the tab navigates or closes.
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
     if (changeInfo.status === 'loading') {
-        void chrome.storage.session.remove(armedStorageKey(tabId));
+        void setTabArmed(tabId, false);
     }
 });
 

@@ -229,7 +229,7 @@ export function createBlock(doc: Document): HTMLDivElement {
                     shortcut('F', 'Freeze'),
                     shortcut('C', 'Copy'),
                     shortcut('+/−', 'Zoom'),
-                    shortcut('H', 'Help'),
+                    shortcut('S', 'Settings'),
                     shortcut('Esc', 'Close'),
                 ],
             }),

@@ -28,7 +28,7 @@ Then open `chrome://extensions`, turn on **Developer mode** (top-right), click *
 
 ## Usage
 
-Click the toolbar icon (or press `Alt+Shift+S` on Windows/Linux/ChromeOS, `Option+Shift+S` on macOS) to enable or disable the viewer on the current page. While enabled, hover any element to inspect it.
+Click the toolbar icon (or press `Alt+Shift+S` (Windows) or `Option+Shift+S` (macOS)) to enable or disable the viewer on the current page. While enabled, hover any element to inspect it.
 
 You can customize the toggle shortcut at `chrome://extensions/shortcuts`.
 
@@ -36,10 +36,8 @@ Keyboard shortcuts while the viewer is active:
 
 - `F` to freeze or unfreeze the panel in place
 - `C` to copy a simple CSS definition for the selected element to the clipboard
-- `+` / `-` to increase or decrease the panel font size
-- `0` to reset the panel font size
-- `M` to Toggle light/dark mode for overlay panel
-- `H` to display the help page
+- `+` / `-` to increase or decrease the panel font size (`0` / zero resets to default)
+- `S` to open the settings page
 - `Esc` to close the viewer
 
 ## Known Issues

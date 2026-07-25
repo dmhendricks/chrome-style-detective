@@ -50,3 +50,26 @@ export async function loadUtilityFirstExtras(): Promise<boolean> {
 export async function saveUtilityFirstExtras(enabled: boolean): Promise<void> {
     await chrome.storage.local.set({ [UTILITY_FIRST_EXTRAS_KEY]: enabled });
 }
+
+/**
+ * Classes row expand/collapse (utility-first extras). Default: expanded.
+ * Persisted in chrome.storage.local so it sticks across tabs and reloads.
+ */
+export const CLASSES_EXPANDED_KEY = 'classesExpanded';
+
+export const CLASSES_EXPANDED_DEFAULT = true;
+
+export function parseClassesExpanded(value: unknown): boolean {
+    if (value === false) return false;
+    if (value === true) return true;
+    return CLASSES_EXPANDED_DEFAULT;
+}
+
+export async function loadClassesExpanded(): Promise<boolean> {
+    const stored = await chrome.storage.local.get(CLASSES_EXPANDED_KEY);
+    return parseClassesExpanded(stored[CLASSES_EXPANDED_KEY]);
+}
+
+export async function saveClassesExpanded(expanded: boolean): Promise<void> {
+    await chrome.storage.local.set({ [CLASSES_EXPANDED_KEY]: expanded });
+}

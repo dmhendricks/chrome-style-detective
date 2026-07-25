@@ -46,5 +46,5 @@ With **Utility-first extras** enabled in settings, a **Classes** row also appear
 
 ## Known Issues
 
-- The viewer will not activate on tabs that were already open before installation or update, nor on the Chrome Web Store itself. Reload the tab so the content script can attach, then try again.
+- The viewer will not activate on the Chrome Web Store, `chrome://` pages, or similar restricted tabs (a small popup explains why). On normal sites that were open before install/update, reload the tab so the content script can attach, then try again.
 - Styling may occasionally conflict with the web site's CSS

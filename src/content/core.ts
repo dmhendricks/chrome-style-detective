@@ -22,6 +22,13 @@ import {
     updateHeader,
     updatePanel,
 } from './lib/panel';
+import {
+    loadPanelThemePreference,
+    parsePanelTheme,
+    resolvePanelTheme,
+    type PanelThemePreference,
+    PANEL_THEME_KEY,
+} from '../shared/prefs';
 import './style.scss';
 
 const FROZEN_CLASS = 'StyleDetectiveOverlay--frozen';
@@ -36,9 +43,7 @@ const PANEL_FONT_SIZE_MIN = 8;
 const PANEL_FONT_SIZE_MAX = 18;
 const PANEL_FONT_SIZE_STEP = 1;
 const PANEL_FONT_SIZE_STORAGE_KEY = 'panelFontSize';
-const PANEL_THEME_STORAGE_KEY = 'panelTheme';
 
-type PanelTheme = 'light' | 'dark';
 type Pointer = { clientX: number; clientY: number; pageX: number; pageY: number };
 
 const HOVER_LISTENER_OPTS: AddEventListenerOptions = { capture: true, passive: true };
@@ -48,8 +53,8 @@ function clampPanelFontSize(size: number): number {
     return Math.min(PANEL_FONT_SIZE_MAX, Math.max(PANEL_FONT_SIZE_MIN, size));
 }
 
-function systemPanelTheme(): PanelTheme {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+function systemPrefersDark(): boolean {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
 function eventTargetElement(e: Event): HTMLElement | null {
@@ -149,8 +154,8 @@ class OverlayController {
 
     // --- prefs ---
     private panelFontSize = PANEL_FONT_SIZE_DEFAULT;
-    private panelTheme: PanelTheme = 'light';
-    private panelThemeUserSet = false;
+    private panelThemePreference: PanelThemePreference = 'system';
+    private systemThemeMedia: MediaQueryList | null = null;
 
     private flashMessageTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -198,9 +203,10 @@ class OverlayController {
         this.syncHighlightToInspected();
     };
 
-    /** Load font size + theme before the first enable(). */
+    /** Load font size and theme prefs before the first enable(). */
     async loadPrefs(): Promise<void> {
-        await Promise.all([this.loadPanelFontSize(), this.loadPanelTheme()]);
+        await Promise.all([this.loadPanelFontSize(), this.loadPanelThemePref()]);
+        this.watchPrefs();
     }
 
     isEnabled(): boolean {
@@ -312,21 +318,36 @@ class OverlayController {
         }
     }
 
-    private async loadPanelTheme(): Promise<void> {
-        const stored = await chrome.storage.local.get(PANEL_THEME_STORAGE_KEY);
-        const value = stored[PANEL_THEME_STORAGE_KEY];
-        if (value === 'dark' || value === 'light') {
-            this.panelTheme = value;
-            this.panelThemeUserSet = true;
-            return;
-        }
+    private async loadPanelThemePref(): Promise<void> {
+        this.panelThemePreference = await loadPanelThemePreference();
+        this.bindSystemThemeListener();
+    }
 
-        this.panelTheme = systemPanelTheme();
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-            if (this.panelThemeUserSet) return;
-            this.panelTheme = systemPanelTheme();
-            this.applyPanelTheme();
+    private watchPrefs(): void {
+        chrome.storage.onChanged.addListener((changes, area) => {
+            if (area !== 'local') return;
+
+            const themeChange = changes[PANEL_THEME_KEY];
+            if (themeChange) {
+                this.panelThemePreference = parsePanelTheme(themeChange.newValue);
+                this.bindSystemThemeListener();
+                this.applyPanelTheme();
+            }
         });
+    }
+
+    private bindSystemThemeListener(): void {
+        if (!this.systemThemeMedia) {
+            this.systemThemeMedia = window.matchMedia('(prefers-color-scheme: dark)');
+            this.systemThemeMedia.addEventListener('change', () => {
+                if (this.panelThemePreference !== 'system') return;
+                this.applyPanelTheme();
+            });
+        }
+    }
+
+    private appliedPanelTheme(): 'light' | 'dark' {
+        return resolvePanelTheme(this.panelThemePreference, systemPrefersDark());
     }
 
     private applyPanelFontSize(): void {
@@ -340,7 +361,7 @@ class OverlayController {
     private applyPanelTheme(): void {
         const block = document.getElementById(OVERLAY_ID);
         if (block) {
-            block.classList.toggle(DARK_CLASS, this.panelTheme === 'dark');
+            block.classList.toggle(DARK_CLASS, this.appliedPanelTheme() === 'dark');
         }
     }
 
@@ -357,13 +378,6 @@ class OverlayController {
         this.panelFontSize = PANEL_FONT_SIZE_DEFAULT;
         this.applyPanelFontSize();
         void chrome.storage.local.set({ [PANEL_FONT_SIZE_STORAGE_KEY]: this.panelFontSize });
-    }
-
-    private togglePanelTheme(): void {
-        this.panelTheme = this.panelTheme === 'dark' ? 'light' : 'dark';
-        this.panelThemeUserSet = true;
-        this.applyPanelTheme();
-        void chrome.storage.local.set({ [PANEL_THEME_STORAGE_KEY]: this.panelTheme });
     }
 
     // --- panel DOM ---
@@ -655,14 +669,9 @@ class OverlayController {
             void this.copyCssDefinition();
             return;
         }
-        if (key === 'h') {
+        if (key === 's') {
             e.preventDefault();
             void chrome.runtime.sendMessage({ type: 'openOptions' });
-            return;
-        }
-        if (key === 'm') {
-            e.preventDefault();
-            this.togglePanelTheme();
             return;
         }
 

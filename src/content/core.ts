@@ -20,6 +20,7 @@ import {
     collapseSelectorHeader,
     refreshSelectorOverflow,
     setClassesCopyNotifier,
+    setClassesExpanded,
     setUtilityFirstExtrasEnabled,
     updateClassesPanel,
     updateHeader,
@@ -27,12 +28,15 @@ import {
 } from './lib/panel';
 import { formatClassesForCopy, parseClassTokens } from './lib/classes';
 import {
+    loadClassesExpanded,
     loadPanelThemePreference,
     loadUtilityFirstExtras,
+    parseClassesExpanded,
     parsePanelTheme,
     parseUtilityFirstExtras,
     resolvePanelTheme,
     type PanelThemePreference,
+    CLASSES_EXPANDED_KEY,
     PANEL_THEME_KEY,
     UTILITY_FIRST_EXTRAS_KEY,
 } from '../shared/prefs';
@@ -221,6 +225,7 @@ class OverlayController {
             this.loadPanelFontSize(),
             this.loadPanelThemePref(),
             this.loadUtilityFirstExtrasPref(),
+            this.loadClassesExpandedPref(),
         ]);
         this.watchPrefs();
         this.syncUtilityFirstExtrasUi();
@@ -353,6 +358,10 @@ class OverlayController {
         this.utilityFirstExtras = await loadUtilityFirstExtras();
     }
 
+    private async loadClassesExpandedPref(): Promise<void> {
+        setClassesExpanded(await loadClassesExpanded());
+    }
+
     private watchPrefs(): void {
         chrome.storage.onChanged.addListener((changes, area) => {
             if (area !== 'local') return;
@@ -372,6 +381,11 @@ class OverlayController {
                     updateHeader(this.inspectedElement);
                     updateClassesPanel(this.inspectedElement);
                 }
+            }
+
+            const classesExpandedChange = changes[CLASSES_EXPANDED_KEY];
+            if (classesExpandedChange) {
+                setClassesExpanded(parseClassesExpanded(classesExpandedChange.newValue));
             }
         });
     }

@@ -9,7 +9,7 @@ Features:
 - Hover any element to view its CSS properties in a floating panel
 - Freeze the panel in place to inspect it
 - Copy an element's style to clipboard, or freeze the panel to copy individual property values
-- Keyboard shortcut to toggle the viewer (`Ctrl+Shift+D` / `Cmd+Shift+D`)
+- Keyboard shortcut to toggle the viewer (`Alt+Shift+S`; macOS: `Option+Shift+S`)
 - New: WCAG contrast ratio for color vs background-color
 - New: Ability to increase/decrease font size
 - New: Dark mode support
@@ -28,7 +28,9 @@ Then open `chrome://extensions`, turn on **Developer mode** (top-right), click *
 
 ## Usage
 
-Click the toolbar icon (or press `Ctrl+Shift+D` on Windows/Linux/ChromeOS, `Cmd+Shift+D` on macOS) to enable or disable the viewer on the current page. While enabled, hover any element to inspect it.
+Click the toolbar icon (or press `Alt+Shift+S` on Windows/Linux/ChromeOS, `Option+Shift+S` on macOS) to enable or disable the viewer on the current page. While enabled, hover any element to inspect it.
+
+You can customize the toggle shortcut at `chrome://extensions/shortcuts`.
 
 Keyboard shortcuts while the viewer is active:
 

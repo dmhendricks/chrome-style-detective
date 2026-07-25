@@ -142,7 +142,12 @@ export function getFileName(str: string): string {
     return path[path.length - 1] ?? '';
 }
 
-/** Round a `"12.34px"`-style value to a whole-pixel string. */
+/** Round a `"12.34px"`-style value to a whole-pixel string; pass through otherwise. */
 export function removeExtraFloat(nb: string): string {
-    return Math.round(Number(nb.substr(0, nb.length - 2))) + 'px';
+    if (!nb.endsWith('px')) return nb;
+
+    const n = Number.parseFloat(nb);
+    if (!Number.isFinite(n)) return nb;
+
+    return `${Math.round(n)}px`;
 }

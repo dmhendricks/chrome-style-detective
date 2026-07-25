@@ -31,9 +31,9 @@ export function el<K extends TagName>(
 
     if (opts.id !== undefined) node.id = opts.id;
     if (opts.className !== undefined) node.className = opts.className;
-    if (opts.text !== undefined) node.appendChild(doc.createTextNode(opts.text));
+    if (opts.text !== undefined) node.append(doc.createTextNode(opts.text));
     if (opts.children) {
-        for (const child of opts.children) node.appendChild(child);
+        for (const child of opts.children) node.append(child);
     }
 
     return node;
@@ -169,7 +169,7 @@ function textWithColorSwatches(doc: Document, text: string): DocumentFragment {
     const leadingHex = firstHexIn(text);
 
     if (leadingHex) {
-        frag.appendChild(colorSwatch(doc, normalizeHexForSwatch(leadingHex)));
+        frag.append(colorSwatch(doc, normalizeHexForSwatch(leadingHex)));
     }
 
     let lastIndex = 0;
@@ -179,17 +179,17 @@ function textWithColorSwatches(doc: Document, text: string): DocumentFragment {
         const index = match.index ?? 0;
 
         if (index > lastIndex) {
-            frag.appendChild(doc.createTextNode(text.slice(lastIndex, index)));
+            frag.append(doc.createTextNode(text.slice(lastIndex, index)));
         }
 
-        frag.appendChild(doc.createTextNode(hex));
+        frag.append(doc.createTextNode(hex));
         lastIndex = index + hex.length;
     }
 
     if (lastIndex === 0) {
-        frag.appendChild(doc.createTextNode(text));
+        frag.append(doc.createTextNode(text));
     } else if (lastIndex < text.length) {
-        frag.appendChild(doc.createTextNode(text.slice(lastIndex)));
+        frag.append(doc.createTextNode(text.slice(lastIndex)));
     }
 
     return frag;
@@ -199,7 +199,7 @@ function copyAffordance(doc: Document): HTMLSpanElement {
     const affordance = doc.createElement('span');
     affordance.className = 'StyleDetectiveOverlay__copy-affordance';
     affordance.title = 'Copy';
-    affordance.appendChild(clipboardIcon(doc));
+    affordance.append(clipboardIcon(doc));
     affordance.setAttribute('aria-hidden', 'true');
 
     return affordance;
@@ -211,7 +211,7 @@ function wrapCopyableValue(doc: Document, copyValue: string): HTMLSpanElement {
 
     const text = doc.createElement('span');
     text.className = 'StyleDetectiveOverlay__value-text';
-    text.appendChild(textWithColorSwatches(doc, copyValue));
+    text.append(textWithColorSwatches(doc, copyValue));
 
     const affordance = copyAffordance(doc);
     group.append(text, affordance);
@@ -288,7 +288,7 @@ export function setValueContent(
         pill.className = `StyleDetectiveOverlay__contrast-badge StyleDetectiveOverlay__contrast-badge--${badge.tone}`;
         pill.textContent = badge.text;
         pill.title = `WCAG ${badge.text}`;
-        group.querySelector('.StyleDetectiveOverlay__value-text')?.appendChild(pill);
+        group.querySelector('.StyleDetectiveOverlay__value-text')?.append(pill);
     }
 
     target.replaceChildren(group);

@@ -90,7 +90,7 @@ function isElementInViewport(el: HTMLElement): boolean {
 
 function removeElement(id: string): void {
     const n = document.getElementById(id);
-    if (n) n.parentNode?.removeChild(n);
+    if (n) n.remove();
 }
 
 /**
@@ -291,9 +291,9 @@ class OverlayController {
 
         if (block) {
             block.classList.remove(FROZEN_CLASS);
-            document.body.removeChild(block);
+            block.remove();
         }
-        if (message) document.body.removeChild(message);
+        if (message) message.remove();
 
         this.removeHoverListeners();
         this.removeKeyListeners();
@@ -443,7 +443,7 @@ class OverlayController {
         let block = document.getElementById(OVERLAY_ID);
         if (!block) {
             block = createBlock(document);
-            document.body.appendChild(block);
+            document.body.append(block);
             this.applyPanelFontSize();
             this.applyPanelTheme();
             this.syncUtilityFirstExtrasUi();
@@ -464,8 +464,8 @@ class OverlayController {
         const p = document.createElement('p');
         p.id = TOAST_ID;
         if (options.tone === 'success') p.className = TOAST_SUCCESS_CLASS;
-        p.appendChild(document.createTextNode(msg));
-        document.body.appendChild(p);
+        p.append(document.createTextNode(msg));
+        document.body.append(p);
 
         if (!options.persistent) {
             this.flashMessageTimer = setTimeout(() => {
@@ -483,7 +483,7 @@ class OverlayController {
             box = document.createElement('div');
             box.id = HIGHLIGHT_ID;
             box.setAttribute('aria-hidden', 'true');
-            document.body.appendChild(box);
+            document.body.append(box);
         }
         return box;
     }

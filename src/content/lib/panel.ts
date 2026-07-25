@@ -124,7 +124,7 @@ function renderClassChips(doc: Document): void {
             e.stopPropagation();
             void copyClassText(token, `Copied ${token}`);
         });
-        classesChips!.appendChild(chip);
+        classesChips!.append(chip);
     };
 
     const appendMoreChip = (hiddenCount: number): void => {
@@ -140,7 +140,7 @@ function renderClassChips(doc: Document): void {
             classesShowAllChips = true;
             renderClassChips(doc);
         });
-        classesChips!.appendChild(more);
+        classesChips!.append(more);
     };
 
     const paint = (visibleCount: number, withMore: boolean): void => {

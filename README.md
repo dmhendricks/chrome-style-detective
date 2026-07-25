@@ -10,6 +10,9 @@ Features:
 - Freeze the panel in place to inspect it
 - Copy an element's style to clipboard, or freeze the panel to copy individual property values
 - Keyboard shortcut to toggle the viewer (`Ctrl+Shift+D` / `Cmd+Shift+D`)
+- New: Ability to increase/decrease font size
+- New: Dark mode support
+- New: Iframe support
 
 ## Installation
 

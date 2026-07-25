@@ -17,6 +17,7 @@
 // &__ would compile to an #id. Rules mirror the panel's DOM:
 //
 //   #StyleDetectiveHighlight                  dashed box over hovered element
+//   #StyleDetectiveToast                      engagement / copy feedback banner
 //   #StyleDetectiveOverlay                       floating panel (block)
 //     h1                                        title banner
 //       .StyleDetectiveOverlay__selector         element selector label
@@ -48,6 +49,32 @@
     pointer-events: none !important;
     // Below the panel (9999) and toast; above ordinary page content.
     z-index: 9998 !important;
+}
+
+// Top-left toast — engagement cue and copy feedback (outside the panel block).
+#StyleDetectiveToast {
+    position: fixed !important;
+    top: 10px !important;
+    left: 10px !important;
+    z-index: 2147483647 !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 8px 12px !important;
+    color: #fff !important;
+    font-family: 'Lucida sans', helvetica, sans-serif !important;
+    font-size: 12px !important;
+    font-weight: 400 !important;
+    line-height: 1.35 !important;
+    text-align: left !important;
+    background: #7a1f1f !important;
+    border: none !important;
+    border-radius: 6px !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25) !important;
+    pointer-events: none !important;
+
+    &.StyleDetectiveToast--success {
+        background: #1f5c3a !important;
+    }
 }
 
 #StyleDetectiveOverlay {

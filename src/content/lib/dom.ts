@@ -100,6 +100,40 @@ export function isOverlayFrozen(doc: Document = document): boolean {
     return doc.getElementById(OVERLAY_ID)?.classList.contains(FROZEN_CLASS) ?? false;
 }
 
+/**
+ * Shift an absolutely-positioned overlay so its box stays inside the viewport
+ * (used after font-size changes and header expand).
+ */
+export function keepOverlayInViewport(block: HTMLElement): void {
+    const MARGIN = 8;
+    // Leave room for the browser's link-URL preview along the bottom edge.
+    const BOTTOM_MARGIN = 40;
+    const rect = block.getBoundingClientRect();
+
+    let dx = 0;
+    let dy = 0;
+
+    if (rect.right > window.innerWidth - MARGIN) {
+        dx = window.innerWidth - MARGIN - rect.right;
+    }
+    if (rect.left + dx < MARGIN) {
+        dx = MARGIN - rect.left;
+    }
+    if (rect.bottom > window.innerHeight - BOTTOM_MARGIN) {
+        dy = window.innerHeight - BOTTOM_MARGIN - rect.bottom;
+    }
+    if (rect.top + dy < MARGIN) {
+        dy = MARGIN - rect.top;
+    }
+
+    if (dx !== 0) {
+        block.style.left = `${block.offsetLeft + dx}px`;
+    }
+    if (dy !== 0) {
+        block.style.top = `${block.offsetTop + dy}px`;
+    }
+}
+
 /** Match #RGB, #RRGGBB, or #RRGGBBAA hex tokens in a property value string. */
 const HEX_COLOR_RE = /#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/g;
 

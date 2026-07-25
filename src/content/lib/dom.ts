@@ -229,10 +229,26 @@ export function selectorLabel(el: HTMLElement): string {
  * When frozen, hovering the value reveals a copy icon; clicking copies the full
  * property value string. Skips the DOM rebuild when the value is unchanged.
  */
-export function setValueContent(target: HTMLElement, copyValue: string): void {
-    if (target.dataset.sdValue === copyValue) return;
+export function setValueContent(
+    target: HTMLElement,
+    copyValue: string,
+    options: { badge?: { text: string; tone: string } | null } = {},
+): void {
+    const badge = options.badge ?? null;
+    const fingerprint = badge ? `${copyValue}\0${badge.tone}:${badge.text}` : copyValue;
+    if (target.dataset.sdValue === fingerprint) return;
 
     const doc = target.ownerDocument;
-    target.dataset.sdValue = copyValue;
-    target.replaceChildren(wrapCopyableValue(doc, copyValue));
+    target.dataset.sdValue = fingerprint;
+
+    const group = wrapCopyableValue(doc, copyValue);
+    if (badge) {
+        const pill = doc.createElement('span');
+        pill.className = `StyleDetectiveOverlay__contrast-badge StyleDetectiveOverlay__contrast-badge--${badge.tone}`;
+        pill.textContent = badge.text;
+        pill.title = `WCAG ${badge.text}`;
+        group.querySelector('.StyleDetectiveOverlay__value-text')?.appendChild(pill);
+    }
+
+    target.replaceChildren(group);
 }

@@ -78,6 +78,19 @@ export function relativeLuminance(color: RgbaColor): number {
     return 0.2126 * channel(color.r) + 0.7152 * channel(color.g) + 0.0722 * channel(color.b);
 }
 
+/** Blend `src` over opaque `dst` (both 0–255 channels, src.a in 0–1). */
+export function alphaBlend(src: RgbaColor, dst: RgbaColor): RgbaColor {
+    const a = Math.max(0, Math.min(1, src.a));
+    return {
+        r: Math.round(src.r * a + dst.r * (1 - a)),
+        g: Math.round(src.g * a + dst.g * (1 - a)),
+        b: Math.round(src.b * a + dst.b * (1 - a)),
+        a: 1,
+    };
+}
+
+const OPAQUE_WHITE: RgbaColor = { r: 255, g: 255, b: 255, a: 1 };
+
 /** WCAG contrast ratio between two opaque colors (1–21). */
 export function contrastRatio(foreground: RgbaColor, background: RgbaColor): number {
     const l1 = relativeLuminance(foreground);
@@ -94,6 +107,39 @@ export function contrastLabel(ratio: number): string {
     if (ratio >= 4.5) return 'AA';
     if (ratio >= 3) return 'AA large';
     return 'fail';
+}
+
+export type ContrastTone = 'aaa' | 'aa' | 'aa-large' | 'fail';
+
+export function contrastTone(label: string): ContrastTone {
+    if (label === 'AAA') return 'aaa';
+    if (label === 'AA') return 'aa';
+    if (label === 'AA large') return 'aa-large';
+    return 'fail';
+}
+
+export interface TextContrast {
+    ratio: number;
+    label: string;
+    tone: ContrastTone;
+}
+
+/**
+ * Contrast of `color` on `background-color`, flattening partial alpha over white
+ * then compositing the foreground over that backdrop (practical page estimate).
+ */
+export function textContrast(foregroundCss: string, backgroundCss: string): TextContrast | null {
+    const fg = parseCssColor(foregroundCss);
+    const bg = parseCssColor(backgroundCss);
+    if (!fg || !bg) return null;
+
+    const bgFlat = alphaBlend(bg, OPAQUE_WHITE);
+    const fgFlat = alphaBlend(fg, bgFlat);
+    const ratio = contrastRatio(fgFlat, bgFlat);
+    if (!Number.isFinite(ratio)) return null;
+
+    const label = contrastLabel(ratio);
+    return { ratio, label, tone: contrastTone(label) };
 }
 
 function gcd(a: number, b: number): number {

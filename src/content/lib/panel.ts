@@ -10,7 +10,6 @@
 
 import {
     CSS_CATEGORIES,
-    enabledPropertyNames,
     isPropertyEnabled,
     resolveProperty,
     type InspectContext,
@@ -72,7 +71,7 @@ export function updatePanel(style: CSSStyleDeclaration, el: HTMLElement): void {
 
             const resolved = resolveProperty(property, ctx);
             if (resolved.visible) {
-                setValueContent(row.value, resolved.value);
+                setValueContent(row.value, resolved.value, { badge: resolved.badge });
                 setRowVisible(row.li, true);
                 visibleCount += 1;
             } else {
@@ -195,8 +194,8 @@ export function createBlock(doc: Document): HTMLDivElement {
     const header = el(doc, 'h1', { children: [selector] });
     header.addEventListener('click', () => toggleSelectorExpanded(header));
 
-    const categoryDivs = CSS_CATEGORIES.filter(
-        (category) => enabledPropertyNames(category).length > 0,
+    const categoryDivs = CSS_CATEGORIES.filter((category) =>
+        category.properties.some(isPropertyEnabled),
     ).map((category) => {
         const rows = category.properties.filter(isPropertyEnabled).map((property) => {
             const value = el(doc, 'span', { className: 'StyleDetectiveOverlay__value' });
@@ -208,7 +207,7 @@ export function createBlock(doc: Document): HTMLDivElement {
                 children: [
                     el(doc, 'span', {
                         className: 'StyleDetectiveOverlay__property',
-                        text: property.name,
+                        text: property.label ?? property.name,
                     }),
                     value,
                 ],

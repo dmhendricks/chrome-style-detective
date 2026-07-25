@@ -569,7 +569,7 @@ export function createBlock(doc: Document): HTMLDivElement {
         (category) => enabledPropertyNames(category).length > 0,
     ).map((category) => {
         const rows = category.properties.filter(isPropertyEnabled).map((property) => {
-            const value = el(doc, 'span');
+            const value = el(doc, 'span', { className: 'StyleDetectiveOverlay__value' });
             const li = el(doc, 'li', {
                 id: ID_PREFIX + property.name,
                 // Hidden until the first updatePanel pass fills values — avoids

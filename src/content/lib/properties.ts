@@ -389,8 +389,12 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
             {
                 name: 'transition',
                 when: (ctx) => {
-                    const value = ctx.get('transition');
-                    return value !== '' && !value.startsWith('all 0s');
+                    const value = ctx.get('transition').trim();
+                    // Initial / no-op serializations vary by Chrome version:
+                    // "all", "all 0s ease 0s", "none", "".
+                    if (value === '' || value === 'all' || value === 'none') return false;
+                    if (value.startsWith('all 0s')) return false;
+                    return true;
                 },
             },
             { name: 'filter', hideDefault: 'none' },

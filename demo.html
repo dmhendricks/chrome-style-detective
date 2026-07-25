@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Style Detective — Playground</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            :root {
+                --ink: #1a1f2c;
+                --mute: #8b93a7;
+                --line: #e6e9f0;
+                --stage: #ffffff;
+                --guide: #c5cad6;
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            html,
+            body {
+                margin: 0;
+                min-height: 100%;
+                background: var(--stage);
+                color: var(--ink);
+                font-family: 'Inter', system-ui, sans-serif;
+            }
+
+            body {
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+            }
+
+            /* Soft capture frame — 1280×800 Chrome Store screenshot size */
+            .frame {
+                position: fixed;
+                inset: 0;
+                pointer-events: none;
+                z-index: 1;
+            }
+
+            .frame__box {
+                position: absolute;
+                top: 24px;
+                left: 50%;
+                translate: -50% 0;
+                width: min(1280px, calc(100vw - 48px));
+                aspect-ratio: 1280 / 800;
+                max-height: calc(100vh - 48px);
+                border: 1px dashed color-mix(in srgb, var(--guide) 70%, transparent);
+                border-radius: 2px;
+            }
+
+            .frame__label {
+                position: absolute;
+                top: 8px;
+                left: 50%;
+                translate: -50% 0;
+                font-size: 11px;
+                letter-spacing: 0.04em;
+                text-transform: uppercase;
+                color: var(--mute);
+                background: var(--stage);
+                padding: 0 8px;
+            }
+
+            .chrome {
+                position: relative;
+                z-index: 2;
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                width: min(1280px, 100%);
+                margin: 0 auto;
+                /* Extra bottom padding keeps specimens above the 1280×800 guide edge */
+                padding: 56px 40px 72px;
+            }
+
+            .help {
+                max-width: 34rem;
+                color: var(--mute);
+                font-size: 0.92rem;
+                line-height: 1.45;
+            }
+
+            .help h1 {
+                margin: 0 0 0.4rem;
+                font-family: 'Fraunces', Georgia, serif;
+                font-size: 1.35rem;
+                font-weight: 600;
+                color: var(--ink);
+                letter-spacing: -0.02em;
+            }
+
+            .help p {
+                margin: 0 0 0.65rem;
+            }
+
+            .help ol {
+                margin: 0;
+                padding-left: 1.15rem;
+            }
+
+            .help li {
+                margin: 0.2rem 0;
+            }
+
+            .help kbd,
+            code {
+                font-family: 'IBM Plex Mono', ui-monospace, monospace;
+                font-size: 0.8em;
+                padding: 0.05em 0.35em;
+                border: 1px solid var(--line);
+                border-radius: 4px;
+                background: #f7f8fb;
+            }
+
+            .spacer {
+                flex: 1;
+                min-height: 12rem;
+            }
+
+            .hint {
+                margin: 0 0 0.75rem;
+                color: var(--mute);
+                font-size: 0.78rem;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+            }
+
+            /* Compact specimens — keep height low so the overlay fills the white above */
+            .stage {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: flex-start;
+                gap: 0.85rem 1rem;
+                margin-top: 0.35rem;
+                padding-top: 1rem;
+                border-top: 1px solid var(--line);
+            }
+
+            .specimen {
+                display: flex;
+                flex-direction: column;
+                gap: 0.35rem;
+                max-width: 100%;
+            }
+
+            .specimen__tag {
+                font-family: 'IBM Plex Mono', ui-monospace, monospace;
+                font-size: 0.68rem;
+                line-height: 1.2;
+                color: var(--mute);
+                letter-spacing: 0.02em;
+                white-space: nowrap;
+            }
+
+            /* Shared control height so bottoms stay even when tags share one baseline */
+            .specimen > :not(.specimen__tag) {
+                height: 2.15rem;
+                box-sizing: border-box;
+            }
+
+            /* 1 — CTA: color swatches + WCAG contrast */
+            .btn-primary {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0 1rem;
+                border: none;
+                border-radius: 8px;
+                background: #2c72ff;
+                color: #ffffff;
+                font: 600 0.92rem/1 'Inter', sans-serif;
+                letter-spacing: 0.01em;
+                cursor: pointer;
+                box-shadow: 0 6px 16px -8px rgb(44 114 255 / 70%);
+            }
+
+            /* 2 — Soft chip: pastel bg, dark text, radius */
+            .chip {
+                display: inline-flex;
+                align-items: center;
+                padding: 0 0.7rem;
+                border-radius: 999px;
+                background: #ffe8a3;
+                color: #5c4810;
+                font: 600 0.82rem/1 'Inter', sans-serif;
+                border: 1px solid #f0d37a;
+            }
+
+            /* 3 — Danger outline: border color swatch + low-ish contrast story */
+            .btn-ghost {
+                display: inline-flex;
+                align-items: center;
+                padding: 0 0.9rem;
+                border-radius: 8px;
+                border: 2px solid #e11d48;
+                background: #fff5f7;
+                color: #9f1239;
+                font: 600 0.88rem/1 'Inter', sans-serif;
+                cursor: pointer;
+            }
+
+            /* 4 — Flex layout specimen */
+            .flex-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 10px;
+                padding: 0 0.55rem;
+                min-width: 9.5rem;
+                border-radius: 10px;
+                background: #0f172a;
+                color: #e2e8f0;
+                font: 500 0.75rem/1 'IBM Plex Mono', monospace;
+            }
+
+            .flex-row span {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 1.45rem;
+                height: 1.45rem;
+                border-radius: 6px;
+                background: #334155;
+            }
+
+            .flex-row span:nth-child(1) {
+                background: #22c55e;
+                color: #052e16;
+            }
+
+            .flex-row span:nth-child(2) {
+                background: #38bdf8;
+                color: #082f49;
+            }
+
+            .flex-row span:nth-child(3) {
+                background: #f472b6;
+                color: #500724;
+            }
+
+            /* 5 — Typography specimen */
+            .type-sample {
+                margin: 0;
+                display: inline-flex;
+                align-items: center;
+                padding: 0 0.55rem;
+                font-family: 'Fraunces', Georgia, serif;
+                font-size: 1.15rem;
+                font-weight: 600;
+                font-style: italic;
+                letter-spacing: 0.02em;
+                line-height: 1;
+                color: #5b21b6;
+                text-decoration: underline;
+                text-decoration-color: #c4b5fd;
+                text-underline-offset: 0.18em;
+                background: #f5f3ff;
+                border-radius: 6px;
+            }
+
+            /* 6 — Box model / effects card (still short) */
+            .card {
+                width: 7.5rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0 0.65rem;
+                margin: 0;
+                border: 1px solid #cbd5e1;
+                border-radius: 12px;
+                background: linear-gradient(180deg, #ffffff, #f8fafc);
+                color: #0f172a;
+                font: 600 0.78rem/1 'Inter', sans-serif;
+                box-shadow:
+                    0 1px 0 rgb(15 23 42 / 4%),
+                    0 8px 18px -12px rgb(15 23 42 / 35%);
+            }
+
+            /* 7 — List category — keep real list-style for the overlay; match row height */
+            .bullets {
+                margin: 0;
+                padding: 0 0.9rem 0 1.5rem;
+                list-style-type: square;
+                list-style-position: outside;
+                color: #0f766e;
+                background: #ecfdf5;
+                border-radius: 8px;
+                font: 500 0.82rem/2.15rem 'Inter', sans-serif;
+            }
+
+            .bullets li {
+                margin: 0;
+                padding: 0;
+            }
+
+            /* 8 — Utility-first class dump (for Classes row screenshots) */
+            .utility {
+                display: inline-flex;
+                align-items: center;
+                padding: 0 0.85rem;
+                border-radius: 0.5rem;
+                background: #111827;
+                color: #f9fafb;
+                font: 500 0.78rem/1 'IBM Plex Mono', monospace;
+                cursor: default;
+            }
+
+            .note {
+                margin-top: 0.85rem;
+                color: var(--mute);
+                font-size: 0.8rem;
+            }
+
+            @media (max-width: 900px) {
+                .chrome {
+                    padding: 48px 20px 20px;
+                }
+
+                .frame__box {
+                    display: none;
+                }
+
+                .frame__label {
+                    display: none;
+                }
+            }
+
+            body.hide-chrome .help,
+            body.hide-chrome .hint,
+            body.hide-chrome .specimen__tag,
+            body.hide-chrome .note,
+            body.hide-chrome .frame {
+                display: none !important;
+            }
+
+            body.hide-chrome .chrome {
+                padding-top: 24px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="frame" aria-hidden="true">
+            <div class="frame__label">1280 × 800 capture guide</div>
+            <div class="frame__box"></div>
+        </div>
+
+        <main class="chrome">
+            <section class="help">
+                <h1>Playground</h1>
+                <p>
+                    A quiet capture stage for store screenshots. Hover the short specimens at the
+                    bottom so the Style Detective panel sits in the white space above (ideal for
+                    1280×800 shots).
+                </p>
+                <ol>
+                    <li>Open this file in Chrome and enable the extension.</li>
+                    <li>
+                        Press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> (Windows/Linux) or
+                        <kbd>Option</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> (macOS).
+                    </li>
+                    <li>Hover a specimen · press <kbd>F</kbd> to freeze · capture the frame.</li>
+                    <li>
+                        Press <kbd>H</kbd> to hide this text for a cleaner shot.
+                    </li>
+                </ol>
+            </section>
+
+            <div class="spacer" aria-hidden="true"></div>
+
+            <p class="hint">Hover targets</p>
+
+            <div class="stage">
+                <div class="specimen">
+                    <span class="specimen__tag">1 · contrast / blue</span>
+                    <button type="button" class="btn-primary">Get started</button>
+                </div>
+
+                <div class="specimen">
+                    <span class="specimen__tag">2 · pastel chip</span>
+                    <span class="chip">New release</span>
+                </div>
+
+                <div class="specimen">
+                    <span class="specimen__tag">3 · rose border</span>
+                    <button type="button" class="btn-ghost">Delete</button>
+                </div>
+
+                <div class="specimen">
+                    <span class="specimen__tag">4 · flex + gap</span>
+                    <div class="flex-row">
+                        <span>A</span>
+                        <span>B</span>
+                        <span>C</span>
+                    </div>
+                </div>
+
+                <div class="specimen">
+                    <span class="specimen__tag">5 · type</span>
+                    <p class="type-sample">Editorial</p>
+                </div>
+
+                <div class="specimen">
+                    <span class="specimen__tag">6 · box / shadow</span>
+                    <div class="card">Card shell</div>
+                </div>
+
+                <div class="specimen">
+                    <span class="specimen__tag">7 · list</span>
+                    <ul class="bullets">
+                        <li>Inspect me</li>
+                    </ul>
+                </div>
+
+                <div class="specimen">
+                    <span class="specimen__tag">8 · utility classes</span>
+                    <!-- Enable Utility-first extras in settings for the Classes row -->
+                    <div
+                        class="utility flex items-center gap-2 rounded-lg bg-gray-900 px-3 text-sm text-white shadow-md hover:bg-gray-800 md:px-4"
+                    >
+                        Save draft
+                    </div>
+                </div>
+            </div>
+
+            <p class="note">
+                Tip: specimen <strong>8</strong> shines with <strong>Utility-first extras</strong> enabled.
+                Toggle panel theme in settings if you want a dark overlay on this white stage.
+            </p>
+        </main>
+
+        <script>
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'h' || e.key === 'H') {
+                    if (e.target instanceof HTMLElement) {
+                        const tag = e.target.tagName;
+                        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+                    }
+                    document.body.classList.toggle('hide-chrome');
+                }
+            });
+        </script>
+    </body>
+</html>

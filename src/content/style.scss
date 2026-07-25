@@ -32,6 +32,7 @@
 //             .StyleDetectiveOverlay__value-group
 //               .StyleDetectiveOverlay__value-text
 //               .StyleDetectiveOverlay__copy-affordance
+//     .StyleDetectiveOverlay__classes            utility-first class chips (optional)
 //     &__footer                                 footer (#id)
 //       .StyleDetectiveOverlay__shortcuts        shortcut chip row
 //         .StyleDetectiveOverlay__shortcut       one kbd + label pair
@@ -133,6 +134,7 @@
     &,
     h1,
     h2,
+    button,
     ul,
     li,
     span,
@@ -218,6 +220,100 @@
         max-height: calc(var(--sd-font-size) * 1.6 * 8) !important;
         overflow-x: hidden !important;
         overflow-y: auto !important;
+    }
+
+    .StyleDetectiveOverlay__classes {
+        flex: 0 0 auto !important;
+        display: block !important;
+        padding: 6px 10px 8px !important;
+        border-bottom: 1px solid var(--sd-divider) !important;
+        background: var(--sd-panel-bg) !important;
+
+        &--hidden {
+            display: none !important;
+        }
+
+        &--collapsed .StyleDetectiveOverlay__classes-body {
+            display: none !important;
+        }
+    }
+
+    .StyleDetectiveOverlay__classes-head {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 8px !important;
+    }
+
+    .StyleDetectiveOverlay__classes-toggle,
+    .StyleDetectiveOverlay__classes-copy-all {
+        box-sizing: border-box !important;
+        margin: 0 !important;
+        padding: 4px 8px !important;
+        color: var(--sd-text) !important;
+        font-size: calc(var(--sd-font-size) * 0.95) !important;
+        line-height: calc(var(--sd-font-size) * 1.35) !important;
+        background: var(--sd-kbd-bg) !important;
+        border: 1px solid var(--sd-kbd-border) !important;
+        border-radius: calc(var(--sd-radius) - 2px) !important;
+        cursor: pointer !important;
+    }
+
+    .StyleDetectiveOverlay__classes-toggle {
+        flex: 1 1 auto !important;
+        text-align: left !important;
+        font-weight: 600 !important;
+    }
+
+    .StyleDetectiveOverlay__classes-copy-all {
+        flex: 0 0 auto !important;
+        color: var(--sd-heading) !important;
+    }
+
+    .StyleDetectiveOverlay__classes-toggle:hover,
+    .StyleDetectiveOverlay__classes-copy-all:hover:not(:disabled) {
+        border-color: var(--sd-heading) !important;
+    }
+
+    .StyleDetectiveOverlay__classes-copy-all:disabled {
+        opacity: 0.45 !important;
+        cursor: default !important;
+    }
+
+    .StyleDetectiveOverlay__classes-body {
+        padding-top: 6px !important;
+    }
+
+    .StyleDetectiveOverlay__class-chips {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 4px !important;
+    }
+
+    .StyleDetectiveOverlay__class-chip {
+        max-width: 100% !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+        font-family: Menlo, Consolas, 'Courier New', ui-monospace, monospace !important;
+        font-size: calc(var(--sd-font-size) * 0.88) !important;
+        font-weight: 500 !important;
+        line-height: calc(var(--sd-font-size) * 1.25) !important;
+        color: var(--sd-kbd-text) !important;
+        background: var(--sd-kbd-bg) !important;
+        border: 1px solid var(--sd-kbd-border) !important;
+        border-radius: calc(var(--sd-radius) - 2px) !important;
+        cursor: pointer !important;
+    }
+
+    .StyleDetectiveOverlay__class-chip:hover {
+        border-color: var(--sd-heading) !important;
+        color: var(--sd-text) !important;
+    }
+
+    .StyleDetectiveOverlay__class-chip--more {
+        font-style: italic !important;
+        color: var(--sd-label) !important;
     }
 
     &__center {

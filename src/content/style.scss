@@ -27,7 +27,10 @@
 //         h2                                    group heading
 //         ul > li                               property rows
 //           .StyleDetectiveOverlay__property     property name / label (.class)
-//           + span                              property value
+//           .StyleDetectiveOverlay__value        value cell (colon via ::before)
+//             .StyleDetectiveOverlay__value-group
+//               .StyleDetectiveOverlay__value-text
+//               .StyleDetectiveOverlay__copy-affordance
 //     &__footer                                 footer (#id)
 //       .StyleDetectiveOverlay__shortcuts        shortcut chip row
 //         .StyleDetectiveOverlay__shortcut       one kbd + label pair
@@ -95,6 +98,8 @@
     --sd-max-width: min(calc(var(--sd-font-size) * 40), calc(100vw - 40px));
     --sd-label-width: calc(var(--sd-font-size) * 9);
     --sd-copy-slot: calc(var(--sd-font-size) * 1.3);
+    // Shared by property name + value so rows share one baseline.
+    --sd-row-line-height: calc(var(--sd-font-size) * 1.45);
 
     // Reset applied to the panel and every element inside it, so host-page
     // styles for these tags can't bleed in.
@@ -249,9 +254,11 @@
         // category's h2 wrapped into the value column until a later update.
         // Visibility uses --hidden so hide/show isn't overridden by !important.
         display: flex !important;
-        align-items: flex-start !important;
+        align-items: baseline !important;
+        gap: 0 !important;
         position: relative !important;
         padding-left: 8px !important;
+        line-height: var(--sd-row-line-height) !important;
 
         &.StyleDetectiveOverlay__row--hidden {
             display: none !important;
@@ -261,7 +268,7 @@
         &::before {
             content: '' !important;
             position: absolute !important;
-            top: calc(var(--sd-font-size) * 0.85) !important;
+            top: calc((var(--sd-row-line-height) - 3px) / 2) !important;
             left: 0 !important;
             width: 3px !important;
             height: 3px !important;
@@ -275,21 +282,23 @@
         width: var(--sd-label-width) !important;
         overflow: hidden !important;
         color: var(--sd-label) !important;
+        line-height: var(--sd-row-line-height) !important;
+    }
 
-        // Property value — sibling span grows/shrinks beside the label.
-        + span {
-            display: flex !important;
-            align-items: center !important;
-            flex-wrap: wrap !important;
-            flex: 1 1 auto !important;
-            min-width: 0 !important;
-            line-height: normal !important;
-            // Flex collapses boundary whitespace between items; preserve the
-            // space after ":" (and within values like "1px solid #…").
-            white-space: pre-wrap !important;
-            overflow: hidden !important;
-            overflow-wrap: break-word !important;
-            word-break: break-word !important;
+    // Value column: colon is a non-wrapping ::before so it never migrates into
+    // wrapped value text (the old " : " text-node flex sibling did).
+    .StyleDetectiveOverlay__value {
+        display: flex !important;
+        align-items: baseline !important;
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        color: var(--sd-text) !important;
+        line-height: var(--sd-row-line-height) !important;
+
+        &::before {
+            content: ':' !important;
+            flex: 0 0 auto !important;
+            margin-right: 0.35em !important;
         }
     }
 
@@ -348,37 +357,33 @@
     }
 
     .StyleDetectiveOverlay__color-swatch {
-        // Match value text size (1em). Flex centers geometrically, but cap-height
-        // glyphs read higher — nudge up so the swatch sits mid-line optically.
-        display: block !important;
-        flex: 0 0 auto !important;
-        align-self: center !important;
+        display: inline-block !important;
         box-sizing: border-box !important;
         width: 1em !important;
         height: 1em !important;
+        margin-right: 4px !important;
         border: 1px solid #555 !important;
         border-radius: 2px !important;
-        transform: translateY(-0.04em) !important;
+        vertical-align: -0.15em !important;
     }
 
     .StyleDetectiveOverlay__value-group {
         // Shrink-to-content so the copy icon sits right after the value,
         // not pinned to the panel's right edge.
         display: inline-flex !important;
-        align-items: center !important;
-        flex: 0 1 auto !important;
+        align-items: baseline !important;
+        flex: 1 1 auto !important;
         max-width: 100% !important;
         min-width: 0 !important;
         gap: 2px !important;
     }
 
     .StyleDetectiveOverlay__value-text {
-        display: inline-flex !important;
-        align-items: center !important;
-        gap: 4px !important;
-        flex: 0 1 auto !important;
         min-width: 0 !important;
-        line-height: 1 !important;
+        flex: 1 1 auto !important;
+        line-height: var(--sd-row-line-height) !important;
+        overflow-wrap: anywhere !important;
+        word-break: break-word !important;
     }
 
     // Always reserve the copy-icon slot (even when unfrozen) so freeze/unfreeze

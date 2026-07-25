@@ -546,6 +546,7 @@ class StyleDetectiveOverlay {
             applyPanelFontSize();
             applyPanelTheme();
             this.addEventListeners();
+            addKeyListeners();
             addHighlightLayoutListeners();
             inspectElementUnderCursor();
             // Pointer may land after async font-size load; re-check once layout settles.
@@ -570,6 +571,7 @@ class StyleDetectiveOverlay {
             }
             if (message) document.body.removeChild(message);
             this.removeEventListeners();
+            removeKeyListeners();
             removeHighlightLayoutListeners();
             removeHighlight();
             inspectedElement = null;
@@ -615,13 +617,47 @@ class StyleDetectiveOverlay {
 
 // === Keymap ===
 
+// Letter shortcuts (matched case-insensitively via e.key). Esc and font-size
+// keys are handled separately below.
+type PanelKeyAction = (e: KeyboardEvent) => void;
+
+const PANEL_KEY_ACTIONS: ReadonlyMap<string, PanelKeyAction> = new Map([
+    [
+        'f',
+        () => {
+            if (overlay.haveEventListeners) overlay.freeze();
+            else overlay.unfreeze();
+        },
+    ],
+    [
+        'c',
+        (e: KeyboardEvent) => {
+            e.preventDefault();
+            void copyCssDefinition();
+        },
+    ],
+    [
+        'h',
+        (e: KeyboardEvent) => {
+            e.preventDefault();
+            void chrome.runtime.sendMessage({ type: 'openOptions' });
+        },
+    ],
+    [
+        'm',
+        (e: KeyboardEvent) => {
+            e.preventDefault();
+            togglePanelTheme();
+        },
+    ],
+]);
+
 // Close on [Esc], freeze on [f], CSS definition on [c], help on [h],
 // theme on [m], font size on [+] / [-] / [0].
 function keyMap(e: KeyboardEvent): void {
     if (!overlay.isEnabled()) return;
 
-    // ESC: Close the css viewer.
-    if (e.key === 'Escape' || e.keyCode === 27) {
+    if (e.key === 'Escape') {
         overlay.disable();
         return;
     }
@@ -629,43 +665,22 @@ function keyMap(e: KeyboardEvent): void {
     // Don't steal browser/OS shortcuts (zoom, copy, etc.).
     if (e.altKey || e.ctrlKey || e.metaKey) return;
 
-    // f: Freeze or Unfreeze the css viewer.
-    if (e.key === 'f' || e.key === 'F' || e.keyCode === 70) {
-        if (overlay.haveEventListeners) overlay.freeze();
-        else overlay.unfreeze();
-        return;
-    }
-
-    // c: Copy the simple CSS definition for the selected element.
-    if (e.key === 'c' || e.key === 'C' || e.keyCode === 67) {
-        e.preventDefault();
-        void copyCssDefinition();
-        return;
-    }
-
-    // h: Open the options / help page.
-    if (e.key === 'h' || e.key === 'H' || e.keyCode === 72) {
-        e.preventDefault();
-        void chrome.runtime.sendMessage({ type: 'openOptions' });
-        return;
-    }
-
-    // m: Toggle light / dark panel theme.
-    if (e.key === 'm' || e.key === 'M' || e.keyCode === 77) {
-        e.preventDefault();
-        togglePanelTheme();
+    const letterAction =
+        e.key.length === 1 ? PANEL_KEY_ACTIONS.get(e.key.toLowerCase()) : undefined;
+    if (letterAction) {
+        letterAction(e);
         return;
     }
 
     // + / = / NumpadAdd: increase panel font size.
-    if (e.key === '+' || e.key === '=' || e.key === 'Add') {
+    if (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd') {
         e.preventDefault();
         adjustPanelFontSize(PANEL_FONT_SIZE_STEP);
         return;
     }
 
     // - / _ / NumpadSubtract: decrease panel font size.
-    if (e.key === '-' || e.key === '_' || e.key === 'Subtract') {
+    if (e.key === '-' || e.key === '_' || e.code === 'NumpadSubtract') {
         e.preventDefault();
         adjustPanelFontSize(-PANEL_FONT_SIZE_STEP);
         return;
@@ -676,6 +691,22 @@ function keyMap(e: KeyboardEvent): void {
         e.preventDefault();
         resetPanelFontSize();
     }
+}
+
+// Attached for the full overlay lifetime (including freeze), not with the
+// hover listeners — shortcuts like [f] / [Esc] must still work while frozen.
+let haveKeyListeners = false;
+
+function addKeyListeners(): void {
+    if (haveKeyListeners) return;
+    currentDocument().addEventListener('keydown', keyMap);
+    haveKeyListeners = true;
+}
+
+function removeKeyListeners(): void {
+    if (!haveKeyListeners) return;
+    currentDocument().removeEventListener('keydown', keyMap);
+    haveKeyListeners = false;
 }
 
 // === Entry point ===
@@ -713,6 +744,4 @@ if (!bootRoot[BOOT_FLAG]) {
         // Keep the message channel open for the async response.
         return true;
     });
-
-    document.onkeydown = keyMap;
 }

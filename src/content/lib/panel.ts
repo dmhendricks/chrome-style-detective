@@ -14,7 +14,7 @@ import {
     resolveProperty,
     type InspectContext,
 } from './properties';
-import { el, isOverlayFrozen, selectorLabel, setValueContent } from './dom';
+import { el, isOverlayFrozen, keepOverlayInViewport, selectorLabel, setValueContent } from './dom';
 
 const ID_PREFIX = 'StyleDetectiveOverlay__';
 const ROW_HIDDEN = 'StyleDetectiveOverlay__row--hidden';
@@ -127,34 +127,6 @@ export function collapseSelectorHeader(): void {
     refreshSelectorOverflow();
 }
 
-function keepOverlayInViewport(): void {
-    const block = document.getElementById('StyleDetectiveOverlay');
-    if (!block) return;
-
-    const MARGIN = 8;
-    const BOTTOM_MARGIN = 40;
-    const rect = block.getBoundingClientRect();
-
-    let dx = 0;
-    let dy = 0;
-
-    if (rect.right > window.innerWidth - MARGIN) {
-        dx = window.innerWidth - MARGIN - rect.right;
-    }
-    if (rect.left + dx < MARGIN) {
-        dx = MARGIN - rect.left;
-    }
-    if (rect.bottom > window.innerHeight - BOTTOM_MARGIN) {
-        dy = window.innerHeight - BOTTOM_MARGIN - rect.bottom;
-    }
-    if (rect.top + dy < MARGIN) {
-        dy = MARGIN - rect.top;
-    }
-
-    if (dx !== 0) block.style.left = `${block.offsetLeft + dx}px`;
-    if (dy !== 0) block.style.top = `${block.offsetTop + dy}px`;
-}
-
 function toggleSelectorExpanded(header: HTMLElement): void {
     if (!isOverlayFrozen()) return;
     if (
@@ -167,7 +139,9 @@ function toggleSelectorExpanded(header: HTMLElement): void {
     const expanding = !header.classList.contains(HEADER_EXPANDED);
     header.classList.toggle(HEADER_EXPANDED, expanding);
     header.title = expanding ? 'Click to collapse' : 'Click to expand';
-    keepOverlayInViewport();
+
+    const block = document.getElementById('StyleDetectiveOverlay');
+    if (block) keepOverlayInViewport(block);
 }
 
 /** Update the header selector label for the hovered element. */

@@ -5,11 +5,6 @@
  * no DOM work (see dom.ts for the colour-swatch element built from `rgbToHex`).
  */
 
-/** True if `name` is present in `array`. */
-export function isInArray(array: readonly string[], name: string): boolean {
-    return array.includes(name);
-}
-
 /** Convert a 0–255 channel to a two-digit uppercase hex pair. */
 export function decToHex(nb: number): string {
     // Clamp to a whole byte so a fractional or out-of-range value (e.g. an

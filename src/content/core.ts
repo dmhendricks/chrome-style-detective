@@ -2,71 +2,71 @@
  * Style Detective — content-script entry point.
  *
  * Declared in the manifest and loaded dormant on matching pages. The service
- * worker toggles the overlay via a runtime message. Wires the panel renderer
- * (lib/panel) to document-level hover delegation and manages enable/disable/
- * freeze state.
+ * worker toggles the overlay via a runtime message. One OverlayController owns
+ * prefs, listeners, highlight, and inspect state; this module only boots it.
  */
 
 import { copyTextToClipboard } from './lib/clipboard';
+import { elementClassName } from './lib/dom';
 import { CSS_CATEGORIES, propertiesFor } from './lib/properties';
-import { createBlock, collapseSelectorHeader, refreshSelectorOverflow, updateHeader, updatePanel } from './lib/panel';
+import {
+    createBlock,
+    collapseSelectorHeader,
+    refreshSelectorOverflow,
+    updateHeader,
+    updatePanel,
+} from './lib/panel';
 import './style.scss';
 
 const FROZEN_CLASS = 'StyleDetectiveOverlay--frozen';
 const DARK_CLASS = 'StyleDetectiveOverlay--dark';
 const HIGHLIGHT_ID = 'StyleDetectiveHighlight';
+const OVERLAY_ID = 'StyleDetectiveOverlay';
+const TOAST_ID = 'styleDetectiveInsertMessage';
 
-// === Module state ===
-
-// Last element that received a full panel update. Used to skip redundant
-// inspect work while the cursor moves within the same target, and as the
-// source for a lazily built CSS definition when the user presses [c].
-let inspectedElement: HTMLElement | null = null;
-
-// Last known pointer position so we can inspect the element under the cursor
-// when the overlay is enabled without waiting for the next mousemove/mouseover.
-let lastPointer: { clientX: number; clientY: number; pageX: number; pageY: number } | null =
-    null;
-
-// Coalesce panel repositioning to one layout pass per animation frame.
-let pendingPanelPointer: { pageX: number; pageY: number } | null = null;
-let panelPositionFrame: number | null = null;
-
-document.addEventListener(
-    'mousemove',
-    (e) => {
-        lastPointer = {
-            clientX: e.clientX,
-            clientY: e.clientY,
-            pageX: e.pageX,
-            pageY: e.pageY,
-        };
-    },
-    { capture: true, passive: true },
-);
-
-// Panel body font size (px). +/- keys adjust this within [MIN, MAX]; applied as
-// --sd-font-size on #StyleDetectiveOverlay so headings/labels scale with it.
-// Persisted in chrome.storage.local so the last size is restored on next open.
 const PANEL_FONT_SIZE_DEFAULT = 10;
 const PANEL_FONT_SIZE_MIN = 8;
 const PANEL_FONT_SIZE_MAX = 18;
 const PANEL_FONT_SIZE_STEP = 1;
 const PANEL_FONT_SIZE_STORAGE_KEY = 'panelFontSize';
-let panelFontSize = PANEL_FONT_SIZE_DEFAULT;
+const PANEL_THEME_STORAGE_KEY = 'panelTheme';
+
+type PanelTheme = 'light' | 'dark';
+type Pointer = { clientX: number; clientY: number; pageX: number; pageY: number };
+
+const HOVER_LISTENER_OPTS: AddEventListenerOptions = { capture: true, passive: true };
+const HIGHLIGHT_LAYOUT_OPTS: AddEventListenerOptions = { capture: true, passive: true };
+const POINTER_TRACK_OPTS: AddEventListenerOptions = { capture: true, passive: true };
 
 function clampPanelFontSize(size: number): number {
     return Math.min(PANEL_FONT_SIZE_MAX, Math.max(PANEL_FONT_SIZE_MIN, size));
 }
 
-function applyPanelFontSize(): void {
-    const block = currentDocument().getElementById('StyleDetectiveOverlay');
-    if (block) {
-        block.style.setProperty('--sd-font-size', `${panelFontSize}px`);
-        // Width grows with font size; nudge left/top so the panel stays on-screen
-        // (mousemove won't re-run while frozen or between hover moves).
-        keepPanelInViewport(block);
-    }
+function systemPanelTheme(): PanelTheme {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function eventTargetElement(e: Event): HTMLElement | null {
+    const target = e.target;
+    if (target instanceof HTMLElement) return target;
+    if (target instanceof Node) return target.parentElement;
+
+    return null;
+}
+
+function isInsidePanel(el: HTMLElement | null): boolean {
+    return !!el && !!el.closest && el.closest(`#${OVERLAY_ID}`) !== null;
+}
+
+function isElementInViewport(el: HTMLElement): boolean {
+    const rect = el.getBoundingClientRect();
+
+    return (
+        rect.top >= 0 &&
+        rect.left >= 0 &&
+        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+    );
 }
 
 /** Shift an absolutely-positioned panel so its box stays inside the viewport. */
@@ -99,93 +99,18 @@ function keepPanelInViewport(block: HTMLElement): void {
     }
 }
 
-function persistPanelFontSize(): void {
-    void chrome.storage.local.set({ [PANEL_FONT_SIZE_STORAGE_KEY]: panelFontSize });
+function removeElement(id: string): void {
+    const n = document.getElementById(id);
+    if (n) n.parentNode?.removeChild(n);
 }
-
-async function loadPanelFontSize(): Promise<void> {
-    const stored = await chrome.storage.local.get(PANEL_FONT_SIZE_STORAGE_KEY);
-    const value = stored[PANEL_FONT_SIZE_STORAGE_KEY];
-    if (typeof value === 'number' && Number.isFinite(value)) {
-        panelFontSize = clampPanelFontSize(Math.round(value));
-    }
-}
-
-function adjustPanelFontSize(delta: number): void {
-    const next = clampPanelFontSize(panelFontSize + delta);
-    if (next === panelFontSize) return;
-    panelFontSize = next;
-    applyPanelFontSize();
-    persistPanelFontSize();
-}
-
-function resetPanelFontSize(): void {
-    if (panelFontSize === PANEL_FONT_SIZE_DEFAULT) return;
-    panelFontSize = PANEL_FONT_SIZE_DEFAULT;
-    applyPanelFontSize();
-    persistPanelFontSize();
-}
-
-// Panel color theme. Follows Chrome's light/dark preference until the user
-// presses [m] once; after that the choice is stored in chrome.storage.local
-// and used instead of the system preference.
-const PANEL_THEME_STORAGE_KEY = 'panelTheme';
-type PanelTheme = 'light' | 'dark';
-let panelTheme: PanelTheme = 'light';
-let panelThemeUserSet = false;
-
-function systemPanelTheme(): PanelTheme {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
-
-function applyPanelTheme(): void {
-    const block = currentDocument().getElementById('StyleDetectiveOverlay');
-    if (block) {
-        block.classList.toggle(DARK_CLASS, panelTheme === 'dark');
-    }
-}
-
-function persistPanelTheme(): void {
-    void chrome.storage.local.set({ [PANEL_THEME_STORAGE_KEY]: panelTheme });
-}
-
-async function loadPanelTheme(): Promise<void> {
-    const stored = await chrome.storage.local.get(PANEL_THEME_STORAGE_KEY);
-    const value = stored[PANEL_THEME_STORAGE_KEY];
-    if (value === 'dark' || value === 'light') {
-        panelTheme = value;
-        panelThemeUserSet = true;
-        return;
-    }
-
-    panelTheme = systemPanelTheme();
-    // Stay in sync with Chrome until the user picks an explicit theme.
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-        if (panelThemeUserSet) return;
-        panelTheme = systemPanelTheme();
-        applyPanelTheme();
-    });
-}
-
-function togglePanelTheme(): void {
-    panelTheme = panelTheme === 'dark' ? 'light' : 'dark';
-    panelThemeUserSet = true;
-    applyPanelTheme();
-    persistPanelTheme();
-}
-
-function currentDocument(): Document {
-    return window.document;
-}
-
-// === CSS definition ===
 
 /** Build a simple CSS definition string for an element (used only on copy). */
 function buildCssDefinition(el: HTMLElement, style: CSSStyleDeclaration): string {
+    const className = elementClassName(el);
     let css =
         el.tagName.toLowerCase() +
         (el.id === '' ? '' : ' #' + el.id) +
-        (el.className === '' ? '' : ' .' + el.className) +
+        (className === '' ? '' : ' .' + className) +
         ' {\n';
 
     for (const category of CSS_CATEGORIES) {
@@ -202,546 +127,529 @@ function buildCssDefinition(el: HTMLElement, style: CSSStyleDeclaration): string
     return css;
 }
 
-// === Event handlers ===
+/**
+ * Owns overlay lifecycle: prefs, hover/key/highlight listeners, inspect state,
+ * and panel positioning. Construct once per content-script boot.
+ */
+class OverlayController {
+    // --- inspect / pointer ---
+    private inspectedElement: HTMLElement | null = null;
+    private lastPointer: Pointer | null = null;
+    private pendingPanelPointer: { pageX: number; pageY: number } | null = null;
+    private panelPositionFrame: number | null = null;
 
-const HOVER_LISTENER_OPTS: AddEventListenerOptions = { capture: true, passive: true };
+    // --- listener flags ---
+    private haveHoverListeners = false;
+    private haveKeyListeners = false;
+    private trackingPointer = false;
 
-/** Resolve the element under a mouse event (text nodes → parentElement). */
-function eventTargetElement(e: Event): HTMLElement | null {
-    const target = e.target;
-    if (target instanceof HTMLElement) return target;
-    if (target instanceof Node) return target.parentElement;
+    // --- prefs ---
+    private panelFontSize = PANEL_FONT_SIZE_DEFAULT;
+    private panelTheme: PanelTheme = 'light';
+    private panelThemeUserSet = false;
 
-    return null;
-}
+    private flashMessageTimer: ReturnType<typeof setTimeout> | null = null;
 
-// True if the element is the panel itself or lives inside it. Without this
-// guard, hovering the panel would re-inspect and reposition it, causing a
-// flicker feedback loop (worst near the right edge, where small width changes
-// flip the panel from one side of the cursor to the other every frame).
-function isInsidePanel(el: HTMLElement | null): boolean {
-    return !!el && !!el.closest && el.closest('#StyleDetectiveOverlay') != null;
-}
+    // Stable handler identities for add/removeEventListener.
+    private readonly onPointerTrack = (e: MouseEvent): void => {
+        this.lastPointer = {
+            clientX: e.clientX,
+            clientY: e.clientY,
+            pageX: e.pageX,
+            pageY: e.pageY,
+        };
+    };
 
-/** Our highlight box — never mutates the host element's styles. */
-function ensureHighlight(): HTMLElement {
-    const doc = currentDocument();
-    let box = doc.getElementById(HIGHLIGHT_ID);
-    if (!box) {
-        box = doc.createElement('div');
-        box.id = HIGHLIGHT_ID;
-        box.setAttribute('aria-hidden', 'true');
-        doc.body.appendChild(box);
-    }
-    return box;
-}
+    private readonly onMouseOver = (e: MouseEvent): void => {
+        const el = eventTargetElement(e);
+        if (!el || isInsidePanel(el)) return;
+        this.inspectElement(el);
+    };
 
-function clearHighlight(): void {
-    const box = currentDocument().getElementById(HIGHLIGHT_ID);
-    if (box) box.style.display = 'none';
-}
+    private readonly onMouseOut = (e: MouseEvent): void => {
+        const el = eventTargetElement(e);
+        if (!el || isInsidePanel(el)) return;
 
-function removeHighlight(): void {
-    removeElement(HIGHLIGHT_ID);
-}
+        if (el === this.inspectedElement) {
+            this.inspectedElement = null;
+            this.clearHighlight();
+        }
+    };
 
-/** Position a dashed box over `el` using viewport coordinates. */
-function highlightElement(el: HTMLElement): void {
-    if (el.tagName === 'BODY' || el.tagName === 'HTML') {
-        clearHighlight();
-        return;
-    }
+    private readonly onMouseMove = (e: MouseEvent): void => {
+        const el = eventTargetElement(e);
+        if (!el || isInsidePanel(el)) return;
 
-    const box = ensureHighlight();
-    const rect = el.getBoundingClientRect();
-    box.style.display = 'block';
-    box.style.top = `${rect.top}px`;
-    box.style.left = `${rect.left}px`;
-    box.style.width = `${Math.max(0, rect.width)}px`;
-    box.style.height = `${Math.max(0, rect.height)}px`;
-}
+        this.inspectElement(el);
+        if (el === this.inspectedElement) this.highlightElement(el);
+        this.schedulePanelPosition(e);
+    };
 
-/** Keep the fixed highlight box aligned after scroll/resize (including while frozen). */
-function syncHighlightToInspected(): void {
-    if (inspectedElement?.isConnected) {
-        highlightElement(inspectedElement);
-    } else {
-        clearHighlight();
-    }
-}
+    private readonly onKeyDown = (e: KeyboardEvent): void => {
+        this.handleKey(e);
+    };
 
-const HIGHLIGHT_LAYOUT_OPTS: AddEventListenerOptions = { capture: true, passive: true };
+    private readonly onHighlightLayout = (): void => {
+        this.syncHighlightToInspected();
+    };
 
-function addHighlightLayoutListeners(): void {
-    const win = currentDocument().defaultView;
-    if (!win) return;
-    win.addEventListener('scroll', syncHighlightToInspected, HIGHLIGHT_LAYOUT_OPTS);
-    win.addEventListener('resize', syncHighlightToInspected, HIGHLIGHT_LAYOUT_OPTS);
-}
-
-function removeHighlightLayoutListeners(): void {
-    const win = currentDocument().defaultView;
-    if (!win) return;
-    win.removeEventListener('scroll', syncHighlightToInspected, HIGHLIGHT_LAYOUT_OPTS);
-    win.removeEventListener('resize', syncHighlightToInspected, HIGHLIGHT_LAYOUT_OPTS);
-}
-
-function inspectElement(el: HTMLElement): void {
-    if (isInsidePanel(el)) return;
-    // Same target as last full update — skip computed-style + panel rebuild.
-    // Positioning still runs separately so the overlay follows the cursor.
-    if (el === inspectedElement) return;
-
-    const document = currentDocument();
-    const block = document.getElementById('StyleDetectiveOverlay');
-
-    if (!block) return;
-
-    updateHeader(el);
-    highlightElement(el);
-
-    // Updating CSS properties
-    if (!document.defaultView) return;
-    const style = document.defaultView.getComputedStyle(el, null);
-
-    updatePanel(style, el);
-
-    removeElement('styleDetectiveInsertMessage');
-
-    inspectedElement = el;
-}
-
-function positionPanelAtPointer(e: { pageX: number; pageY: number }): void {
-    const block = currentDocument().getElementById('StyleDetectiveOverlay');
-
-    if (!block) return;
-
-    block.style.display = 'flex';
-
-    const pageWidth = window.innerWidth;
-    // Keep the panel clear of the browser's link-URL preview, which the browser
-    // draws in the bottom-left of the viewport when hovering a link. Reserve a
-    // strip at the bottom so the panel never extends into it.
-    const BOTTOM_MARGIN = 40;
-    const pageHeight = window.innerHeight - BOTTOM_MARGIN;
-    // Measure the actual rendered size — the panel grows wider than a fixed
-    // width for long values, so a hardcoded width mispositions it near the edge.
-    const blockWidth = block.offsetWidth;
-    const blockHeight = block.offsetHeight;
-
-    if (e.pageX + blockWidth > pageWidth) {
-        if (e.pageX - blockWidth - 10 > 0) block.style.left = e.pageX - blockWidth - 40 + 'px';
-        else block.style.left = 0 + 'px';
-    } else block.style.left = e.pageX + 20 + 'px';
-
-    if (e.pageY + blockHeight > pageHeight) {
-        if (e.pageY - blockHeight - 10 > 0) block.style.top = e.pageY - blockHeight - 20 + 'px';
-        else block.style.top = 0 + 'px';
-    } else block.style.top = e.pageY + 20 + 'px';
-
-    // adapt block top to screen offset
-    if (!isElementInViewport(block)) block.style.top = window.pageYOffset + 20 + 'px';
-}
-
-/** Queue a panel reposition for the next animation frame (last pointer wins). */
-function schedulePanelPosition(e: { pageX: number; pageY: number }): void {
-    pendingPanelPointer = { pageX: e.pageX, pageY: e.pageY };
-    if (panelPositionFrame !== null) return;
-
-    panelPositionFrame = requestAnimationFrame(() => {
-        panelPositionFrame = null;
-        const pointer = pendingPanelPointer;
-        pendingPanelPointer = null;
-        if (pointer) positionPanelAtPointer(pointer);
-    });
-}
-
-function cancelScheduledPanelPosition(): void {
-    if (panelPositionFrame !== null) {
-        cancelAnimationFrame(panelPositionFrame);
-        panelPositionFrame = null;
-    }
-    pendingPanelPointer = null;
-}
-
-/** Populate and position the panel for whatever is under the current cursor. */
-function inspectElementUnderCursor(): void {
-    if (!lastPointer) return;
-
-    const document = currentDocument();
-    const el = document.elementFromPoint(lastPointer.clientX, lastPointer.clientY);
-
-    if (!el || !(el instanceof HTMLElement) || isInsidePanel(el)) return;
-
-    inspectElement(el);
-    positionPanelAtPointer(lastPointer);
-}
-
-function onMouseOver(e: MouseEvent): void {
-    const el = eventTargetElement(e);
-    if (!el || isInsidePanel(el)) return;
-
-    inspectElement(el);
-}
-
-function onMouseOut(e: MouseEvent): void {
-    const el = eventTargetElement(e);
-    if (!el || isInsidePanel(el)) return;
-
-    // Allow a full re-inspect if the pointer returns to this element (e.g. after
-    // briefly entering the overlay panel).
-    if (el === inspectedElement) {
-        inspectedElement = null;
-        clearHighlight();
-    }
-}
-
-function onMouseMove(e: MouseEvent): void {
-    const el = eventTargetElement(e);
-    if (!el || isInsidePanel(el)) return;
-
-    // mouseover does not re-fire when the overlay is enabled while the cursor
-    // is already over an element, so inspect on mousemove too — but only when
-    // the target element changed (see inspectElement gate).
-    inspectElement(el);
-    // Keep the highlight glued under scroll/layout even when the target is unchanged.
-    if (el === inspectedElement) highlightElement(el);
-    schedulePanelPosition(e);
-}
-
-// http://stackoverflow.com/a/7557433
-function isElementInViewport(el: HTMLElement): boolean {
-    const rect = el.getBoundingClientRect();
-
-    return (
-        rect.top >= 0 &&
-        rect.left >= 0 &&
-        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
-    );
-}
-
-// === Notification message ===
-
-let flashMessageTimer: ReturnType<typeof setTimeout> | null = null;
-
-// Display a short-lived toast in the top-left of the page.
-function flashMessage(
-    msg: string,
-    options: { persistent?: boolean; tone?: 'default' | 'success' } = {},
-): void {
-    removeElement('styleDetectiveInsertMessage');
-    if (flashMessageTimer) {
-        clearTimeout(flashMessageTimer);
-        flashMessageTimer = null;
+    /** Load font size + theme before the first enable(). */
+    async loadPrefs(): Promise<void> {
+        await Promise.all([this.loadPanelFontSize(), this.loadPanelTheme()]);
     }
 
-    const p = document.createElement('p');
-
-    p.appendChild(document.createTextNode(msg));
-    p.id = 'styleDetectiveInsertMessage';
-    p.style.backgroundColor = options.tone === 'success' ? '#1f5c3a' : '#7a1f1f';
-    p.style.color = '#ffffff';
-    p.style.position = 'fixed';
-    p.style.top = '10px';
-    p.style.left = '10px';
-    p.style.zIndex = '2147483647';
-    p.style.padding = '8px 12px';
-    p.style.borderRadius = '6px';
-    p.style.fontFamily = 'Lucida sans, helvetica, sans-serif';
-    p.style.fontSize = '12px';
-    p.style.boxShadow = '0 2px 10px rgba(0,0,0,0.25)';
-    p.style.pointerEvents = 'none';
-
-    document.body.appendChild(p);
-
-    if (!options.persistent) {
-        flashMessageTimer = setTimeout(() => {
-            removeElement('styleDetectiveInsertMessage');
-            flashMessageTimer = null;
-        }, 2000);
-    }
-}
-
-// Removes an element from the DOM, used to remove the notification message.
-function removeElement(divid: string): void {
-    const n = document.getElementById(divid);
-    if (n) n.parentNode?.removeChild(n);
-}
-
-async function copyCssDefinition(): Promise<void> {
-    const el = inspectedElement;
-    if (!el || !el.isConnected) {
-        flashMessage('Nothing to copy — hover an element first.');
-        return;
+    /**
+     * Remember the pointer while dormant so enable() can inspect immediately.
+     * Bound once for the content-script lifetime.
+     */
+    startPointerTracking(): void {
+        if (this.trackingPointer) return;
+        document.addEventListener('mousemove', this.onPointerTrack, POINTER_TRACK_OPTS);
+        this.trackingPointer = true;
     }
 
-    const view = currentDocument().defaultView;
-    if (!view) {
-        flashMessage('Could not copy to clipboard');
-        return;
+    isEnabled(): boolean {
+        return document.getElementById(OVERLAY_ID) !== null;
     }
 
-    try {
-        const css = buildCssDefinition(el, view.getComputedStyle(el, null));
-        await copyTextToClipboard(css);
-        flashMessage('CSS definition copied to clipboard', { tone: 'success' });
-    } catch {
-        flashMessage('Could not copy to clipboard');
+    /** True while hover listeners are attached (false when frozen). */
+    isTracking(): boolean {
+        return this.haveHoverListeners;
     }
-}
 
-// === Overlay controller ===
+    enable(): boolean {
+        if (document.getElementById(OVERLAY_ID)) return false;
 
-class StyleDetectiveOverlay {
-    // Whether the document-level hover listeners are attached.
-    haveEventListeners = false;
+        document.body.appendChild(this.createPanel());
+        this.applyPanelFontSize();
+        this.applyPanelTheme();
+        this.addHoverListeners();
+        this.addKeyListeners();
+        this.addHighlightLayoutListeners();
+        this.inspectElementUnderCursor();
+        requestAnimationFrame(() => this.inspectElementUnderCursor());
 
-    // Build the panel and show the "loaded" notification.
-    createBlock(): HTMLElement {
-        const block = createBlock(currentDocument());
+        return true;
+    }
 
-        flashMessage('Style Detective loaded! Hover any element you want to inspect in the page.', {
-            persistent: true,
+    disable(): boolean {
+        const block = document.getElementById(OVERLAY_ID);
+        const message = document.getElementById(TOAST_ID);
+
+        if (!block && !message) return false;
+
+        if (block) {
+            block.classList.remove(FROZEN_CLASS);
+            document.body.removeChild(block);
+        }
+        if (message) document.body.removeChild(message);
+
+        this.removeHoverListeners();
+        this.removeKeyListeners();
+        this.removeHighlightLayoutListeners();
+        this.removeHighlight();
+        this.inspectedElement = null;
+
+        return true;
+    }
+
+    freeze(): boolean {
+        const block = document.getElementById(OVERLAY_ID);
+        if (!block || !this.haveHoverListeners) return false;
+
+        this.removeHoverListeners();
+        block.classList.add(FROZEN_CLASS);
+        requestAnimationFrame(() => refreshSelectorOverflow());
+
+        return true;
+    }
+
+    unfreeze(): boolean {
+        const block = document.getElementById(OVERLAY_ID);
+        if (!block || this.haveHoverListeners) return false;
+
+        this.clearHighlight();
+        this.inspectedElement = null;
+        block.classList.remove(FROZEN_CLASS);
+        collapseSelectorHeader();
+        this.addHoverListeners();
+        this.inspectElementUnderCursor();
+
+        return true;
+    }
+
+    // --- prefs ---
+
+    private async loadPanelFontSize(): Promise<void> {
+        const stored = await chrome.storage.local.get(PANEL_FONT_SIZE_STORAGE_KEY);
+        const value = stored[PANEL_FONT_SIZE_STORAGE_KEY];
+        if (typeof value === 'number' && Number.isFinite(value)) {
+            this.panelFontSize = clampPanelFontSize(Math.round(value));
+        }
+    }
+
+    private async loadPanelTheme(): Promise<void> {
+        const stored = await chrome.storage.local.get(PANEL_THEME_STORAGE_KEY);
+        const value = stored[PANEL_THEME_STORAGE_KEY];
+        if (value === 'dark' || value === 'light') {
+            this.panelTheme = value;
+            this.panelThemeUserSet = true;
+            return;
+        }
+
+        this.panelTheme = systemPanelTheme();
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+            if (this.panelThemeUserSet) return;
+            this.panelTheme = systemPanelTheme();
+            this.applyPanelTheme();
         });
+    }
 
+    private applyPanelFontSize(): void {
+        const block = document.getElementById(OVERLAY_ID);
+        if (!block) return;
+
+        block.style.setProperty('--sd-font-size', `${this.panelFontSize}px`);
+        keepPanelInViewport(block);
+    }
+
+    private applyPanelTheme(): void {
+        const block = document.getElementById(OVERLAY_ID);
+        if (block) {
+            block.classList.toggle(DARK_CLASS, this.panelTheme === 'dark');
+        }
+    }
+
+    private adjustPanelFontSize(delta: number): void {
+        const next = clampPanelFontSize(this.panelFontSize + delta);
+        if (next === this.panelFontSize) return;
+        this.panelFontSize = next;
+        this.applyPanelFontSize();
+        void chrome.storage.local.set({ [PANEL_FONT_SIZE_STORAGE_KEY]: this.panelFontSize });
+    }
+
+    private resetPanelFontSize(): void {
+        if (this.panelFontSize === PANEL_FONT_SIZE_DEFAULT) return;
+        this.panelFontSize = PANEL_FONT_SIZE_DEFAULT;
+        this.applyPanelFontSize();
+        void chrome.storage.local.set({ [PANEL_FONT_SIZE_STORAGE_KEY]: this.panelFontSize });
+    }
+
+    private togglePanelTheme(): void {
+        this.panelTheme = this.panelTheme === 'dark' ? 'light' : 'dark';
+        this.panelThemeUserSet = true;
+        this.applyPanelTheme();
+        void chrome.storage.local.set({ [PANEL_THEME_STORAGE_KEY]: this.panelTheme });
+    }
+
+    // --- panel DOM ---
+
+    private createPanel(): HTMLElement {
+        const block = createBlock(document);
+        this.flashMessage(
+            'Style Detective loaded! Hover any element you want to inspect in the page.',
+            { persistent: true },
+        );
         return block;
     }
 
-    // One capture-phase listener trio on document covers the whole page,
-    // including nodes inserted after enable (SPAs). O(1) vs walking the DOM.
-    addEventListeners(): void {
-        if (this.haveEventListeners) return;
-
-        const doc = currentDocument();
-        doc.addEventListener('mouseover', onMouseOver, HOVER_LISTENER_OPTS);
-        doc.addEventListener('mouseout', onMouseOut, HOVER_LISTENER_OPTS);
-        doc.addEventListener('mousemove', onMouseMove, HOVER_LISTENER_OPTS);
-        this.haveEventListeners = true;
-    }
-
-    removeEventListeners(): void {
-        if (!this.haveEventListeners) return;
-
-        const doc = currentDocument();
-        doc.removeEventListener('mouseover', onMouseOver, HOVER_LISTENER_OPTS);
-        doc.removeEventListener('mouseout', onMouseOut, HOVER_LISTENER_OPTS);
-        doc.removeEventListener('mousemove', onMouseMove, HOVER_LISTENER_OPTS);
-        cancelScheduledPanelPosition();
-        this.haveEventListeners = false;
-    }
-
-    // Check whether the overlay is enabled
-    isEnabled(): boolean {
-        return currentDocument().getElementById('StyleDetectiveOverlay') != null;
-    }
-
-    // Enable the overlay
-    enable(): boolean {
-        const document = currentDocument();
-        const block = document.getElementById('StyleDetectiveOverlay');
-
-        if (!block) {
-            document.body.appendChild(this.createBlock());
-            applyPanelFontSize();
-            applyPanelTheme();
-            this.addEventListeners();
-            addKeyListeners();
-            addHighlightLayoutListeners();
-            inspectElementUnderCursor();
-            // Pointer may land after async font-size load; re-check once layout settles.
-            requestAnimationFrame(() => inspectElementUnderCursor());
-
-            return true;
+    private flashMessage(
+        msg: string,
+        options: { persistent?: boolean; tone?: 'default' | 'success' } = {},
+    ): void {
+        removeElement(TOAST_ID);
+        if (this.flashMessageTimer) {
+            clearTimeout(this.flashMessageTimer);
+            this.flashMessageTimer = null;
         }
 
-        return false;
+        const p = document.createElement('p');
+        p.appendChild(document.createTextNode(msg));
+        p.id = TOAST_ID;
+        p.style.backgroundColor = options.tone === 'success' ? '#1f5c3a' : '#7a1f1f';
+        p.style.color = '#ffffff';
+        p.style.position = 'fixed';
+        p.style.top = '10px';
+        p.style.left = '10px';
+        p.style.zIndex = '2147483647';
+        p.style.padding = '8px 12px';
+        p.style.borderRadius = '6px';
+        p.style.fontFamily = 'Lucida sans, helvetica, sans-serif';
+        p.style.fontSize = '12px';
+        p.style.boxShadow = '0 2px 10px rgba(0,0,0,0.25)';
+        p.style.pointerEvents = 'none';
+
+        document.body.appendChild(p);
+
+        if (!options.persistent) {
+            this.flashMessageTimer = setTimeout(() => {
+                removeElement(TOAST_ID);
+                this.flashMessageTimer = null;
+            }, 2000);
+        }
     }
 
-    // Disable the overlay
-    disable(): boolean {
-        const document = currentDocument();
-        const block = document.getElementById('StyleDetectiveOverlay');
-        const message = document.getElementById('styleDetectiveInsertMessage');
+    // --- highlight ---
 
-        if (block || message) {
-            if (block) {
-                block.classList.remove(FROZEN_CLASS);
-                document.body.removeChild(block);
-            }
-            if (message) document.body.removeChild(message);
-            this.removeEventListeners();
-            removeKeyListeners();
-            removeHighlightLayoutListeners();
-            removeHighlight();
-            inspectedElement = null;
+    private ensureHighlight(): HTMLElement {
+        let box = document.getElementById(HIGHLIGHT_ID);
+        if (!box) {
+            box = document.createElement('div');
+            box.id = HIGHLIGHT_ID;
+            box.setAttribute('aria-hidden', 'true');
+            document.body.appendChild(box);
+        }
+        return box;
+    }
 
-            return true;
+    private clearHighlight(): void {
+        const box = document.getElementById(HIGHLIGHT_ID);
+        if (box) box.style.display = 'none';
+    }
+
+    private removeHighlight(): void {
+        removeElement(HIGHLIGHT_ID);
+    }
+
+    private highlightElement(el: HTMLElement): void {
+        if (el.tagName === 'BODY' || el.tagName === 'HTML') {
+            this.clearHighlight();
+            return;
         }
 
-        return false;
+        const box = this.ensureHighlight();
+        const rect = el.getBoundingClientRect();
+        box.style.display = 'block';
+        box.style.top = `${rect.top}px`;
+        box.style.left = `${rect.left}px`;
+        box.style.width = `${Math.max(0, rect.width)}px`;
+        box.style.height = `${Math.max(0, rect.height)}px`;
     }
 
-    // Freeze the overlay (stop tracking the cursor)
-    freeze(): boolean {
-        const block = currentDocument().getElementById('StyleDetectiveOverlay');
-        if (block && this.haveEventListeners) {
-            this.removeEventListeners();
-            block.classList.add(FROZEN_CLASS);
-            // Refresh title / expandable cue now that click-to-expand is active.
-            requestAnimationFrame(() => refreshSelectorOverflow());
+    private syncHighlightToInspected(): void {
+        if (this.inspectedElement?.isConnected) {
+            this.highlightElement(this.inspectedElement);
+        } else {
+            this.clearHighlight();
+        }
+    }
 
-            return true;
+    private addHighlightLayoutListeners(): void {
+        window.addEventListener('scroll', this.onHighlightLayout, HIGHLIGHT_LAYOUT_OPTS);
+        window.addEventListener('resize', this.onHighlightLayout, HIGHLIGHT_LAYOUT_OPTS);
+    }
+
+    private removeHighlightLayoutListeners(): void {
+        window.removeEventListener('scroll', this.onHighlightLayout, HIGHLIGHT_LAYOUT_OPTS);
+        window.removeEventListener('resize', this.onHighlightLayout, HIGHLIGHT_LAYOUT_OPTS);
+    }
+
+    // --- inspect / position ---
+
+    private inspectElement(el: HTMLElement): void {
+        if (isInsidePanel(el)) return;
+        if (el === this.inspectedElement) return;
+
+        const block = document.getElementById(OVERLAY_ID);
+        if (!block) return;
+
+        updateHeader(el);
+        this.highlightElement(el);
+
+        if (!document.defaultView) return;
+        const style = document.defaultView.getComputedStyle(el, null);
+        updatePanel(style, el);
+        removeElement(TOAST_ID);
+
+        this.inspectedElement = el;
+    }
+
+    private positionPanelAtPointer(e: { pageX: number; pageY: number }): void {
+        const block = document.getElementById(OVERLAY_ID);
+        if (!block) return;
+
+        block.style.display = 'flex';
+
+        const pageWidth = window.innerWidth;
+        const BOTTOM_MARGIN = 40;
+        const pageHeight = window.innerHeight - BOTTOM_MARGIN;
+        const blockWidth = block.offsetWidth;
+        const blockHeight = block.offsetHeight;
+
+        if (e.pageX + blockWidth > pageWidth) {
+            if (e.pageX - blockWidth - 10 > 0) block.style.left = e.pageX - blockWidth - 40 + 'px';
+            else block.style.left = 0 + 'px';
+        } else block.style.left = e.pageX + 20 + 'px';
+
+        if (e.pageY + blockHeight > pageHeight) {
+            if (e.pageY - blockHeight - 10 > 0) block.style.top = e.pageY - blockHeight - 20 + 'px';
+            else block.style.top = 0 + 'px';
+        } else block.style.top = e.pageY + 20 + 'px';
+
+        if (!isElementInViewport(block)) block.style.top = window.pageYOffset + 20 + 'px';
+    }
+
+    private schedulePanelPosition(e: { pageX: number; pageY: number }): void {
+        this.pendingPanelPointer = { pageX: e.pageX, pageY: e.pageY };
+        if (this.panelPositionFrame !== null) return;
+
+        this.panelPositionFrame = requestAnimationFrame(() => {
+            this.panelPositionFrame = null;
+            const pointer = this.pendingPanelPointer;
+            this.pendingPanelPointer = null;
+            if (pointer) this.positionPanelAtPointer(pointer);
+        });
+    }
+
+    private cancelScheduledPanelPosition(): void {
+        if (this.panelPositionFrame !== null) {
+            cancelAnimationFrame(this.panelPositionFrame);
+            this.panelPositionFrame = null;
+        }
+        this.pendingPanelPointer = null;
+    }
+
+    private inspectElementUnderCursor(): void {
+        if (!this.lastPointer) return;
+
+        const el = document.elementFromPoint(this.lastPointer.clientX, this.lastPointer.clientY);
+        if (!el || !(el instanceof HTMLElement) || isInsidePanel(el)) return;
+
+        this.inspectElement(el);
+        this.positionPanelAtPointer(this.lastPointer);
+    }
+
+    // --- listeners ---
+
+    private addHoverListeners(): void {
+        if (this.haveHoverListeners) return;
+        document.addEventListener('mouseover', this.onMouseOver, HOVER_LISTENER_OPTS);
+        document.addEventListener('mouseout', this.onMouseOut, HOVER_LISTENER_OPTS);
+        document.addEventListener('mousemove', this.onMouseMove, HOVER_LISTENER_OPTS);
+        this.haveHoverListeners = true;
+    }
+
+    private removeHoverListeners(): void {
+        if (!this.haveHoverListeners) return;
+        document.removeEventListener('mouseover', this.onMouseOver, HOVER_LISTENER_OPTS);
+        document.removeEventListener('mouseout', this.onMouseOut, HOVER_LISTENER_OPTS);
+        document.removeEventListener('mousemove', this.onMouseMove, HOVER_LISTENER_OPTS);
+        this.cancelScheduledPanelPosition();
+        this.haveHoverListeners = false;
+    }
+
+    private addKeyListeners(): void {
+        if (this.haveKeyListeners) return;
+        document.addEventListener('keydown', this.onKeyDown);
+        this.haveKeyListeners = true;
+    }
+
+    private removeKeyListeners(): void {
+        if (!this.haveKeyListeners) return;
+        document.removeEventListener('keydown', this.onKeyDown);
+        this.haveKeyListeners = false;
+    }
+
+    private handleKey(e: KeyboardEvent): void {
+        if (!this.isEnabled()) return;
+
+        if (e.key === 'Escape') {
+            this.disable();
+            return;
         }
 
-        return false;
-    }
+        if (e.altKey || e.ctrlKey || e.metaKey) return;
 
-    // Unfreeze the overlay
-    unfreeze(): boolean {
-        const block = currentDocument().getElementById('StyleDetectiveOverlay');
-        if (block && !this.haveEventListeners) {
-            clearHighlight();
-            inspectedElement = null;
-            block.classList.remove(FROZEN_CLASS);
-            collapseSelectorHeader();
-            this.addEventListeners();
-            inspectElementUnderCursor();
-
-            return true;
+        const key = e.key.length === 1 ? e.key.toLowerCase() : '';
+        if (key === 'f') {
+            if (this.isTracking()) this.freeze();
+            else this.unfreeze();
+            return;
         }
-
-        return false;
-    }
-}
-
-// === Keymap ===
-
-// Letter shortcuts (matched case-insensitively via e.key). Esc and font-size
-// keys are handled separately below.
-type PanelKeyAction = (e: KeyboardEvent) => void;
-
-const PANEL_KEY_ACTIONS: ReadonlyMap<string, PanelKeyAction> = new Map([
-    [
-        'f',
-        () => {
-            if (overlay.haveEventListeners) overlay.freeze();
-            else overlay.unfreeze();
-        },
-    ],
-    [
-        'c',
-        (e: KeyboardEvent) => {
+        if (key === 'c') {
             e.preventDefault();
-            void copyCssDefinition();
-        },
-    ],
-    [
-        'h',
-        (e: KeyboardEvent) => {
+            void this.copyCssDefinition();
+            return;
+        }
+        if (key === 'h') {
             e.preventDefault();
             void chrome.runtime.sendMessage({ type: 'openOptions' });
-        },
-    ],
-    [
-        'm',
-        (e: KeyboardEvent) => {
+            return;
+        }
+        if (key === 'm') {
             e.preventDefault();
-            togglePanelTheme();
-        },
-    ],
-]);
+            this.togglePanelTheme();
+            return;
+        }
 
-// Close on [Esc], freeze on [f], CSS definition on [c], help on [h],
-// theme on [m], font size on [+] / [-] / [0].
-function keyMap(e: KeyboardEvent): void {
-    if (!overlay.isEnabled()) return;
-
-    if (e.key === 'Escape') {
-        overlay.disable();
-        return;
+        if (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd') {
+            e.preventDefault();
+            this.adjustPanelFontSize(PANEL_FONT_SIZE_STEP);
+            return;
+        }
+        if (e.key === '-' || e.key === '_' || e.code === 'NumpadSubtract') {
+            e.preventDefault();
+            this.adjustPanelFontSize(-PANEL_FONT_SIZE_STEP);
+            return;
+        }
+        if (e.key === '0' || e.code === 'Numpad0') {
+            e.preventDefault();
+            this.resetPanelFontSize();
+        }
     }
 
-    // Don't steal browser/OS shortcuts (zoom, copy, etc.).
-    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    private async copyCssDefinition(): Promise<void> {
+        const el = this.inspectedElement;
+        if (!el || !el.isConnected) {
+            this.flashMessage('Nothing to copy — hover an element first.');
+            return;
+        }
 
-    const letterAction =
-        e.key.length === 1 ? PANEL_KEY_ACTIONS.get(e.key.toLowerCase()) : undefined;
-    if (letterAction) {
-        letterAction(e);
-        return;
+        const view = document.defaultView;
+        if (!view) {
+            this.flashMessage('Could not copy to clipboard');
+            return;
+        }
+
+        try {
+            const css = buildCssDefinition(el, view.getComputedStyle(el, null));
+            await copyTextToClipboard(css);
+            this.flashMessage('CSS definition copied to clipboard', { tone: 'success' });
+        } catch {
+            this.flashMessage('Could not copy to clipboard');
+        }
     }
-
-    // + / = / NumpadAdd: increase panel font size.
-    if (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd') {
-        e.preventDefault();
-        adjustPanelFontSize(PANEL_FONT_SIZE_STEP);
-        return;
-    }
-
-    // - / _ / NumpadSubtract: decrease panel font size.
-    if (e.key === '-' || e.key === '_' || e.code === 'NumpadSubtract') {
-        e.preventDefault();
-        adjustPanelFontSize(-PANEL_FONT_SIZE_STEP);
-        return;
-    }
-
-    // 0 / Numpad0: reset panel font size to the default.
-    if (e.key === '0' || e.code === 'Numpad0') {
-        e.preventDefault();
-        resetPanelFontSize();
-    }
-}
-
-// Attached for the full overlay lifetime (including freeze), not with the
-// hover listeners — shortcuts like [f] / [Esc] must still work while frozen.
-let haveKeyListeners = false;
-
-function addKeyListeners(): void {
-    if (haveKeyListeners) return;
-    currentDocument().addEventListener('keydown', keyMap);
-    haveKeyListeners = true;
-}
-
-function removeKeyListeners(): void {
-    if (!haveKeyListeners) return;
-    currentDocument().removeEventListener('keydown', keyMap);
-    haveKeyListeners = false;
 }
 
 // === Entry point ===
 
-// Stay dormant until the service worker asks us to toggle. Prefs load up front
-// so the first enable() already has font size + theme.
-const overlay = new StyleDetectiveOverlay();
-const ready = Promise.all([loadPanelFontSize(), loadPanelTheme()]);
+const controller = new OverlayController();
+const ready = controller.loadPrefs();
 
-// Guard against double boot when the service worker injects the same file into
-// a tab that already has the declared content script (or a prior fallback).
 const BOOT_FLAG = '__styleDetectiveBooted__';
 const bootRoot = globalThis as typeof globalThis & { [BOOT_FLAG]?: boolean };
 
 if (!bootRoot[BOOT_FLAG]) {
     bootRoot[BOOT_FLAG] = true;
+    controller.startPointerTracking();
 
     chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         if (message?.type !== 'toggleOverlay') return;
 
         void ready
             .then(() => {
-                if (overlay.isEnabled()) {
-                    overlay.disable();
+                if (controller.isEnabled()) {
+                    controller.disable();
                 } else {
-                    overlay.enable();
+                    controller.enable();
                 }
-                sendResponse({ ok: true, enabled: overlay.isEnabled() });
+                sendResponse({ ok: true, enabled: controller.isEnabled() });
             })
             .catch((err: unknown) => {
                 console.error('[Style Detective] toggle failed', err);
                 sendResponse({ ok: false, error: String(err) });
             });
 
-        // Keep the message channel open for the async response.
         return true;
     });
 }

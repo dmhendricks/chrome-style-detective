@@ -1,6 +1,6 @@
 # Style Detective Chrome Extension
 
-A simple CSS property viewer for Google Chrome. Hover any element on a page to inspect its computed styles in a floating panel. Forked from [miled/cssviewer](https://github.com/miled/cssviewer) and modernized.
+A modern rewrite of the popular [CSS Viewer](https://github.com/miled/cssviewer) extension. Hover any element on a page to inspect its computed styles in a floating panel.
 
 ![Style Detective](store/demo.webp)
 
@@ -10,6 +10,7 @@ Features:
 - Freeze the panel in place to inspect it
 - Copy an element's style to clipboard, or freeze the panel to copy individual property values
 - Keyboard shortcut to toggle the viewer (`Ctrl+Shift+D` / `Cmd+Shift+D`)
+- New: WCAG contrast ratio for color vs background-color
 - New: Ability to increase/decrease font size
 - New: Dark mode support
 - New: Iframe support

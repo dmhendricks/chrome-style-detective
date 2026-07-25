@@ -14,6 +14,7 @@ Features:
 - New: Ability to increase/decrease font size
 - New: Dark mode support
 - New: Iframe support
+- New: Utility-first extras for frameworks like Tailwind CSS
 
 ## Installation
 
@@ -41,7 +42,7 @@ Keyboard shortcuts while the viewer is active:
 - `S` to open the settings page
 - `Esc` to close the viewer
 
-With **Utility-first extras** enabled in settings, a **Classes** row also appears on elements that have a `class` attribute — expand it to see chips; click a chip or **Copy all** to copy classes.
+With **Utility-first extras** enabled in settings, a **Classes** row also appears on elements that have a `class` attribute (expanded by default; expand/collapse is saved and shared across tabs). Click a chip or **Copy all** to copy classes.
 
 ## Known Issues
 

@@ -17,6 +17,7 @@ import {
 import { countChipRows, formatClassesForCopy, parseClassTokens } from './classes';
 import { copyTextToClipboard } from './clipboard';
 import { el, isOverlayFrozen, keepOverlayInViewport, selectorLabel, setValueContent } from './dom';
+import { saveClassesExpanded } from '../../shared/prefs';
 
 const ID_PREFIX = 'StyleDetectiveOverlay__';
 const ROW_HIDDEN = 'StyleDetectiveOverlay__row--hidden';
@@ -43,7 +44,8 @@ let classesCopyAll: HTMLButtonElement | null = null;
 let classesChips: HTMLElement | null = null;
 let shortcutsContainer: HTMLElement | null = null;
 let utilityFirstExtrasEnabled = false;
-let classesExpanded = false;
+/** Sticky open/closed for the Classes row (defaults open so chips are visible). */
+let classesExpanded = true;
 let classesShowAllChips = false;
 let currentClassTokens: readonly string[] = [];
 let copyNotifier: CopyNotifier | null = null;
@@ -68,6 +70,17 @@ export function setUtilityFirstExtrasEnabled(enabled: boolean): void {
     utilityFirstExtrasEnabled = enabled;
     if (!enabled) hideClassesPanel();
     rebuildFooterShortcuts();
+}
+
+/**
+ * Apply persisted expand/collapse (all tabs/elements). Does not write storage —
+ * callers that change the preference should save separately.
+ */
+export function setClassesExpanded(expanded: boolean): void {
+    if (classesExpanded === expanded) return;
+    classesExpanded = expanded;
+    if (!classesExpanded) classesShowAllChips = false;
+    if (classesRoot) refreshClassesChrome(classesRoot.ownerDocument);
 }
 
 function notifyCopy(message: string, tone: 'default' | 'success' = 'success'): void {
@@ -175,7 +188,13 @@ function refreshClassesChrome(doc: Document): void {
     classesCopyAll.disabled = count === 0;
 
     classesRoot?.classList.toggle(CLASSES_COLLAPSED, !classesExpanded);
-    if (classesExpanded) renderClassChips(doc);
+    if (classesExpanded) {
+        renderClassChips(doc);
+        // Remeasure after layout — panel may have been display:none on first paint.
+        requestAnimationFrame(() => {
+            if (classesExpanded && !classesShowAllChips) renderClassChips(doc);
+        });
+    }
 }
 
 /** Update the class chip panel for the hovered element (utility-first extras only). */
@@ -192,7 +211,7 @@ export function updateClassesPanel(target: HTMLElement): void {
         return;
     }
 
-    classesExpanded = false;
+    // Keep expand/collapse sticky across hovers; only reset "+N more" per element.
     classesShowAllChips = false;
     setClassesPanelVisible(true);
     refreshClassesChrome(doc);
@@ -204,7 +223,7 @@ function createClassesSection(doc: Document): HTMLElement {
         text: 'Classes',
     });
     classesToggle.type = 'button';
-    classesToggle.setAttribute('aria-expanded', 'false');
+    classesToggle.setAttribute('aria-expanded', 'true');
 
     classesCopyAll = el(doc, 'button', {
         className: 'StyleDetectiveOverlay__classes-copy-all',
@@ -230,6 +249,7 @@ function createClassesSection(doc: Document): HTMLElement {
         classesExpanded = !classesExpanded;
         if (!classesExpanded) classesShowAllChips = false;
         refreshClassesChrome(doc);
+        void saveClassesExpanded(classesExpanded);
     });
 
     classesCopyAll.addEventListener('click', (e) => {
@@ -242,7 +262,7 @@ function createClassesSection(doc: Document): HTMLElement {
 
     classesRoot = el(doc, 'div', {
         id: 'StyleDetectiveOverlay__classes',
-        className: `StyleDetectiveOverlay__classes ${CLASSES_HIDDEN} ${CLASSES_COLLAPSED}`,
+        className: `StyleDetectiveOverlay__classes ${CLASSES_HIDDEN}`,
         children: [head, body],
     });
 

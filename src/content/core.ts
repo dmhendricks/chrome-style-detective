@@ -8,7 +8,7 @@
  */
 
 import { copyTextToClipboard } from './lib/clipboard';
-import { elementClassName } from './lib/dom';
+import { elementClassName, keepOverlayInViewport } from './lib/dom';
 import { CSS_CATEGORIES, propertiesFor } from './lib/properties';
 import {
     createBlock,
@@ -23,7 +23,8 @@ const FROZEN_CLASS = 'StyleDetectiveOverlay--frozen';
 const DARK_CLASS = 'StyleDetectiveOverlay--dark';
 const HIGHLIGHT_ID = 'StyleDetectiveHighlight';
 const OVERLAY_ID = 'StyleDetectiveOverlay';
-const TOAST_ID = 'styleDetectiveInsertMessage';
+const TOAST_ID = 'StyleDetectiveToast';
+const TOAST_SUCCESS_CLASS = 'StyleDetectiveToast--success';
 
 const PANEL_FONT_SIZE_DEFAULT = 10;
 const PANEL_FONT_SIZE_MIN = 8;
@@ -37,7 +38,6 @@ type Pointer = { clientX: number; clientY: number; pageX: number; pageY: number 
 
 const HOVER_LISTENER_OPTS: AddEventListenerOptions = { capture: true, passive: true };
 const HIGHLIGHT_LAYOUT_OPTS: AddEventListenerOptions = { capture: true, passive: true };
-const POINTER_TRACK_OPTS: AddEventListenerOptions = { capture: true, passive: true };
 
 function clampPanelFontSize(size: number): number {
     return Math.min(PANEL_FONT_SIZE_MAX, Math.max(PANEL_FONT_SIZE_MIN, size));
@@ -68,36 +68,6 @@ function isElementInViewport(el: HTMLElement): boolean {
         rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
         rect.right <= (window.innerWidth || document.documentElement.clientWidth)
     );
-}
-
-/** Shift an absolutely-positioned panel so its box stays inside the viewport. */
-function keepPanelInViewport(block: HTMLElement): void {
-    const MARGIN = 8;
-    const BOTTOM_MARGIN = 40;
-    const rect = block.getBoundingClientRect();
-
-    let dx = 0;
-    let dy = 0;
-
-    if (rect.right > window.innerWidth - MARGIN) {
-        dx = window.innerWidth - MARGIN - rect.right;
-    }
-    if (rect.left + dx < MARGIN) {
-        dx = MARGIN - rect.left;
-    }
-    if (rect.bottom > window.innerHeight - BOTTOM_MARGIN) {
-        dy = window.innerHeight - BOTTOM_MARGIN - rect.bottom;
-    }
-    if (rect.top + dy < MARGIN) {
-        dy = MARGIN - rect.top;
-    }
-
-    if (dx !== 0) {
-        block.style.left = `${block.offsetLeft + dx}px`;
-    }
-    if (dy !== 0) {
-        block.style.top = `${block.offsetTop + dy}px`;
-    }
 }
 
 function removeElement(id: string): void {
@@ -151,7 +121,6 @@ class OverlayController {
     // --- listener flags ---
     private haveHoverListeners = false;
     private haveKeyListeners = false;
-    private trackingPointer = false;
 
     // --- prefs ---
     private panelFontSize = PANEL_FONT_SIZE_DEFAULT;
@@ -161,25 +130,16 @@ class OverlayController {
     private flashMessageTimer: ReturnType<typeof setTimeout> | null = null;
 
     // Stable handler identities for add/removeEventListener.
-    private readonly onPointerTrack = (e: MouseEvent): void => {
-        this.pointerInFrame = true;
-        this.lastPointer = {
-            clientX: e.clientX,
-            clientY: e.clientY,
-            pageX: e.pageX,
-            pageY: e.pageY,
-        };
-    };
-
     private readonly onPointerLeaveFrame = (): void => {
         // Entering a child browsing context (iframe) leaves this document —
-        // drop the stale point so enable()/rAF can't revive a pane here and
-        // steal the claim from the frame that actually has the cursor.
+        // drop the stale point so we don't steal the claim from the frame
+        // that actually has the cursor.
         this.pointerInFrame = false;
         this.lastPointer = null;
     };
 
     private readonly onMouseOver = (e: MouseEvent): void => {
+        this.notePointer(e);
         const el = eventTargetElement(e);
         if (!el || isInsidePanel(el)) return;
         this.inspectElement(el);
@@ -196,6 +156,7 @@ class OverlayController {
     };
 
     private readonly onMouseMove = (e: MouseEvent): void => {
+        this.notePointer(e);
         const el = eventTargetElement(e);
         if (!el || isInsidePanel(el)) return;
 
@@ -215,22 +176,6 @@ class OverlayController {
     /** Load font size + theme before the first enable(). */
     async loadPrefs(): Promise<void> {
         await Promise.all([this.loadPanelFontSize(), this.loadPanelTheme()]);
-    }
-
-    /**
-     * Remember the pointer while dormant so enable() can inspect immediately
-     * when the cursor is still in this frame. Cleared on mouseleave so iframes
-     * don't keep a stale point that steals the pane on arm.
-     */
-    startPointerTracking(): void {
-        if (this.trackingPointer) return;
-        document.addEventListener('mousemove', this.onPointerTrack, POINTER_TRACK_OPTS);
-        document.documentElement.addEventListener(
-            'mouseleave',
-            this.onPointerLeaveFrame,
-            POINTER_TRACK_OPTS,
-        );
-        this.trackingPointer = true;
     }
 
     isEnabled(): boolean {
@@ -264,14 +209,13 @@ class OverlayController {
         this.addHoverListeners();
         this.addKeyListeners();
         this.addHighlightLayoutListeners();
-        // Only the frame that currently has the cursor should open a pane.
-        // Other frames often still had a stale lastPointer from earlier
-        // iframe hops, which claimed + parked the real one (flicker/close).
-        if (this.pointerInFrame) {
-            this.inspectElementUnderCursor();
-            requestAnimationFrame(() => {
-                if (this.armed && this.pointerInFrame) this.inspectElementUnderCursor();
-            });
+        // Panel opens on the next hover/move in this frame (no dormant
+        // mousemove tracker — see notePointer). Cue engagement immediately.
+        if (window === window.top) {
+            this.flashMessage(
+                'Style Detective loaded! Hover any element you want to inspect in the page.',
+                { persistent: true },
+            );
         }
 
         return true;
@@ -297,6 +241,8 @@ class OverlayController {
         this.removeHighlightLayoutListeners();
         this.removeHighlight();
         this.inspectedElement = null;
+        this.pointerInFrame = false;
+        this.lastPointer = null;
         this.cancelScheduledPanelPosition();
         if (this.claimFrame !== null) {
             cancelAnimationFrame(this.claimFrame);
@@ -363,7 +309,7 @@ class OverlayController {
         if (!block) return;
 
         block.style.setProperty('--sd-font-size', `${this.panelFontSize}px`);
-        keepPanelInViewport(block);
+        keepOverlayInViewport(block);
     }
 
     private applyPanelTheme(): void {
@@ -397,23 +343,11 @@ class OverlayController {
 
     // --- panel DOM ---
 
-    private createPanel(): HTMLElement {
-        const block = createBlock(document);
-        // One toast for the tab — nested frames would otherwise stack N banners.
-        if (window === window.top) {
-            this.flashMessage(
-                'Style Detective loaded! Hover any element you want to inspect in the page.',
-                { persistent: true },
-            );
-        }
-        return block;
-    }
-
     /** Create the panel on first use in this frame. */
     private ensurePanel(): HTMLElement {
         let block = document.getElementById(OVERLAY_ID);
         if (!block) {
-            block = this.createPanel();
+            block = createBlock(document);
             document.body.appendChild(block);
             this.applyPanelFontSize();
             this.applyPanelTheme();
@@ -432,21 +366,9 @@ class OverlayController {
         }
 
         const p = document.createElement('p');
-        p.appendChild(document.createTextNode(msg));
         p.id = TOAST_ID;
-        p.style.backgroundColor = options.tone === 'success' ? '#1f5c3a' : '#7a1f1f';
-        p.style.color = '#ffffff';
-        p.style.position = 'fixed';
-        p.style.top = '10px';
-        p.style.left = '10px';
-        p.style.zIndex = '2147483647';
-        p.style.padding = '8px 12px';
-        p.style.borderRadius = '6px';
-        p.style.fontFamily = 'Lucida sans, helvetica, sans-serif';
-        p.style.fontSize = '12px';
-        p.style.boxShadow = '0 2px 10px rgba(0,0,0,0.25)';
-        p.style.pointerEvents = 'none';
-
+        if (options.tone === 'success') p.className = TOAST_SUCCESS_CLASS;
+        p.appendChild(document.createTextNode(msg));
         document.body.appendChild(p);
 
         if (!options.persistent) {
@@ -513,6 +435,16 @@ class OverlayController {
     }
 
     // --- inspect / position ---
+
+    private notePointer(e: MouseEvent): void {
+        this.pointerInFrame = true;
+        this.lastPointer = {
+            clientX: e.clientX,
+            clientY: e.clientY,
+            pageX: e.pageX,
+            pageY: e.pageY,
+        };
+    }
 
     /** Tell sibling frames to hide their pane; coalesce to one message per frame. */
     private claimOverlay(): void {
@@ -638,6 +570,11 @@ class OverlayController {
         document.addEventListener('mouseover', this.onMouseOver, HOVER_LISTENER_OPTS);
         document.addEventListener('mouseout', this.onMouseOut, HOVER_LISTENER_OPTS);
         document.addEventListener('mousemove', this.onMouseMove, HOVER_LISTENER_OPTS);
+        document.documentElement.addEventListener(
+            'mouseleave',
+            this.onPointerLeaveFrame,
+            HOVER_LISTENER_OPTS,
+        );
         this.haveHoverListeners = true;
     }
 
@@ -646,6 +583,11 @@ class OverlayController {
         document.removeEventListener('mouseover', this.onMouseOver, HOVER_LISTENER_OPTS);
         document.removeEventListener('mouseout', this.onMouseOut, HOVER_LISTENER_OPTS);
         document.removeEventListener('mousemove', this.onMouseMove, HOVER_LISTENER_OPTS);
+        document.documentElement.removeEventListener(
+            'mouseleave',
+            this.onPointerLeaveFrame,
+            HOVER_LISTENER_OPTS,
+        );
         this.cancelScheduledPanelPosition();
         this.haveHoverListeners = false;
     }
@@ -748,7 +690,6 @@ const bootRoot = globalThis as typeof globalThis & { [BOOT_FLAG]?: boolean };
 
 if (!bootRoot[BOOT_FLAG]) {
     bootRoot[BOOT_FLAG] = true;
-    controller.startPointerTracking();
 
     chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         if (message?.type === 'pingOverlay') {

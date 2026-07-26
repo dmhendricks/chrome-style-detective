@@ -4,7 +4,7 @@ A modern rewrite of the popular [CSS Viewer](https://github.com/miled/cssviewer)
 
 ![Style Detective](store/screenshot-1280x800-01.png)
 
-Features:
+#### Features:
 
 - Hover over any element to view its CSS properties in a floating panel
 - Freeze the panel in place to inspect it
@@ -14,20 +14,24 @@ Features:
 - New: Ability to increase/decrease font size
 - New: Dark mode support
 - New: Iframe support
-- New: Classes row with click-to-copy chips
+- New: Classes section with click-to-copy chips or "Copy All"
 
 ## Installation
 
-Clone the repo and build:
+The easiest way to install this extension is from the [Chrome Web Store](https://chromewebstore.google.com/detail/podlfieffggllefapodbbghcpjjknghm).
+
+## Development
+
+Requires Node 20+. Clone the repository, then run:
 
 ```bash
 npm install
-npm run build    # production build → dist/
+npm run dev      # Watches for changes, rebuilds the extension
+npm run lint
+npm run test
 ```
 
 Then open `chrome://extensions`, turn on **Developer mode** (top-right), click **Load Unpacked** and choose the `dist/` directory.
-
-Published builds (when available) can also be loaded from a release zip the same way.
 
 ## Usage
 
@@ -35,7 +39,7 @@ Click the toolbar icon (or press `Alt+Shift+S` (Windows) or `Option+Shift+S` (ma
 
 You can customize the toggle shortcut at `chrome://extensions/shortcuts`.
 
-Keyboard shortcuts while the viewer is active:
+#### Keyboard Shortcuts
 
 - `F` to freeze or unfreeze the panel in place
 - `C` to copy a simple CSS definition for the selected element to the clipboard
@@ -46,3 +50,11 @@ Keyboard shortcuts while the viewer is active:
 - `Esc` to close the viewer
 
 On elements with a `class` attribute, a **Classes** row appears below the header with click-to-copy chips and **Copy All** (long lists cap at a configurable number of wrap lines — default 3 — with `+N more`). The header shows the tag and `#id` only. Toggle the row anytime with **`L`** or **Show CSS Classes** in settings (`Shift+C` still copies classes).
+
+## What the Panel Shows
+
+Values are the element’s **current computed styles**—what the browser is rendering right now—not authored CSS or cascade sources.
+
+That includes interaction state: hovering a link shows its `:hover` color (and any other hover styles), which matches what you see under the cursor. Press **`F`** to freeze while hovered if you want to keep that snapshot and move the mouse away.
+
+Copied CSS (`C`) uses the same live computed values as the panel.

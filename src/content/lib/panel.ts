@@ -16,6 +16,7 @@ import {
 } from './properties';
 import { countChipRows, formatClassesForCopy, parseClassTokens } from './classes';
 import { copyTextToClipboard } from './clipboard';
+import { notifyCopy } from './copy-feedback';
 import { el, isOverlayFrozen, keepOverlayInViewport, selectorLabel, setValueContent } from './dom';
 
 const ID_PREFIX = 'StyleDetectiveOverlay__';
@@ -24,8 +25,6 @@ const CATEGORY_HIDDEN = 'StyleDetectiveOverlay__category--hidden';
 const HEADER_EXPANDABLE = 'StyleDetectiveOverlay__header--expandable';
 const HEADER_EXPANDED = 'StyleDetectiveOverlay__header--expanded';
 const CLASSES_HIDDEN = 'StyleDetectiveOverlay__classes--hidden';
-
-type CopyNotifier = (message: string, tone?: 'default' | 'success') => void;
 
 /** Cached DOM nodes for a property row, filled once in createBlock(). */
 interface PropertyRow {
@@ -47,7 +46,6 @@ let showCssClasses = true;
 let classesChipLines = 3;
 let classesShowAllChips = false;
 let currentClassTokens: readonly string[] = [];
-let copyNotifier: CopyNotifier | null = null;
 
 function clearPanelCache(): void {
     propertyRows.clear();
@@ -57,11 +55,6 @@ function clearPanelCache(): void {
     classesCopyAll = null;
     classesChips = null;
     shortcutsContainer = null;
-}
-
-/** Wire overlay copy feedback (toast) for class chip actions. */
-export function setClassesCopyNotifier(notifier: CopyNotifier | null): void {
-    copyNotifier = notifier;
 }
 
 /** Current Show CSS Classes preference (in-memory; storage is owned by callers). */
@@ -85,10 +78,6 @@ export function setClassesChipLines(lines: number): void {
     if (classesRoot && showCssClasses && currentClassTokens.length > 0) {
         refreshClassesChrome(classesRoot.ownerDocument);
     }
-}
-
-function notifyCopy(message: string, tone: 'default' | 'success' = 'success'): void {
-    copyNotifier?.(message, tone);
 }
 
 async function copyClassText(text: string, message: string): Promise<void> {

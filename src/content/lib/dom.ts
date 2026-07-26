@@ -7,19 +7,10 @@
  */
 
 import { copyTextToClipboard } from './clipboard';
+import { notifyCopy } from './copy-feedback';
 
 const OVERLAY_ID = 'StyleDetectiveOverlay';
 const FROZEN_CLASS = 'StyleDetectiveOverlay--frozen';
-
-type CopyNotifier = (message: string, tone?: 'default' | 'success') => void;
-
-/** Toast feedback for frozen property-value copy (wired by the overlay controller). */
-let valueCopyNotifier: CopyNotifier | null = null;
-
-/** Wire overlay toast feedback for property-value copy failures. */
-export function setValueCopyNotifier(notifier: CopyNotifier | null): void {
-    valueCopyNotifier = notifier;
-}
 
 /** Tag names we construct, mapped to their element types for `el()`. */
 type TagName = keyof HTMLElementTagNameMap;
@@ -254,7 +245,7 @@ function attachFrozenCopy(
                 }, 900);
             },
             () => {
-                valueCopyNotifier?.('Could not copy to clipboard', 'default');
+                notifyCopy('Could not copy to clipboard', 'default');
             },
         );
     });

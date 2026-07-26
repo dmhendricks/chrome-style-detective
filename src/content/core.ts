@@ -8,7 +8,8 @@
  */
 
 import { copyTextToClipboard } from './lib/clipboard';
-import { elementClassName, keepOverlayInViewport, setValueCopyNotifier } from './lib/dom';
+import { setCopyNotifier } from './lib/copy-feedback';
+import { keepOverlayInViewport } from './lib/dom';
 import {
     CSS_CATEGORIES,
     isPropertyEnabled,
@@ -21,7 +22,6 @@ import {
     refreshSelectorOverflow,
     isShowCssClasses,
     setClassesChipLines,
-    setClassesCopyNotifier,
     setShowCssClasses,
     updateClassesPanel,
     updateHeader,
@@ -96,17 +96,24 @@ function removeElement(id: string): void {
 }
 
 /**
+ * Compound selector for the copied rule: `tag#id.class1.class2` (no spaces —
+ * spaces would be descendant combinators and break multi-class elements).
+ */
+function cssDefinitionSelector(el: HTMLElement): string {
+    const classes = parseClassTokens(el)
+        .map((token) => '.' + CSS.escape(token))
+        .join('');
+    const id = el.id === '' ? '' : '#' + CSS.escape(el.id);
+    return el.tagName.toLowerCase() + id + classes;
+}
+
+/**
  * Build a CSS definition for copy. Only includes properties that would appear
  * in the panel (same `when` / `hideDefault` visibility), omits `panelOnly`
  * rows, and skips tag-gated categories that don't match the element.
  */
 function buildCssDefinition(el: HTMLElement, style: CSSStyleDeclaration): string {
-    const className = elementClassName(el);
-    let css =
-        el.tagName.toLowerCase() +
-        (el.id === '' ? '' : ' #' + el.id) +
-        (className === '' ? '' : ' .' + className) +
-        ' {\n';
+    let css = cssDefinitionSelector(el) + ' {\n';
 
     const ctx: InspectContext = {
         style,
@@ -219,11 +226,9 @@ class OverlayController {
 
     /** Load font size, theme, and feature prefs before the first enable(). */
     async loadPrefs(): Promise<void> {
-        const flashCopy = (message: string, tone?: 'default' | 'success') => {
+        setCopyNotifier((message, tone) => {
             this.flashMessage(message, { tone: tone ?? 'default' });
-        };
-        setClassesCopyNotifier(flashCopy);
-        setValueCopyNotifier(flashCopy);
+        });
         await Promise.all([
             this.loadPanelFontSizePref(),
             this.loadPanelThemePref(),

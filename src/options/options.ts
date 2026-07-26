@@ -22,6 +22,7 @@ import {
     PANEL_THEME_KEY,
     SHOW_CSS_CLASSES_KEY,
 } from '../shared/prefs';
+import { Messages } from '../shared/messages';
 
 const showCssClassesToggle = document.querySelector<HTMLInputElement>('#showCssClasses');
 const classesChipLinesInput = document.querySelector<HTMLInputElement>('#classesChipLines');
@@ -42,11 +43,12 @@ function wireStoreRateLink(): void {
 async function registerRestrictedOptionsTab(): Promise<void> {
     try {
         const tab = await chrome.tabs.getCurrent();
-        await chrome.runtime.sendMessage({
-            type: 'registerRestrictedTab',
-            tabId: tab?.id,
-            url: tab?.url ?? chrome.runtime.getURL('src/options/options.html'),
-        });
+        await chrome.runtime.sendMessage(
+            Messages.registerRestrictedTab({
+                tabId: tab?.id,
+                url: tab?.url ?? chrome.runtime.getURL('src/options/options.html'),
+            }),
+        );
     } catch {
         // Service worker may be waking; click path still shows unsupported.
     }

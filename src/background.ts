@@ -10,6 +10,7 @@
  * shows a small popup instead of toggling — content scripts cannot run there.
  */
 
+import { MessageType, Messages, parseExtensionMessage } from './shared/messages';
 import { armedStorageKey, parseSessionArmed } from './shared/prefs';
 
 const ACTION_TITLE_DEFAULT = 'Style Detective';
@@ -144,7 +145,7 @@ async function setTabArmed(tabId: number, armed: boolean): Promise<void> {
 
     await syncActionUi(tabId, armed);
 
-    await chrome.tabs.sendMessage(tabId, { type: 'setOverlayArmed', armed }).catch(() => {
+    await chrome.tabs.sendMessage(tabId, Messages.setOverlayArmed(armed)).catch(() => {
         // No receivers during navigation / restricted frames.
     });
 }
@@ -176,7 +177,7 @@ async function ensureContentScripts(tabId: number): Promise<void> {
 async function waitForOverlay(tabId: number, attempts = 40, delayMs = 50): Promise<boolean> {
     for (let i = 0; i < attempts; i++) {
         try {
-            await chrome.tabs.sendMessage(tabId, { type: 'pingOverlay' });
+            await chrome.tabs.sendMessage(tabId, Messages.pingOverlay());
             return true;
         } catch {
             await new Promise((resolve) => setTimeout(resolve, delayMs));
@@ -189,7 +190,7 @@ async function toggleOverlay(tabId: number): Promise<void> {
     let coldInject = false;
 
     try {
-        await chrome.tabs.sendMessage(tabId, { type: 'pingOverlay' });
+        await chrome.tabs.sendMessage(tabId, Messages.pingOverlay());
     } catch {
         await ensureContentScripts(tabId);
         coldInject = true;
@@ -236,18 +237,21 @@ chrome.tabs.onRemoved.addListener((tabId) => {
     void chrome.storage.session.remove(armedStorageKey(tabId));
 });
 
-chrome.runtime.onMessage.addListener((message, sender) => {
-    if (message?.type === 'openOptions') {
+chrome.runtime.onMessage.addListener((raw, sender) => {
+    const message = parseExtensionMessage(raw);
+    if (!message) return;
+
+    if (message.type === MessageType.OpenOptions) {
         chrome.runtime.openOptionsPage();
         return;
     }
 
     // Options page (and similar) register so the toolbar shows unsupported.html
     // even when chrome.tabs omits chrome-extension:// URLs.
-    if (message?.type === 'registerRestrictedTab') {
-        const tabId = sender.tab?.id ?? (typeof message.tabId === 'number' ? message.tabId : null);
+    if (message.type === MessageType.RegisterRestrictedTab) {
+        const tabId = sender.tab?.id ?? message.tabId ?? null;
         const url =
-            (typeof message.url === 'string' && message.url) ||
+            message.url ||
             sender.url ||
             sender.tab?.url ||
             'chrome-extension://restricted/';
@@ -255,22 +259,19 @@ chrome.runtime.onMessage.addListener((message, sender) => {
         return;
     }
 
-    if (message?.type === 'disarmOverlay') {
+    if (message.type === MessageType.DisarmOverlay) {
         const tabId = sender.tab?.id;
         if (tabId == null) return;
         void setTabArmed(tabId, false);
         return;
     }
 
-    if (message?.type === 'overlayClaim' && typeof message.instanceId === 'string') {
+    if (message.type === MessageType.OverlayClaim) {
         const tabId = sender.tab?.id;
         if (tabId == null) return;
 
         void chrome.tabs
-            .sendMessage(tabId, {
-                type: 'overlayClaim',
-                instanceId: message.instanceId,
-            })
+            .sendMessage(tabId, Messages.overlayClaim(message.instanceId))
             .catch(() => {});
     }
 });

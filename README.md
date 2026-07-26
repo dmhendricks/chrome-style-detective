@@ -14,7 +14,7 @@ Features:
 - New: Ability to increase/decrease font size
 - New: Dark mode support
 - New: Iframe support
-- New: Utility-first extras for frameworks like Tailwind CSS
+- New: Classes row with click-to-copy chips
 
 ## Installation
 
@@ -42,4 +42,4 @@ Keyboard shortcuts while the viewer is active:
 - `S` to open the settings page
 - `Esc` to close the viewer
 
-With **Utility-first extras** enabled in settings, a **Classes** row also appears on elements that have a `class` attribute (expanded by default; expand/collapse is saved and shared across tabs). Click a chip or **Copy all** to copy classes.
+On elements with a `class` attribute, a **Classes** row appears below the header (expanded by default; expand/collapse is saved and shared across tabs). Click a chip or **Copy all** to copy classes. The header shows the tag and `#id` only. Turn on **Hide CSS Classes** in settings if you want a more compact panel (`Shift+C` still copies classes).

@@ -83,20 +83,20 @@
                     </li>
                     <li class="settings__row">
                         <div class="settings__copy">
-                            <label class="settings__label" for="utilityFirstExtras"
-                                >Utility-First Extras</label
+                            <label class="settings__label" for="hideCssClasses"
+                                >Hide CSS Classes</label
                             >
-                            <p class="settings__hint" id="utilityFirstExtras-hint">
-                                Show a Classes row with chips for <strong>Tailwind</strong> and other utility-first
-                                markup. Off by default so ordinary CSS pages stay uncluttered.
+                            <p class="settings__hint" id="hideCssClasses-hint">
+                                Remove the Classes row from the overlay to save space. Class names
+                                stay available via <kbd>Shift+C</kbd>.
                             </p>
                         </div>
                         <label class="switch">
                             <input
                                 type="checkbox"
-                                id="utilityFirstExtras"
+                                id="hideCssClasses"
                                 role="switch"
-                                aria-describedby="utilityFirstExtras-hint"
+                                aria-describedby="hideCssClasses-hint"
                             />
                             <span class="switch__track" aria-hidden="true">
                                 <span class="switch__thumb"></span>
@@ -119,10 +119,43 @@
                     <li>Works on <code>http</code>, <code>https</code>, and local pages.</li>
                     -->
                 </ol>
+
                 <p class="shortcut-customize">
                     To customize the toggle shortcut, paste
                     <code>chrome://extensions/shortcuts</code> into Chrome's address bar.
                 </p>
+
+                <aside class="tip" aria-label="Tip">
+                    <span class="tip__icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M9 18h6M10 21h4"
+                                stroke="currentColor"
+                                stroke-width="1.75"
+                                stroke-linecap="round"
+                            />
+                            <path
+                                d="M12 3a6 6 0 0 0-3.5 10.8c.6.45 1 1.1 1.15 1.85h4.7c.15-.75.55-1.4 1.15-1.85A6 6 0 0 0 12 3Z"
+                                stroke="currentColor"
+                                stroke-width="1.75"
+                                stroke-linejoin="round"
+                            />
+                            <path
+                                d="M12 7.25v2.5"
+                                stroke="currentColor"
+                                stroke-width="1.75"
+                                stroke-linecap="round"
+                            />
+                        </svg>
+                    </span>
+                    <div class="tip__body">
+                        <p class="tip__label">Tip</p>
+                        <p class="tip__text">
+                            Press <kbd>F</kbd> to freeze the panel in place and <kbd>Esc</kbd> to
+                            disable it. Freezing lets you expand classes and copy property values to clipboard.
+                        </p>
+                    </div>
+                </aside>
             </section>
 
             <section class="section" id="shortcuts">

@@ -439,6 +439,77 @@ main {
     border-radius: 0.4rem;
 }
 
+.tip {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.85rem;
+    align-items: start;
+    margin: 0.85rem 0 0;
+    padding: 0.9rem 1rem;
+    color: var(--sd-text);
+    background:
+        linear-gradient(
+            135deg,
+            color-mix(in srgb, var(--sd-coral) 14%, transparent),
+            color-mix(in srgb, var(--sd-bg-elevated) 88%, transparent) 42%
+        );
+    border: 1px solid color-mix(in srgb, var(--sd-coral) 42%, var(--sd-border));
+    border-radius: 0.85rem;
+    box-shadow:
+        inset 3px 0 0 var(--sd-coral),
+        0 8px 22px -16px var(--sd-glow);
+}
+
+.tip__icon {
+    display: grid;
+    place-items: center;
+    width: 2.1rem;
+    height: 2.1rem;
+    margin-top: 0.05rem;
+    color: var(--sd-coral);
+    background: var(--sd-coral-soft);
+    border: 1px solid color-mix(in srgb, var(--sd-coral) 35%, transparent);
+    border-radius: 0.55rem;
+    animation: tip-glow 2.8s ease-in-out infinite;
+}
+
+.tip__icon svg {
+    width: 1.15rem;
+    height: 1.15rem;
+}
+
+.tip__label {
+    margin: 0 0 0.2rem;
+    font-family: var(--sd-font-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sd-coral);
+}
+
+.tip__text {
+    margin: 0;
+    color: var(--sd-text-muted);
+    line-height: 1.55;
+}
+
+@keyframes tip-glow {
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 color-mix(in srgb, var(--sd-coral) 0%, transparent);
+    }
+    50% {
+        box-shadow: 0 0 0 4px color-mix(in srgb, var(--sd-coral) 18%, transparent);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tip__icon {
+        animation: none;
+    }
+}
+
 code {
     font-family: var(--sd-font-mono);
     font-size: 0.88em;

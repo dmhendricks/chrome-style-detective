@@ -143,9 +143,9 @@ export function keepOverlayInViewport(block: HTMLElement): void {
 /** Match #RGB, #RRGGBB, or #RRGGBBAA hex tokens in a property value string. */
 const HEX_COLOR_RE = /#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/g;
 
-/** Leading color token for a swatch: hex or rgb()/rgba(). */
-const LEADING_COLOR_RE =
-    /^(#[0-9a-fA-F]{3,8}|rgba?\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*(?:,\s*[\d.]+\s*)?\))/i;
+/** Hex or rgb()/rgba() anywhere in a value (e.g. `1px solid rgba(...)`). */
+const COLOR_TOKEN_RE =
+    /#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b|rgba?\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*(?:,\s*[\d.]+\s*)?\)/gi;
 
 /** Expand shorthand #RGB / #RGBA to six- or eight-digit hex for swatch fill. */
 function normalizeHexForSwatch(hex: string): string {
@@ -180,10 +180,14 @@ function swatchCssColor(token: string): string {
     return token.startsWith('#') ? normalizeHexForSwatch(token) : token;
 }
 
+function firstColorToken(text: string): string | null {
+    return text.match(COLOR_TOKEN_RE)?.[0] ?? null;
+}
+
 /** Build display nodes for a value, adding a leading swatch when a color is present. */
 function textWithColorSwatches(doc: Document, text: string): DocumentFragment {
     const frag = doc.createDocumentFragment();
-    const leading = text.trimStart().match(LEADING_COLOR_RE)?.[0] ?? firstHexIn(text);
+    const leading = firstColorToken(text);
 
     if (leading) {
         frag.append(colorSwatch(doc, swatchCssColor(leading)));
@@ -210,10 +214,6 @@ function textWithColorSwatches(doc: Document, text: string): DocumentFragment {
     }
 
     return frag;
-}
-
-function firstHexIn(text: string): string | null {
-    return text.match(HEX_COLOR_RE)?.[0] ?? null;
 }
 
 function copyAffordance(doc: Document): HTMLSpanElement {
@@ -266,24 +266,12 @@ export function elementClassName(el: Element): string {
 }
 
 /**
- * Build the `<tag> #id .class` selector label shown in the panel header and used
- * for the CSS-definition selector line. Text nodes only — no markup injection.
- *
- * When `includeClasses` is false (utility-first extras), omit class tokens so the
- * Classes chip row owns that information.
+ * Build the `<tag> #id` selector label shown in the panel header.
+ * Classes live in the Classes row — omit them here so the banner stays short.
+ * Text nodes only — no markup injection.
  */
-export function selectorLabel(
-    el: HTMLElement,
-    options: { includeClasses?: boolean } = {},
-): string {
-    const includeClasses = options.includeClasses !== false;
-    const className = includeClasses ? elementClassName(el) : '';
-
-    return (
-        el.tagName +
-        (el.id === '' ? '' : ' #' + el.id) +
-        (className === '' ? '' : ' .' + className)
-    );
+export function selectorLabel(el: HTMLElement): string {
+    return el.tagName + (el.id === '' ? '' : ' #' + el.id);
 }
 
 /**

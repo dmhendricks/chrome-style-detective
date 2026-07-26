@@ -1,5 +1,5 @@
 /*!
- * Class-token helpers for utility-first extras (see docs/tailwind.md).
+ * Class-token helpers for the Classes row.
  */
 
 import { elementClassName } from './dom';

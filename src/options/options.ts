@@ -30,7 +30,7 @@ const classesChipLinesRow = document.querySelector<HTMLElement>('#classesChipLin
 const themeRadios = document.querySelectorAll<HTMLInputElement>('input[name="panelTheme"]');
 const storeRateLink = document.querySelector<HTMLAnchorElement>('#storeRateLink');
 
-/** Listing URL from the installed extension id (stable after Chrome Web Store publish). */
+/** Listing URL from the installed extension id (stable after store publish). */
 function wireStoreRateLink(): void {
     if (!storeRateLink) return;
     storeRateLink.href = `https://chromewebstore.google.com/detail/${chrome.runtime.id}`;

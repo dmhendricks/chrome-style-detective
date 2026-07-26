@@ -66,8 +66,8 @@ export function rgbToHex(str: string): string {
 }
 
 /**
- * Panel display for a computed color: `transparent` when alpha is 0, otherwise
- * `#RRGGBB` (and `#RRGGBBAA` when partially transparent). Does not remap black.
+ * Panel display for a computed color: `transparent` when alpha is 0,
+ * `#RRGGBB` when opaque, otherwise familiar `rgba(r, g, b, a)` (not 8-digit hex).
  */
 export function formatCssColorDisplay(str: string): string {
     const color = parseCssColor(str);
@@ -78,7 +78,9 @@ export function formatCssColorDisplay(str: string): string {
     const hex = '#' + decToHex(color.r) + decToHex(color.g) + decToHex(color.b);
     if (color.a >= 1) return hex;
 
-    return hex + decToHex(Math.round(color.a * 255));
+    // Keep alpha readable — most people know rgba(), not #RRGGBBAA.
+    const alpha = Number((Math.round(color.a * 1000) / 1000).toFixed(3));
+    return `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`;
 }
 
 /**

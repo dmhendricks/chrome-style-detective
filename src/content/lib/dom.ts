@@ -42,11 +42,17 @@ export function el<K extends TagName>(
 /**
  * Build the small colour swatch shown next to a colour value. Replaces the
  * inline-`<span style=...>` HTML the original `RGBToHex` returned as a string.
+ * Semi-transparent fills sit on a light checkerboard so they match page paint
+ * better than compositing onto the dark panel chrome.
  */
-export function colorSwatch(doc: Document, hex: string): HTMLSpanElement {
+export function colorSwatch(doc: Document, cssColor: string): HTMLSpanElement {
     const swatch = doc.createElement('span');
     swatch.className = 'StyleDetectiveOverlay__color-swatch';
-    swatch.style.setProperty('background-color', hex, 'important');
+
+    const fill = doc.createElement('span');
+    fill.className = 'StyleDetectiveOverlay__color-swatch-fill';
+    fill.style.setProperty('background-color', cssColor, 'important');
+    swatch.append(fill);
 
     return swatch;
 }
@@ -137,6 +143,10 @@ export function keepOverlayInViewport(block: HTMLElement): void {
 /** Match #RGB, #RRGGBB, or #RRGGBBAA hex tokens in a property value string. */
 const HEX_COLOR_RE = /#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/g;
 
+/** Leading color token for a swatch: hex or rgb()/rgba(). */
+const LEADING_COLOR_RE =
+    /^(#[0-9a-fA-F]{3,8}|rgba?\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*(?:,\s*[\d.]+\s*)?\))/i;
+
 /** Expand shorthand #RGB / #RGBA to six- or eight-digit hex for swatch fill. */
 function normalizeHexForSwatch(hex: string): string {
     let normalized = hex.toUpperCase();
@@ -166,17 +176,17 @@ function normalizeHexForSwatch(hex: string): string {
     return normalized;
 }
 
-function firstHexIn(text: string): string | null {
-    return text.match(HEX_COLOR_RE)?.[0] ?? null;
+function swatchCssColor(token: string): string {
+    return token.startsWith('#') ? normalizeHexForSwatch(token) : token;
 }
 
-/** Build display nodes for a value, adding a leading swatch when hex is present. */
+/** Build display nodes for a value, adding a leading swatch when a color is present. */
 function textWithColorSwatches(doc: Document, text: string): DocumentFragment {
     const frag = doc.createDocumentFragment();
-    const leadingHex = firstHexIn(text);
+    const leading = text.trimStart().match(LEADING_COLOR_RE)?.[0] ?? firstHexIn(text);
 
-    if (leadingHex) {
-        frag.append(colorSwatch(doc, normalizeHexForSwatch(leadingHex)));
+    if (leading) {
+        frag.append(colorSwatch(doc, swatchCssColor(leading)));
     }
 
     let lastIndex = 0;
@@ -200,6 +210,10 @@ function textWithColorSwatches(doc: Document, text: string): DocumentFragment {
     }
 
     return frag;
+}
+
+function firstHexIn(text: string): string | null {
+    return text.match(HEX_COLOR_RE)?.[0] ?? null;
 }
 
 function copyAffordance(doc: Document): HTMLSpanElement {

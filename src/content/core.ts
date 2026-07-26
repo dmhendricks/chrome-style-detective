@@ -21,7 +21,7 @@ import {
     refreshSelectorOverflow,
     setClassesCopyNotifier,
     setClassesExpanded,
-    setUtilityFirstExtrasEnabled,
+    setHideCssClasses,
     updateClassesPanel,
     updateHeader,
     updatePanel,
@@ -30,22 +30,22 @@ import { formatClassesForCopy, parseClassTokens } from './lib/classes';
 import {
     clampPanelFontSize,
     loadClassesExpanded,
+    loadHideCssClasses,
     loadPanelFontSize,
     loadPanelThemePreference,
-    loadUtilityFirstExtras,
     parseClassesExpanded,
+    parseHideCssClasses,
     parsePanelFontSize,
     parsePanelTheme,
-    parseUtilityFirstExtras,
     resolvePanelTheme,
     savePanelFontSize,
     type PanelThemePreference,
     CLASSES_EXPANDED_KEY,
+    HIDE_CSS_CLASSES_KEY,
     PANEL_FONT_SIZE_DEFAULT,
     PANEL_FONT_SIZE_KEY,
     PANEL_FONT_SIZE_STEP,
     PANEL_THEME_KEY,
-    UTILITY_FIRST_EXTRAS_KEY,
 } from '../shared/prefs';
 import './style.scss';
 
@@ -163,8 +163,6 @@ class OverlayController {
     // --- prefs ---
     private panelFontSize = PANEL_FONT_SIZE_DEFAULT;
     private panelThemePreference: PanelThemePreference = 'system';
-    /** When true, class / utility-first extras may be shown (see docs/tailwind.md). */
-    private utilityFirstExtras = false;
     private systemThemeMedia: MediaQueryList | null = null;
 
     private flashMessageTimer: ReturnType<typeof setTimeout> | null = null;
@@ -225,20 +223,10 @@ class OverlayController {
         await Promise.all([
             this.loadPanelFontSizePref(),
             this.loadPanelThemePref(),
-            this.loadUtilityFirstExtrasPref(),
+            this.loadHideCssClassesPref(),
             this.loadClassesExpandedPref(),
         ]);
         this.watchPrefs();
-        this.syncUtilityFirstExtrasUi();
-    }
-
-    /** Opt-in utility-first / class tools in the panel. */
-    isUtilityFirstExtrasEnabled(): boolean {
-        return this.utilityFirstExtras;
-    }
-
-    private syncUtilityFirstExtrasUi(): void {
-        setUtilityFirstExtrasEnabled(this.utilityFirstExtras);
     }
 
     isEnabled(): boolean {
@@ -351,8 +339,8 @@ class OverlayController {
         this.bindSystemThemeListener();
     }
 
-    private async loadUtilityFirstExtrasPref(): Promise<void> {
-        this.utilityFirstExtras = await loadUtilityFirstExtras();
+    private async loadHideCssClassesPref(): Promise<void> {
+        setHideCssClasses(await loadHideCssClasses());
     }
 
     private async loadClassesExpandedPref(): Promise<void> {
@@ -370,12 +358,10 @@ class OverlayController {
                 this.applyPanelTheme();
             }
 
-            const utilityChange = changes[UTILITY_FIRST_EXTRAS_KEY];
-            if (utilityChange) {
-                this.utilityFirstExtras = parseUtilityFirstExtras(utilityChange.newValue);
-                this.syncUtilityFirstExtrasUi();
+            const hideClassesChange = changes[HIDE_CSS_CLASSES_KEY];
+            if (hideClassesChange) {
+                setHideCssClasses(parseHideCssClasses(hideClassesChange.newValue));
                 if (this.inspectedElement?.isConnected) {
-                    updateHeader(this.inspectedElement);
                     updateClassesPanel(this.inspectedElement);
                 }
             }
@@ -450,7 +436,6 @@ class OverlayController {
             document.body.append(block);
             this.applyPanelFontSize();
             this.applyPanelTheme();
-            this.syncUtilityFirstExtrasUi();
         }
         return block;
     }
@@ -603,7 +588,7 @@ class OverlayController {
         this.ensurePanel();
         this.claimOverlay();
         updateHeader(el);
-        if (this.utilityFirstExtras) updateClassesPanel(el);
+        updateClassesPanel(el);
         this.highlightElement(el);
 
         if (!document.defaultView) return;

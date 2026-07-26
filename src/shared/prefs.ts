@@ -116,32 +116,28 @@ export async function savePanelFontSize(size: number): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Utility-first extras
+// Hide CSS Classes section
 // ---------------------------------------------------------------------------
 
-/** Opt-in utility / class tools (see docs/tailwind.md). Default: off. */
-export const UTILITY_FIRST_EXTRAS_KEY = 'utilityFirstExtras';
+/** Hide the Classes chip row to save panel space. Default: false (section shown). */
+export const HIDE_CSS_CLASSES_KEY = 'hideCssClasses';
 
-export const utilityFirstExtrasSchema = z.boolean();
+export const hideCssClassesSchema = z.boolean();
 
-export const UTILITY_FIRST_EXTRAS_DEFAULT = false;
+export const HIDE_CSS_CLASSES_DEFAULT = false;
 
-export function parseUtilityFirstExtras(value: unknown): boolean {
-    const result = utilityFirstExtrasSchema.safeParse(value);
-    return result.success ? result.data : UTILITY_FIRST_EXTRAS_DEFAULT;
+export function parseHideCssClasses(value: unknown): boolean {
+    const result = hideCssClassesSchema.safeParse(value);
+    return result.success ? result.data : HIDE_CSS_CLASSES_DEFAULT;
 }
 
-export async function loadUtilityFirstExtras(): Promise<boolean> {
-    return loadLocalPref(
-        UTILITY_FIRST_EXTRAS_KEY,
-        utilityFirstExtrasSchema,
-        UTILITY_FIRST_EXTRAS_DEFAULT,
-    );
+export async function loadHideCssClasses(): Promise<boolean> {
+    return loadLocalPref(HIDE_CSS_CLASSES_KEY, hideCssClassesSchema, HIDE_CSS_CLASSES_DEFAULT);
 }
 
-export async function saveUtilityFirstExtras(enabled: boolean): Promise<void> {
+export async function saveHideCssClasses(hidden: boolean): Promise<void> {
     await chrome.storage.local.set({
-        [UTILITY_FIRST_EXTRAS_KEY]: utilityFirstExtrasSchema.parse(enabled),
+        [HIDE_CSS_CLASSES_KEY]: hideCssClassesSchema.parse(hidden),
     });
 }
 
@@ -150,7 +146,7 @@ export async function saveUtilityFirstExtras(enabled: boolean): Promise<void> {
 // ---------------------------------------------------------------------------
 
 /**
- * Classes row expand/collapse (utility-first extras). Default: expanded.
+ * Classes row expand/collapse. Default: expanded.
  * Persisted in chrome.storage.local so it sticks across tabs and reloads.
  */
 export const CLASSES_EXPANDED_KEY = 'classesExpanded';

@@ -13,7 +13,7 @@
 // Naming follows BEM: #StyleDetectiveOverlay is the block; its parts are elements
 // (StyleDetectiveOverlay__center, __category, __footer, __property). Singleton parts
 // are #ids and use the & parent selector (&__center); parts the panel renders
-// many of are .classes and are written out (.StyleDetectiveOverlay__category) since
+// many of which are .classes and are written out (.StyleDetectiveOverlay__category) since
 // &__ would compile to an #id. Rules mirror the panel's DOM:
 //
 //   #StyleDetectiveHighlight                  dashed box over hovered element
@@ -605,7 +605,15 @@
             cursor: pointer !important;
         }
 
-        .StyleDetectiveOverlay__value-group:hover .StyleDetectiveOverlay__copy-affordance {
+        .StyleDetectiveOverlay__value-group:focus-visible {
+            outline: 2px solid var(--sd-copy-affordance-hover) !important;
+            outline-offset: 2px !important;
+            border-radius: 2px !important;
+        }
+
+        // Mouse hover or keyboard focus — show the copy icon without layout shift.
+        .StyleDetectiveOverlay__value-group:hover .StyleDetectiveOverlay__copy-affordance,
+        .StyleDetectiveOverlay__value-group:focus-visible .StyleDetectiveOverlay__copy-affordance {
             visibility: visible !important;
             pointer-events: auto !important;
             color: var(--sd-copy-affordance-hover) !important;

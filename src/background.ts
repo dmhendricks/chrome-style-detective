@@ -10,8 +10,14 @@
  * shows a small popup instead of toggling — content scripts cannot run there.
  */
 
+import {
+    OPTIONS_REVISION,
+    loadLastSeenOptionsRevision,
+    saveLastSeenOptionsRevision,
+    armedStorageKey,
+    parseSessionArmed,
+} from './shared/prefs';
 import { MessageType, Messages, parseExtensionMessage } from './shared/messages';
-import { armedStorageKey, parseSessionArmed } from './shared/prefs';
 
 const ACTION_TITLE_DEFAULT = 'Style Detective';
 const ACTION_TITLE_ARMED = 'Style Detective is on — click to turn off';
@@ -212,11 +218,33 @@ async function toggleOverlay(tabId: number): Promise<void> {
     await setTabArmed(tabId, !currentlyArmed);
 }
 
-// Open the options page on install/update.
+/**
+ * First install → always open Options (onboarding).
+ * Updates → open only when OPTIONS_REVISION was bumped for new Settings UI.
+ * First encounter of the revision system seeds storage without opening a tab.
+ */
 chrome.runtime.onInstalled.addListener((details) => {
-    if (details.reason === 'install' || details.reason === 'update') {
-        chrome.runtime.openOptionsPage();
-    }
+    void (async () => {
+        if (details.reason === 'install') {
+            chrome.runtime.openOptionsPage();
+            await saveLastSeenOptionsRevision(OPTIONS_REVISION);
+            return;
+        }
+
+        if (details.reason !== 'update') return;
+
+        const lastSeen = await loadLastSeenOptionsRevision();
+        if (lastSeen == null) {
+            // Existing installs before OPTIONS_REVISION — don't nag once.
+            await saveLastSeenOptionsRevision(OPTIONS_REVISION);
+            return;
+        }
+
+        if (OPTIONS_REVISION > lastSeen) {
+            chrome.runtime.openOptionsPage();
+            await saveLastSeenOptionsRevision(OPTIONS_REVISION);
+        }
+    })();
 });
 
 // Drop stale armed flags when the tab navigates or closes; keep popup in sync.

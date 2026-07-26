@@ -49,6 +49,7 @@ import {
     PANEL_THEME_KEY,
     SHOW_CSS_CLASSES_KEY,
 } from '../shared/prefs';
+import { MessageType, Messages, parseExtensionMessage } from '../shared/messages';
 import './style.scss';
 
 const FROZEN_CLASS = 'StyleDetectiveOverlay--frozen';
@@ -551,7 +552,7 @@ class OverlayController {
         this.claimFrame = requestAnimationFrame(() => {
             this.claimFrame = null;
             void chrome.runtime
-                .sendMessage({ type: 'overlayClaim', instanceId: this.instanceId })
+                .sendMessage(Messages.overlayClaim(this.instanceId))
                 .catch(() => {
                     // Service worker may be asleep mid-navigation.
                 });
@@ -723,7 +724,7 @@ class OverlayController {
         if (e.key === 'Escape') {
             e.preventDefault();
             // Disarm every frame in the tab — local disable only closes this frame.
-            void chrome.runtime.sendMessage({ type: 'disarmOverlay' }).catch(() => {
+            void chrome.runtime.sendMessage(Messages.disarmOverlay()).catch(() => {
                 this.disable();
             });
             return;
@@ -750,7 +751,7 @@ class OverlayController {
         }
         if (key === 's') {
             e.preventDefault();
-            void chrome.runtime.sendMessage({ type: 'openOptions' });
+            void chrome.runtime.sendMessage(Messages.openOptions());
             return;
         }
 
@@ -837,18 +838,21 @@ const bootRoot = globalThis as typeof globalThis & { [BOOT_FLAG]?: boolean };
 if (!bootRoot[BOOT_FLAG]) {
     bootRoot[BOOT_FLAG] = true;
 
-    chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-        if (message?.type === 'pingOverlay') {
+    chrome.runtime.onMessage.addListener((raw, _sender, sendResponse) => {
+        const message = parseExtensionMessage(raw);
+        if (!message) return;
+
+        if (message.type === MessageType.PingOverlay) {
             sendResponse({ ok: true });
             return;
         }
 
-        if (message?.type === 'overlayClaim' && typeof message.instanceId === 'string') {
+        if (message.type === MessageType.OverlayClaim) {
             controller.onOverlayClaim(message.instanceId);
             return;
         }
 
-        if (message?.type === 'setOverlayArmed' && typeof message.armed === 'boolean') {
+        if (message.type === MessageType.SetOverlayArmed) {
             void ready
                 .then(() => {
                     controller.setArmed(message.armed);

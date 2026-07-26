@@ -584,6 +584,8 @@
         cursor: pointer !important;
         align-items: center !important;
         justify-content: center !important;
+        align-self: center !important;
+        transform: translateY(calc(0.025em - 1px)) !important;
         line-height: 1 !important;
         padding: 0 !important;
         color: var(--sd-copy-affordance) !important;

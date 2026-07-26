@@ -35,6 +35,23 @@ function wireStoreRateLink(): void {
     storeRateLink.href = `https://chromewebstore.google.com/detail/${chrome.runtime.id}`;
 }
 
+/**
+ * Toolbar can't inject into this page — register so the action shows unsupported.html.
+ * chrome.tabs often omits chrome-extension:// URLs without the `tabs` permission.
+ */
+async function registerRestrictedOptionsTab(): Promise<void> {
+    try {
+        const tab = await chrome.tabs.getCurrent();
+        await chrome.runtime.sendMessage({
+            type: 'registerRestrictedTab',
+            tabId: tab?.id,
+            url: tab?.url ?? chrome.runtime.getURL('src/options/options.html'),
+        });
+    } catch {
+        // Service worker may be waking; click path still shows unsupported.
+    }
+}
+
 function syncChipLinesRowVisibility(showClasses: boolean): void {
     if (!classesChipLinesRow) return;
     classesChipLinesRow.hidden = !showClasses;
@@ -131,3 +148,4 @@ wireClassesChipLinesInput();
 void syncThemeFromStorage();
 wireThemeRadios();
 wireStoreRateLink();
+void registerRestrictedOptionsTab();

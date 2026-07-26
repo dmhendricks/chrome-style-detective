@@ -6,8 +6,8 @@
  * broadcasts it so every frame stays in sync. Escape also disarms the whole tab
  * (not just the focused frame). A claim/yield broadcast keeps one visible pane.
  *
- * On restricted URLs (Web Store, chrome://, …) the action shows a small popup
- * instead of toggling — content scripts cannot run there.
+ * On restricted URLs (Web Store, chrome://, chrome-extension://, …) the action
+ * shows a small popup instead of toggling — content scripts cannot run there.
  */
 
 import { armedStorageKey, parseSessionArmed } from './shared/prefs';
@@ -35,6 +35,7 @@ function isRestrictedUrl(url: string): boolean {
         url.startsWith('https://chrome.google.com') ||
         url.startsWith('https://chromewebstore.google.com') ||
         url.startsWith('chrome://') ||
+        url.startsWith('chrome-extension://') ||
         url.startsWith('edge://') ||
         url.startsWith('about:') ||
         url.startsWith('devtools://')
@@ -60,9 +61,15 @@ async function syncActionUi(tabId: number, armed: boolean): Promise<void> {
 /**
  * Restricted tabs get a popup (message UI). Normal tabs clear the popup so
  * chrome.action.onClicked can toggle the overlay.
+ *
+ * When `url` is missing (common for chrome-extension:// without the `tabs`
+ * permission), leave the tab's popup alone — callers like the options page
+ * register explicitly.
  */
 async function syncActionPopup(tabId: number, url: string | undefined): Promise<void> {
-    const restricted = Boolean(url && isRestrictedUrl(url));
+    if (!url) return;
+
+    const restricted = isRestrictedUrl(url);
     try {
         await chrome.action.setPopup({
             tabId,
@@ -77,6 +84,31 @@ async function syncActionPopup(tabId: number, url: string | undefined): Promise<
         }
     } catch {
         // Tab may already be closed.
+    }
+}
+
+/** Force the unsupported popup for this tab and open it on the current gesture. */
+async function showUnsupportedForTab(tab: chrome.tabs.Tab): Promise<void> {
+    if (tab.id == null) return;
+
+    try {
+        await chrome.action.setPopup({ tabId: tab.id, popup: UNSUPPORTED_POPUP });
+        await chrome.action.setTitle({ tabId: tab.id, title: ACTION_TITLE_RESTRICTED });
+        await chrome.action.setIcon({ tabId: tab.id, path: ACTION_ICON_DEFAULT });
+        await chrome.action.openPopup(
+            tab.windowId != null ? { windowId: tab.windowId } : undefined,
+        );
+    } catch (err) {
+        console.warn('[Style Detective] openPopup failed, opening fallback window', err);
+        await chrome.windows
+            .create({
+                url: chrome.runtime.getURL(UNSUPPORTED_POPUP),
+                type: 'popup',
+                width: 340,
+                height: 280,
+                focused: true,
+            })
+            .catch(() => {});
     }
 }
 
@@ -164,8 +196,7 @@ async function toggleOverlay(tabId: number): Promise<void> {
     }
 
     if (!(await waitForOverlay(tabId))) {
-        console.warn('[Style Detective] content script did not become ready');
-        return;
+        throw new Error('content script did not become ready');
     }
 
     // After a cold inject, session storage may still say "armed" from a prior
@@ -211,6 +242,19 @@ chrome.runtime.onMessage.addListener((message, sender) => {
         return;
     }
 
+    // Options page (and similar) register so the toolbar shows unsupported.html
+    // even when chrome.tabs omits chrome-extension:// URLs.
+    if (message?.type === 'registerRestrictedTab') {
+        const tabId = sender.tab?.id ?? (typeof message.tabId === 'number' ? message.tabId : null);
+        const url =
+            (typeof message.url === 'string' && message.url) ||
+            sender.url ||
+            sender.tab?.url ||
+            'chrome-extension://restricted/';
+        if (tabId != null) void syncActionPopup(tabId, url);
+        return;
+    }
+
     if (message?.type === 'disarmOverlay') {
         const tabId = sender.tab?.id;
         if (tabId == null) return;
@@ -232,17 +276,37 @@ chrome.runtime.onMessage.addListener((message, sender) => {
 });
 
 chrome.action.onClicked.addListener((tab) => {
-    if (!tab?.id) {
-        return;
-    }
-    // Restricted tabs use setPopup (onClicked does not fire when a popup is set).
-    if (tab.url && isRestrictedUrl(tab.url)) {
+    const tabId = tab.id;
+    if (tabId == null) {
         return;
     }
 
-    void toggleOverlay(tab.id).catch((err) => {
-        console.warn('[Style Detective] toggle failed', err);
-    });
+    void (async () => {
+        let url = tab.url;
+        if (!url) {
+            try {
+                const fresh = await chrome.tabs.get(tabId);
+                url = fresh.url;
+            } catch {
+                // Tab may be gone.
+            }
+        }
+
+        if (url && isRestrictedUrl(url)) {
+            await showUnsupportedForTab(tab);
+            return;
+        }
+
+        try {
+            await toggleOverlay(tabId);
+        } catch (err) {
+            console.warn('[Style Detective] toggle failed', err);
+            // Injection is blocked on extension pages and other restricted surfaces.
+            if (!url || isRestrictedUrl(url)) {
+                await showUnsupportedForTab(tab);
+            }
+        }
+    })();
 });
 
 // Align popup state for the active tab when the worker wakes.

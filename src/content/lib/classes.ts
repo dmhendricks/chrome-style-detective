@@ -18,7 +18,7 @@ export function formatClassesForCopy(tokens: readonly string[]): string {
 
 /**
  * How many flex/wrap rows the chip container currently occupies (via offsetTop).
- * Used to cap the expanded list at two lines before showing "+N more".
+ * Used to cap the expanded list at three lines before showing "+N more".
  */
 export function countChipRows(container: HTMLElement): number {
     const tops = new Set<number>();

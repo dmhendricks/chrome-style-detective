@@ -38,8 +38,9 @@ Keyboard shortcuts while the viewer is active:
 - `F` to freeze or unfreeze the panel in place
 - `C` to copy a simple CSS definition for the selected element to the clipboard
 - `Shift+C` to copy the element's classes (space-separated)
+- `L` to show or hide the Classes row
 - `+` / `-` to increase or decrease the panel font size (`0` / zero resets to default)
 - `S` to open the settings page
 - `Esc` to close the viewer
 
-On elements with a `class` attribute, a **Classes** row appears below the header (expanded by default; expand/collapse is saved and shared across tabs). Click a chip or **Copy all** to copy classes. The header shows the tag and `#id` only. Turn on **Hide CSS Classes** in settings if you want a more compact panel (`Shift+C` still copies classes).
+On elements with a `class` attribute, a **Classes** row appears below the header with click-to-copy chips and **Copy All** (long lists cap at three lines with `+N more`). The header shows the tag and `#id` only. Hide the row anytime with **`L`** or **Hide CSS Classes** in settings (`Shift+C` still copies classes).

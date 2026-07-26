@@ -43,4 +43,4 @@ Keyboard shortcuts while the viewer is active:
 - `S` to open the settings page
 - `Esc` to close the viewer
 
-On elements with a `class` attribute, a **Classes** row appears below the header with click-to-copy chips and **Copy All** (long lists cap at three lines with `+N more`). The header shows the tag and `#id` only. Hide the row anytime with **`L`** or **Hide CSS Classes** in settings (`Shift+C` still copies classes).
+On elements with a `class` attribute, a **Classes** row appears below the header with click-to-copy chips and **Copy All** (long lists cap at a configurable number of wrap lines — default 3 — with `+N more`). The header shows the tag and `#id` only. Toggle the row anytime with **`L`** or **Show CSS Classes** in settings (`Shift+C` still copies classes).

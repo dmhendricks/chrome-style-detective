@@ -8,9 +8,7 @@
 
 import { copyTextToClipboard } from './clipboard';
 import { notifyCopy } from './copy-feedback';
-
-const OVERLAY_ID = 'StyleDetectiveOverlay';
-const FROZEN_CLASS = 'StyleDetectiveOverlay--frozen';
+import { FROZEN_CLASS, OVERLAY_ID } from '../../shared/dom-ids';
 
 /** Tag names we construct, mapped to their element types for `el()`. */
 type TagName = keyof HTMLElementTagNameMap;

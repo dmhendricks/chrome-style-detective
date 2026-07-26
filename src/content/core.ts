@@ -189,6 +189,10 @@ class OverlayController {
         const el = eventTargetElement(e);
         if (!el || isInsidePanel(el)) return;
 
+        // mouseout fires when entering a descendant — that is not a leave.
+        const next = e.relatedTarget;
+        if (next instanceof Node && el.contains(next)) return;
+
         if (el === this.inspectedElement) {
             this.inspectedElement = null;
             this.clearHighlight();
@@ -588,7 +592,13 @@ class OverlayController {
 
     private inspectElement(el: HTMLElement): void {
         if (!this.armed || isInsidePanel(el)) return;
-        if (el === this.inspectedElement) return;
+
+        // Same target: still refresh computed styles so :hover / class toggles
+        // (e.g. hover-primary) don't leave the panel on stale colors.
+        if (el === this.inspectedElement) {
+            this.refreshInspectedStyles();
+            return;
+        }
 
         this.ensurePanel();
         this.claimOverlay();
@@ -602,6 +612,13 @@ class OverlayController {
         removeElement(TOAST_ID);
 
         this.inspectedElement = el;
+    }
+
+    /** Re-read computed style for the current target without rebuilding chrome. */
+    private refreshInspectedStyles(): void {
+        const el = this.inspectedElement;
+        if (!el?.isConnected || !document.defaultView) return;
+        updatePanel(document.defaultView.getComputedStyle(el, null), el);
     }
 
     private positionPanelAtPointer(e: { pageX: number; pageY: number }): void {

@@ -137,7 +137,7 @@ export function keepOverlayInViewport(block: HTMLElement): void {
 /** Match #RGB, #RRGGBB, or #RRGGBBAA hex tokens in a property value string. */
 const HEX_COLOR_RE = /#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/g;
 
-/** Expand #RGB and remap pure black so swatches stay visible on the panel. */
+/** Expand shorthand #RGB / #RGBA to six- or eight-digit hex for swatch fill. */
 function normalizeHexForSwatch(hex: string): string {
     let normalized = hex.toUpperCase();
 
@@ -150,10 +150,17 @@ function normalizeHexForSwatch(hex: string): string {
             normalized[2]! +
             normalized[3]! +
             normalized[3]!;
-    }
-
-    if (normalized === '#000000') {
-        normalized = '#FFFFFF';
+    } else if (normalized.length === 5) {
+        normalized =
+            '#' +
+            normalized[1]! +
+            normalized[1]! +
+            normalized[2]! +
+            normalized[2]! +
+            normalized[3]! +
+            normalized[3]! +
+            normalized[4]! +
+            normalized[4]!;
     }
 
     return normalized;

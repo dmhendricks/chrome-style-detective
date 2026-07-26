@@ -1,9 +1,8 @@
 /*!
  * Style Detective — typed DOM construction helpers.
  *
- * Replaces the original string-concatenated `innerHTML` with typed element
- * builders, so nothing on the host page can be affected by unescaped markup and
- * the panel's structure is expressed as real nodes.
+ * Builds overlay UI with real DOM nodes (never string-concatenated HTML) so
+ * host-page markup cannot leak into the panel and nothing collides with the page.
  */
 
 import { copyTextToClipboard } from './clipboard';
@@ -39,8 +38,7 @@ export function el<K extends TagName>(
 }
 
 /**
- * Build the small colour swatch shown next to a colour value. Replaces the
- * inline-`<span style=...>` HTML the original `RGBToHex` returned as a string.
+ * Build the small colour swatch shown next to a colour value.
  * Semi-transparent fills sit on a light checkerboard so they match page paint
  * better than compositing onto the dark panel chrome.
  */
@@ -219,10 +217,54 @@ function copyAffordance(doc: Document): HTMLSpanElement {
     const affordance = doc.createElement('span');
     affordance.className = 'StyleDetectiveOverlay__copy-affordance';
     affordance.title = 'Copy';
-    affordance.append(clipboardIcon(doc));
+    // Decorative — the value group is the accessible control when frozen.
     affordance.setAttribute('aria-hidden', 'true');
+    affordance.append(clipboardIcon(doc));
 
     return affordance;
+}
+
+function performFrozenCopy(
+    doc: Document,
+    affordance: HTMLElement,
+    copyValue: string,
+): void {
+    void copyTextToClipboard(copyValue).then(
+        () => {
+            affordance.replaceChildren(checkIcon(doc));
+            window.setTimeout(() => {
+                affordance.replaceChildren(clipboardIcon(doc));
+            }, 900);
+        },
+        () => {
+            notifyCopy('Could not copy to clipboard', 'default');
+        },
+    );
+}
+
+function applyCopyGroupAccessibility(group: HTMLElement, frozen: boolean): void {
+    if (frozen) {
+        group.setAttribute('role', 'button');
+        group.setAttribute('tabindex', '0');
+        group.setAttribute('aria-label', 'Copy value');
+    } else {
+        group.removeAttribute('role');
+        group.removeAttribute('tabindex');
+        group.removeAttribute('aria-label');
+    }
+}
+
+/**
+ * When the overlay freezes, value groups become keyboard-activatable copy
+ * buttons. Unfreeze removes them from the tab order so live hover isn't noisy.
+ */
+export function syncCopyValueAccessibility(doc: Document = document): void {
+    const frozen = isOverlayFrozen(doc);
+    for (const group of doc.querySelectorAll<HTMLElement>(
+        '.StyleDetectiveOverlay__value-group',
+    )) {
+        applyCopyGroupAccessibility(group, frozen);
+    }
 }
 
 function attachFrozenCopy(
@@ -231,21 +273,21 @@ function attachFrozenCopy(
     affordance: HTMLElement,
     copyValue: string,
 ): void {
+    applyCopyGroupAccessibility(target, isOverlayFrozen(doc));
+
     target.addEventListener('click', (e) => {
         if (!isOverlayFrozen(doc)) return;
         e.preventDefault();
         e.stopPropagation();
-        void copyTextToClipboard(copyValue).then(
-            () => {
-                affordance.replaceChildren(checkIcon(doc));
-                window.setTimeout(() => {
-                    affordance.replaceChildren(clipboardIcon(doc));
-                }, 900);
-            },
-            () => {
-                notifyCopy('Could not copy to clipboard', 'default');
-            },
-        );
+        performFrozenCopy(doc, affordance, copyValue);
+    });
+
+    target.addEventListener('keydown', (e) => {
+        if (!isOverlayFrozen(doc)) return;
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        e.stopPropagation();
+        performFrozenCopy(doc, affordance, copyValue);
     });
 }
 

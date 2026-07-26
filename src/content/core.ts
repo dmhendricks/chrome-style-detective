@@ -9,7 +9,7 @@
 
 import { copyTextToClipboard } from './lib/clipboard';
 import { setCopyNotifier } from './lib/copy-feedback';
-import { keepOverlayInViewport } from './lib/dom';
+import { keepOverlayInViewport, syncCopyValueAccessibility } from './lib/dom';
 import {
     CSS_CATEGORIES,
     isPropertyEnabled,
@@ -320,6 +320,7 @@ class OverlayController {
 
         this.removeHoverListeners();
         block.classList.add(FROZEN_CLASS);
+        syncCopyValueAccessibility();
         requestAnimationFrame(() => refreshSelectorOverflow());
 
         return true;
@@ -332,6 +333,7 @@ class OverlayController {
         this.clearHighlight();
         this.inspectedElement = null;
         block.classList.remove(FROZEN_CLASS);
+        syncCopyValueAccessibility();
         collapseSelectorHeader();
         this.addHoverListeners();
         this.inspectElementUnderCursor();
@@ -571,6 +573,7 @@ class OverlayController {
         if (block) {
             const wasFrozen = block.classList.contains(FROZEN_CLASS);
             block.classList.remove(FROZEN_CLASS);
+            if (wasFrozen) syncCopyValueAccessibility();
             block.style.display = 'none';
             if (wasFrozen && !this.haveHoverListeners) {
                 collapseSelectorHeader();

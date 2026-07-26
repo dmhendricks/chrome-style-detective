@@ -116,28 +116,88 @@ export async function savePanelFontSize(size: number): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Hide CSS Classes section
+// Show CSS Classes section
 // ---------------------------------------------------------------------------
 
-/** Hide the Classes chip row to save panel space. Default: false (section shown). */
-export const HIDE_CSS_CLASSES_KEY = 'hideCssClasses';
+/** Show the Classes chip row. Default: true. */
+export const SHOW_CSS_CLASSES_KEY = 'showCssClasses';
 
-export const hideCssClassesSchema = z.boolean();
+/** Legacy key — migrated to `showCssClasses` on read (`!hideCssClasses`). */
+const LEGACY_HIDE_CSS_CLASSES_KEY = 'hideCssClasses';
 
-export const HIDE_CSS_CLASSES_DEFAULT = false;
+export const showCssClassesSchema = z.boolean();
 
-export function parseHideCssClasses(value: unknown): boolean {
-    const result = hideCssClassesSchema.safeParse(value);
-    return result.success ? result.data : HIDE_CSS_CLASSES_DEFAULT;
+export const SHOW_CSS_CLASSES_DEFAULT = true;
+
+export function parseShowCssClasses(value: unknown): boolean {
+    const result = showCssClassesSchema.safeParse(value);
+    return result.success ? result.data : SHOW_CSS_CLASSES_DEFAULT;
 }
 
-export async function loadHideCssClasses(): Promise<boolean> {
-    return loadLocalPref(HIDE_CSS_CLASSES_KEY, hideCssClassesSchema, HIDE_CSS_CLASSES_DEFAULT);
+export async function loadShowCssClasses(): Promise<boolean> {
+    const stored = await chrome.storage.local.get([
+        SHOW_CSS_CLASSES_KEY,
+        LEGACY_HIDE_CSS_CLASSES_KEY,
+    ]);
+
+    if (SHOW_CSS_CLASSES_KEY in stored) {
+        const result = showCssClassesSchema.safeParse(stored[SHOW_CSS_CLASSES_KEY]);
+        if (result.success) return result.data;
+        await chrome.storage.local.set({ [SHOW_CSS_CLASSES_KEY]: SHOW_CSS_CLASSES_DEFAULT });
+        return SHOW_CSS_CLASSES_DEFAULT;
+    }
+
+    // Migrate inverted legacy pref once, then drop the old key.
+    if (LEGACY_HIDE_CSS_CLASSES_KEY in stored) {
+        const legacy = z.boolean().safeParse(stored[LEGACY_HIDE_CSS_CLASSES_KEY]);
+        const shown = legacy.success ? !legacy.data : SHOW_CSS_CLASSES_DEFAULT;
+        await chrome.storage.local.set({ [SHOW_CSS_CLASSES_KEY]: shown });
+        await chrome.storage.local.remove(LEGACY_HIDE_CSS_CLASSES_KEY);
+        return shown;
+    }
+
+    return SHOW_CSS_CLASSES_DEFAULT;
 }
 
-export async function saveHideCssClasses(hidden: boolean): Promise<void> {
+export async function saveShowCssClasses(shown: boolean): Promise<void> {
     await chrome.storage.local.set({
-        [HIDE_CSS_CLASSES_KEY]: hideCssClassesSchema.parse(hidden),
+        [SHOW_CSS_CLASSES_KEY]: showCssClassesSchema.parse(shown),
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Classes chip wrap lines (before "+N more")
+// ---------------------------------------------------------------------------
+
+/** How many wrap lines of class chips to show before "+N more". Default: 3. */
+export const CLASSES_CHIP_LINES_KEY = 'classesChipLines';
+
+export const CLASSES_CHIP_LINES_DEFAULT = 3;
+export const CLASSES_CHIP_LINES_MIN = 1;
+export const CLASSES_CHIP_LINES_MAX = 9;
+
+export const classesChipLinesSchema = z
+    .number()
+    .finite()
+    .transform((n) => Math.round(n))
+    .pipe(z.number().int().min(CLASSES_CHIP_LINES_MIN).max(CLASSES_CHIP_LINES_MAX));
+
+export function parseClassesChipLines(value: unknown): number {
+    const result = classesChipLinesSchema.safeParse(value);
+    return result.success ? result.data : CLASSES_CHIP_LINES_DEFAULT;
+}
+
+export async function loadClassesChipLines(): Promise<number> {
+    return loadLocalPref(
+        CLASSES_CHIP_LINES_KEY,
+        classesChipLinesSchema,
+        CLASSES_CHIP_LINES_DEFAULT,
+    );
+}
+
+export async function saveClassesChipLines(lines: number): Promise<void> {
+    await chrome.storage.local.set({
+        [CLASSES_CHIP_LINES_KEY]: classesChipLinesSchema.parse(lines),
     });
 }
 

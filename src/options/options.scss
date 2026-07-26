@@ -306,6 +306,36 @@ main {
     outline-offset: 2px;
 }
 
+.settings-number {
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    width: 4.75rem;
+    margin: 0;
+    padding: 0.45rem 0.35rem;
+    font-family: var(--sd-font-mono);
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--sd-text);
+    text-align: center;
+    background: var(--sd-kbd-bg);
+    border: 1px solid var(--sd-kbd-border);
+    border-radius: 0.5rem;
+}
+
+.settings-number::-webkit-inner-spin-button {
+    opacity: 1;
+    cursor: pointer;
+}
+
+.settings-number:focus-visible {
+    outline: 2px solid var(--sd-link);
+    outline-offset: 2px;
+}
+
+.settings__row[hidden] {
+    display: none !important;
+}
+
 .theme-seg {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -518,6 +548,10 @@ code {
     background: var(--sd-kbd-bg);
     border: 1px solid var(--sd-kbd-border);
     border-radius: 0.3rem;
+}
+
+.nobr {
+    white-space: nowrap;
 }
 
 // —— Shortcuts ————————————————————————————————————————————————————————————

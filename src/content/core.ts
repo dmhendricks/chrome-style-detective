@@ -19,9 +19,10 @@ import {
     createBlock,
     collapseSelectorHeader,
     refreshSelectorOverflow,
-    isHideCssClasses,
+    isShowCssClasses,
+    setClassesChipLines,
     setClassesCopyNotifier,
-    setHideCssClasses,
+    setShowCssClasses,
     updateClassesPanel,
     updateHeader,
     updatePanel,
@@ -29,21 +30,24 @@ import {
 import { formatClassesForCopy, parseClassTokens } from './lib/classes';
 import {
     clampPanelFontSize,
-    loadHideCssClasses,
+    loadClassesChipLines,
     loadPanelFontSize,
     loadPanelThemePreference,
-    parseHideCssClasses,
+    loadShowCssClasses,
+    parseClassesChipLines,
     parsePanelFontSize,
     parsePanelTheme,
+    parseShowCssClasses,
     resolvePanelTheme,
-    saveHideCssClasses,
     savePanelFontSize,
+    saveShowCssClasses,
     type PanelThemePreference,
-    HIDE_CSS_CLASSES_KEY,
+    CLASSES_CHIP_LINES_KEY,
     PANEL_FONT_SIZE_DEFAULT,
     PANEL_FONT_SIZE_KEY,
     PANEL_FONT_SIZE_STEP,
     PANEL_THEME_KEY,
+    SHOW_CSS_CLASSES_KEY,
 } from '../shared/prefs';
 import './style.scss';
 
@@ -221,7 +225,8 @@ class OverlayController {
         await Promise.all([
             this.loadPanelFontSizePref(),
             this.loadPanelThemePref(),
-            this.loadHideCssClassesPref(),
+            this.loadShowCssClassesPref(),
+            this.loadClassesChipLinesPref(),
         ]);
         this.watchPrefs();
     }
@@ -336,8 +341,12 @@ class OverlayController {
         this.bindSystemThemeListener();
     }
 
-    private async loadHideCssClassesPref(): Promise<void> {
-        setHideCssClasses(await loadHideCssClasses());
+    private async loadShowCssClassesPref(): Promise<void> {
+        setShowCssClasses(await loadShowCssClasses());
+    }
+
+    private async loadClassesChipLinesPref(): Promise<void> {
+        setClassesChipLines(await loadClassesChipLines());
     }
 
     private watchPrefs(): void {
@@ -351,12 +360,19 @@ class OverlayController {
                 this.applyPanelTheme();
             }
 
-            const hideClassesChange = changes[HIDE_CSS_CLASSES_KEY];
-            if (hideClassesChange) {
-                setHideCssClasses(parseHideCssClasses(hideClassesChange.newValue));
+            const showClassesChange = changes[SHOW_CSS_CLASSES_KEY];
+            if (showClassesChange) {
+                setShowCssClasses(parseShowCssClasses(showClassesChange.newValue));
                 if (this.inspectedElement?.isConnected) {
                     updateClassesPanel(this.inspectedElement);
                 }
+                const block = document.getElementById(OVERLAY_ID);
+                if (block) keepOverlayInViewport(block);
+            }
+
+            const chipLinesChange = changes[CLASSES_CHIP_LINES_KEY];
+            if (chipLinesChange) {
+                setClassesChipLines(parseClassesChipLines(chipLinesChange.newValue));
                 const block = document.getElementById(OVERLAY_ID);
                 if (block) keepOverlayInViewport(block);
             }
@@ -722,7 +738,7 @@ class OverlayController {
         }
         if (key === 'l') {
             e.preventDefault();
-            this.toggleHideCssClasses();
+            this.toggleShowCssClasses();
             return;
         }
         if (key === 's') {
@@ -747,11 +763,11 @@ class OverlayController {
         }
     }
 
-    private toggleHideCssClasses(): void {
-        const next = !isHideCssClasses();
-        setHideCssClasses(next);
-        void saveHideCssClasses(next);
-        this.flashMessage(next ? 'Classes hidden' : 'Classes shown', { tone: 'success' });
+    private toggleShowCssClasses(): void {
+        const next = !isShowCssClasses();
+        setShowCssClasses(next);
+        void saveShowCssClasses(next);
+        this.flashMessage(next ? 'Classes shown' : 'Classes hidden', { tone: 'success' });
         if (this.inspectedElement?.isConnected) {
             updateClassesPanel(this.inspectedElement);
         }

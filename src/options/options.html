@@ -83,26 +83,49 @@
                     </li>
                     <li class="settings__row">
                         <div class="settings__copy">
-                            <label class="settings__label" for="hideCssClasses"
-                                >Hide CSS Classes</label
+                            <label class="settings__label" for="showCssClasses"
+                                >Show CSS Classes</label
                             >
-                            <p class="settings__hint" id="hideCssClasses-hint">
-                                Remove the Classes row from the overlay to save space. Toggle anytime
-                                with <kbd>L</kbd> while inspecting. Class names stay available via
-                                <kbd>Shift+C</kbd>.
+                            <p class="settings__hint" id="showCssClasses-hint">
+                                Show a Classes row with clickable chips on elements that have
+                                classes. Toggle anytime with <kbd>L</kbd> while inspecting.
+                                <kbd>Shift+C</kbd> still copies classes when the row is hidden.
                             </p>
                         </div>
                         <label class="switch">
                             <input
                                 type="checkbox"
-                                id="hideCssClasses"
+                                id="showCssClasses"
                                 role="switch"
-                                aria-describedby="hideCssClasses-hint"
+                                aria-describedby="showCssClasses-hint"
+                                checked
                             />
                             <span class="switch__track" aria-hidden="true">
                                 <span class="switch__thumb"></span>
                             </span>
                         </label>
+                    </li>
+                    <li class="settings__row" id="classesChipLines-row">
+                        <div class="settings__copy">
+                            <label class="settings__label" for="classesChipLines"
+                                >CSS Class Lines</label
+                            >
+                            <p class="settings__hint" id="classesChipLines-hint">
+                                Number of lines of CSS classes to display before collapsing into
+                                <code class="nobr">+N more</code>. Default is 3.
+                            </p>
+                        </div>
+                        <input
+                            class="settings-number"
+                            type="number"
+                            id="classesChipLines"
+                            min="1"
+                            max="9"
+                            step="1"
+                            value="3"
+                            inputmode="numeric"
+                            aria-describedby="classesChipLines-hint"
+                        />
                     </li>
                 </ul>
             </section>
@@ -177,7 +200,7 @@
                     </li>
                     <li>
                         <kbd>L</kbd>
-                        <span>Show / hide the Classes row (same as Hide CSS Classes in Settings)</span>
+                        <span>Show / hide the Classes row (same as Show CSS Classes in Settings)</span>
                     </li>
                     <li>
                         <kbd>+/-</kbd>

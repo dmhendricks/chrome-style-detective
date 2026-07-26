@@ -36,11 +36,16 @@ export interface InspectContext {
  * (`background-image` over `background-color`). Returns `'unknown'` when the
  * element uses a non-solid image (url/gradient) we cannot model for contrast.
  */
-function elementBackgroundContribution(
-    style: CSSStyleDeclaration,
+export type BackgroundSnapshot = {
+    backgroundColor: string;
+    backgroundImage: string;
+};
+
+export function backgroundContributionFromSnapshot(
+    snap: BackgroundSnapshot,
 ): RgbaColor[] | 'unknown' {
     const layers: RgbaColor[] = [];
-    const image = style.backgroundImage.trim();
+    const image = snap.backgroundImage.trim();
 
     if (image && image !== 'none') {
         const solidImage = parseCssColor(image);
@@ -52,7 +57,7 @@ function elementBackgroundContribution(
         }
     }
 
-    const bg = parseCssColor(style.backgroundColor);
+    const bg = parseCssColor(snap.backgroundColor);
     if (bg && !isFullyTransparent(bg)) {
         layers.push(bg);
     }
@@ -61,20 +66,17 @@ function elementBackgroundContribution(
 }
 
 /**
- * Walk the element and ancestors, compositing solid background paints.
- * Returns null when contrast would be a guess (no opaque base, or a
- * non-solid background-image in the way).
+ * Composite solid paints from element→ancestor snapshots (nearest first).
+ * Same rules as the live DOM walk — usable from field-audit without a window.
  */
-export function effectiveBackgroundColor(el: Element): RgbaColor | null {
+export function effectiveBackgroundFromSnapshots(
+    snapshotsTopFirst: readonly BackgroundSnapshot[],
+): RgbaColor | null {
     const layers: RgbaColor[] = [];
-    let node: Element | null = el;
 
-    while (node) {
-        const contrib = elementBackgroundContribution(getComputedStyle(node));
-        if (contrib === 'unknown') {
-            // This box paints something we can't resolve (photo/gradient).
-            return null;
-        }
+    for (const snap of snapshotsTopFirst) {
+        const contrib = backgroundContributionFromSnapshot(snap);
+        if (contrib === 'unknown') return null;
 
         for (const layer of contrib) {
             layers.push(layer);
@@ -82,11 +84,30 @@ export function effectiveBackgroundColor(el: Element): RgbaColor | null {
                 return compositeBackgroundLayers(layers);
             }
         }
-
-        node = node.parentElement;
     }
 
     return compositeBackgroundLayers(layers);
+}
+
+/**
+ * Walk the element and ancestors, compositing solid background paints.
+ * Returns null when contrast would be a guess (no opaque base, or a
+ * non-solid background-image in the way).
+ */
+export function effectiveBackgroundColor(el: Element): RgbaColor | null {
+    const snapshots: BackgroundSnapshot[] = [];
+    let node: Element | null = el;
+
+    while (node) {
+        const style = getComputedStyle(node);
+        snapshots.push({
+            backgroundColor: style.backgroundColor,
+            backgroundImage: style.backgroundImage,
+        });
+        node = node.parentElement;
+    }
+
+    return effectiveBackgroundFromSnapshots(snapshots);
 }
 
 function elementTextContrast(ctx: InspectContext) {

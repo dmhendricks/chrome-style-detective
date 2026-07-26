@@ -488,6 +488,22 @@
         border: 1px solid #555 !important;
         border-radius: 2px !important;
         vertical-align: -0.15em !important;
+        // Light checkerboard so translucent fills aren't composited on the
+        // dark panel (which makes rgba(..., 0.1) look falsely saturated).
+        background-color: #fff !important;
+        background-image: linear-gradient(45deg, #d0d0d0 25%, transparent 25%),
+            linear-gradient(-45deg, #d0d0d0 25%, transparent 25%),
+            linear-gradient(45deg, transparent 75%, #d0d0d0 75%),
+            linear-gradient(-45deg, transparent 75%, #d0d0d0 75%) !important;
+        background-size: 6px 6px !important;
+        background-position: 0 0, 0 3px, 3px -3px, -3px 0 !important;
+        overflow: hidden !important;
+    }
+
+    .StyleDetectiveOverlay__color-swatch-fill {
+        display: block !important;
+        width: 100% !important;
+        height: 100% !important;
     }
 
     .StyleDetectiveOverlay__value-group {

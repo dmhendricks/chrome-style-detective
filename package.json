@@ -1,7 +1,7 @@
 {
   "name": "style-detective",
   "private": true,
-  "version": "0.9.0",
+  "version": "1.0.0",
   "type": "module",
   "description": "Hover over any HTML element to inspect its computed CSS in a floating panel.",
   "license": "GPL-2.0",
@@ -20,7 +20,8 @@
   },
   "allowScripts": {
     "@parcel/watcher": true,
-    "fsevents": true
+    "fsevents": true,
+    "esbuild": true
   },
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.7.1",
@@ -30,7 +31,7 @@
     "@types/node": "^26.1.1",
     "eslint": "^10.8.0",
     "eslint-plugin-unicorn": "^72.0.0",
-    "globals": "^17.7.0",
+    "globals": "^17.8.0",
     "playwright": "^1.62.0",
     "prettier": "^3.9.5",
     "sass": "^1.102.0",

@@ -1,0 +1,15 @@
+# Field audit — pages to visit when you run: npm run audit:field
+#
+# One entry per line. Blank lines and # comments are ignored.
+#
+# Supported:
+#   https://example.com/     full http(s) URLs
+#   file:///.../page.html    absolute file URLs
+#   demo.html                path relative to the repo root (converted to file://)
+#
+# Auth-protected sites use a fresh Chromium profile (no your cookies).
+
+demo.html
+https://posthog.com
+https://docs.imgproxy.net/usage/getting_info
+https://tailwindcss.com/docs/display

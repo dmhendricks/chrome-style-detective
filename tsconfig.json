@@ -12,8 +12,8 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "types": ["chrome", "node", "vite/client"]
+    "types": ["chrome", "node", "vite/client", "vitest/globals"]
   },
-  "include": ["src/**/*.ts", "vite.config.ts"],
+  "include": ["src/**/*.ts", "vite.config.ts", "vitest.config.ts", "audits/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

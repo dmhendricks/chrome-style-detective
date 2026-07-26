@@ -8,7 +8,7 @@
  */
 
 import { copyTextToClipboard } from './lib/clipboard';
-import { elementClassName, keepOverlayInViewport } from './lib/dom';
+import { elementClassName, keepOverlayInViewport, setValueCopyNotifier } from './lib/dom';
 import {
     CSS_CATEGORIES,
     isPropertyEnabled,
@@ -219,9 +219,11 @@ class OverlayController {
 
     /** Load font size, theme, and feature prefs before the first enable(). */
     async loadPrefs(): Promise<void> {
-        setClassesCopyNotifier((message, tone) => {
+        const flashCopy = (message: string, tone?: 'default' | 'success') => {
             this.flashMessage(message, { tone: tone ?? 'default' });
-        });
+        };
+        setClassesCopyNotifier(flashCopy);
+        setValueCopyNotifier(flashCopy);
         await Promise.all([
             this.loadPanelFontSizePref(),
             this.loadPanelThemePref(),

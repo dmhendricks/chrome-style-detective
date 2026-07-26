@@ -18,13 +18,14 @@ import { countChipRows, formatClassesForCopy, parseClassTokens } from './classes
 import { copyTextToClipboard } from './clipboard';
 import { notifyCopy } from './copy-feedback';
 import { el, isOverlayFrozen, keepOverlayInViewport, selectorLabel, setValueContent } from './dom';
+import { OVERLAY_ID } from '../../shared/dom-ids';
 
-const ID_PREFIX = 'StyleDetectiveOverlay__';
-const ROW_HIDDEN = 'StyleDetectiveOverlay__row--hidden';
-const CATEGORY_HIDDEN = 'StyleDetectiveOverlay__category--hidden';
-const HEADER_EXPANDABLE = 'StyleDetectiveOverlay__header--expandable';
-const HEADER_EXPANDED = 'StyleDetectiveOverlay__header--expanded';
-const CLASSES_HIDDEN = 'StyleDetectiveOverlay__classes--hidden';
+const ID_PREFIX = `${OVERLAY_ID}__`;
+const ROW_HIDDEN = `${OVERLAY_ID}__row--hidden`;
+const CATEGORY_HIDDEN = `${OVERLAY_ID}__category--hidden`;
+const HEADER_EXPANDABLE = `${OVERLAY_ID}__header--expandable`;
+const HEADER_EXPANDED = `${OVERLAY_ID}__header--expanded`;
+const CLASSES_HIDDEN = `${OVERLAY_ID}__classes--hidden`;
 
 /** Cached DOM nodes for a property row, filled once in createBlock(). */
 interface PropertyRow {
@@ -323,11 +324,11 @@ export function updatePanel(style: CSSStyleDeclaration, el: HTMLElement): void {
 }
 
 function panelHeader(): HTMLElement | null {
-    return document.querySelector('#StyleDetectiveOverlay > h1');
+    return document.querySelector(`#${OVERLAY_ID} > h1`);
 }
 
 function panelSelector(): HTMLElement | null {
-    return document.querySelector('#StyleDetectiveOverlay .StyleDetectiveOverlay__selector');
+    return document.querySelector(`#${OVERLAY_ID} .${OVERLAY_ID}__selector`);
 }
 
 /** Collapse the header and mark whether the clamped text overflows (clickable when frozen). */
@@ -371,7 +372,7 @@ function toggleSelectorExpanded(header: HTMLElement): void {
     header.classList.toggle(HEADER_EXPANDED, expanding);
     header.title = expanding ? 'Click to collapse' : 'Click to expand';
 
-    const block = document.getElementById('StyleDetectiveOverlay');
+    const block = document.getElementById(OVERLAY_ID);
     if (block) keepOverlayInViewport(block);
 }
 
@@ -453,7 +454,7 @@ export function createBlock(doc: Document): HTMLDivElement {
     rebuildFooterShortcuts();
 
     return el(doc, 'div', {
-        id: 'StyleDetectiveOverlay',
+        id: OVERLAY_ID,
         children: [header, classesSection, center, footer],
     });
 }

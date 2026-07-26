@@ -18,7 +18,6 @@ import {
     isFullyTransparent,
     parseCssColor,
     removeExtraFloat,
-    rgbToHex,
     textContrast,
     type ContrastTone,
     type RgbaColor,
@@ -211,7 +210,7 @@ function borderSide(ctx: InspectContext, side: string): string {
         ' ' +
         ctx.get(`border-${side}-style`) +
         ' ' +
-        rgbToHex(ctx.get(`border-${side}-color`))
+        formatCssColorDisplay(ctx.get(`border-${side}-color`))
     );
 }
 

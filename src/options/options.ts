@@ -6,18 +6,18 @@
  */
 
 import {
+    loadHideCssClasses,
     loadPanelThemePreference,
-    loadUtilityFirstExtras,
+    parseHideCssClasses,
     parsePanelTheme,
-    parseUtilityFirstExtras,
+    saveHideCssClasses,
     savePanelThemePreference,
-    saveUtilityFirstExtras,
     type PanelThemePreference,
+    HIDE_CSS_CLASSES_KEY,
     PANEL_THEME_KEY,
-    UTILITY_FIRST_EXTRAS_KEY,
 } from '../shared/prefs';
 
-const utilityFirstToggle = document.querySelector<HTMLInputElement>('#utilityFirstExtras');
+const hideCssClassesToggle = document.querySelector<HTMLInputElement>('#hideCssClasses');
 const themeRadios = document.querySelectorAll<HTMLInputElement>('input[name="panelTheme"]');
 const storeRateLink = document.querySelector<HTMLAnchorElement>('#storeRateLink');
 
@@ -27,16 +27,16 @@ function wireStoreRateLink(): void {
     storeRateLink.href = `https://chromewebstore.google.com/detail/${chrome.runtime.id}`;
 }
 
-async function syncUtilityFirstFromStorage(): Promise<void> {
-    if (!utilityFirstToggle) return;
-    utilityFirstToggle.checked = await loadUtilityFirstExtras();
+async function syncHideCssClassesFromStorage(): Promise<void> {
+    if (!hideCssClassesToggle) return;
+    hideCssClassesToggle.checked = await loadHideCssClasses();
 }
 
-function wireUtilityFirstToggle(): void {
-    if (!utilityFirstToggle) return;
+function wireHideCssClassesToggle(): void {
+    if (!hideCssClassesToggle) return;
 
-    utilityFirstToggle.addEventListener('change', () => {
-        void saveUtilityFirstExtras(utilityFirstToggle.checked);
+    hideCssClassesToggle.addEventListener('change', () => {
+        void saveHideCssClasses(hideCssClassesToggle.checked);
     });
 }
 
@@ -62,9 +62,9 @@ function wireThemeRadios(): void {
 chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
 
-    const utilityChange = changes[UTILITY_FIRST_EXTRAS_KEY];
-    if (utilityChange && utilityFirstToggle) {
-        utilityFirstToggle.checked = parseUtilityFirstExtras(utilityChange.newValue);
+    const hideClassesChange = changes[HIDE_CSS_CLASSES_KEY];
+    if (hideClassesChange && hideCssClassesToggle) {
+        hideCssClassesToggle.checked = parseHideCssClasses(hideClassesChange.newValue);
     }
 
     const themeChange = changes[PANEL_THEME_KEY];
@@ -73,8 +73,8 @@ chrome.storage.onChanged.addListener((changes, area) => {
     }
 });
 
-void syncUtilityFirstFromStorage();
-wireUtilityFirstToggle();
+void syncHideCssClassesFromStorage();
+wireHideCssClassesToggle();
 void syncThemeFromStorage();
 wireThemeRadios();
 wireStoreRateLink();

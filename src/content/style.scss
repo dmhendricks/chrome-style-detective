@@ -32,7 +32,7 @@
 //             .StyleDetectiveOverlay__value-group
 //               .StyleDetectiveOverlay__value-text
 //               .StyleDetectiveOverlay__copy-affordance
-//     .StyleDetectiveOverlay__classes            utility-first class chips (optional)
+//     .StyleDetectiveOverlay__classes            class chips (when element has classes)
 //     &__footer                                 footer (#id)
 //       .StyleDetectiveOverlay__shortcuts        shortcut chip row
 //         .StyleDetectiveOverlay__shortcut       one kbd + label pair
@@ -91,6 +91,8 @@
     --sd-footer-bg: #fafbfc;
     --sd-kbd-bg: #f3f5f8;
     --sd-kbd-border: #c9d0da;
+    // Softer than kbd borders — chips sit denser and read heavy at #c9d0da.
+    --sd-chip-border: #e2e7ee;
     --sd-kbd-text: #3d4654;
     --sd-copy-affordance: #888;
     --sd-copy-affordance-hover: #555;
@@ -110,6 +112,7 @@
         --sd-footer-bg: #141920;
         --sd-kbd-bg: #252d3a;
         --sd-kbd-border: #3a4556;
+        --sd-chip-border: #3a4556;
         --sd-kbd-text: #e8edf4;
         --sd-copy-affordance: #6b7585;
         --sd-copy-affordance-hover: #b8c0cc;
@@ -301,7 +304,7 @@
         line-height: calc(var(--sd-font-size) * 1.25) !important;
         color: var(--sd-kbd-text) !important;
         background: var(--sd-kbd-bg) !important;
-        border: 1px solid var(--sd-kbd-border) !important;
+        border: 1px solid var(--sd-chip-border) !important;
         border-radius: calc(var(--sd-radius) - 2px) !important;
         cursor: pointer !important;
     }

@@ -205,21 +205,31 @@ export function formatAspectRatio(width: number, height: number): string {
     return `${rw}:${rh}`;
 }
 
-/** Extract the file name from a `url(...)` value (used for background images). */
+/** Extract the file name from a `url(...)` value (legacy helper). */
 export function getFileName(str: string): string {
     const start = str.search(/\(/) + 1;
     const end = str.search(/\)/);
 
-    str = str.slice(start, end);
+    str = str.slice(start, end).replaceAll(/['"]/g, '');
 
     const path = str.split('/');
 
     return path[path.length - 1] ?? '';
 }
 
+/** URLs inside one or more `url(...)` tokens, quotes stripped. */
+export function extractCssUrls(str: string): string[] {
+    const urls: string[] = [];
+    for (const match of str.matchAll(/url\(\s*(['"]?)(.*?)\1\s*\)/gi)) {
+        const inner = match[2]?.trim();
+        if (inner) urls.push(inner);
+    }
+    return urls;
+}
+
 /**
- * Panel display for background-image: hex for solid `color(...)` layers, file
- * name for urls, otherwise the raw computed string (gradients, etc.).
+ * Panel display for background-image: hex/rgba for solid `color(...)` layers,
+ * full URL(s) for url(...), otherwise the raw computed string (gradients, etc.).
  */
 export function formatBackgroundImage(str: string): string {
     const trimmed = str.trim();
@@ -228,7 +238,10 @@ export function formatBackgroundImage(str: string): string {
     const solid = parseCssColor(trimmed);
     if (solid) return formatCssColorDisplay(trimmed);
 
-    if (/url\s*\(/i.test(trimmed)) return getFileName(trimmed);
+    if (/url\s*\(/i.test(trimmed)) {
+        const urls = extractCssUrls(trimmed);
+        return urls.length > 0 ? urls.join(', ') : trimmed;
+    }
 
     return trimmed;
 }

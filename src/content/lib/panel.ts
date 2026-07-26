@@ -43,7 +43,8 @@ let classesToggle: HTMLButtonElement | null = null;
 let classesCopyAll: HTMLButtonElement | null = null;
 let classesChips: HTMLElement | null = null;
 let shortcutsContainer: HTMLElement | null = null;
-let utilityFirstExtrasEnabled = false;
+/** When true, the Classes row is suppressed (settings: Hide CSS Classes). */
+let hideCssClasses = false;
 /** Sticky open/closed for the Classes row (defaults open so chips are visible). */
 let classesExpanded = true;
 let classesShowAllChips = false;
@@ -65,11 +66,11 @@ export function setClassesCopyNotifier(notifier: CopyNotifier | null): void {
     copyNotifier = notifier;
 }
 
-/** Show or hide utility-first class tools and refresh footer shortcuts. */
-export function setUtilityFirstExtrasEnabled(enabled: boolean): void {
-    utilityFirstExtrasEnabled = enabled;
-    if (!enabled) hideClassesPanel();
-    rebuildFooterShortcuts();
+/** Apply the Hide CSS Classes preference (does not write storage). */
+export function setHideCssClasses(hidden: boolean): void {
+    if (hideCssClasses === hidden) return;
+    hideCssClasses = hidden;
+    if (hidden) hideClassesPanel();
 }
 
 /**
@@ -197,9 +198,9 @@ function refreshClassesChrome(doc: Document): void {
     }
 }
 
-/** Update the class chip panel for the hovered element (utility-first extras only). */
+/** Update the Classes row for the hovered element (hidden when opted out or empty). */
 export function updateClassesPanel(target: HTMLElement): void {
-    if (!utilityFirstExtrasEnabled || !classesRoot) {
+    if (hideCssClasses || !classesRoot) {
         hideClassesPanel();
         return;
     }
@@ -409,11 +410,8 @@ export function updateHeader(el: HTMLElement): void {
     const selector = panelSelector();
     if (!selector) return;
 
-    // With utility-first extras, classes live in the Classes row — keep the
-    // banner to tag + id so it stays short and readable.
-    selector.textContent = selectorLabel(el, {
-        includeClasses: !utilityFirstExtrasEnabled,
-    });
+    // Banner is tag + #id only; classes live in the Classes row.
+    selector.textContent = selectorLabel(el);
     // New element → collapse; measure overflow after the clamped layout settles.
     header?.classList.remove(HEADER_EXPANDED);
     requestAnimationFrame(() => refreshSelectorOverflow());

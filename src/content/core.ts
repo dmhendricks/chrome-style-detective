@@ -361,6 +361,12 @@ class OverlayController {
     }
 
     private watchPrefs(): void {
+        try {
+            if (!chrome.storage?.onChanged) return;
+        } catch {
+            return;
+        }
+
         chrome.storage.onChanged.addListener((changes, area) => {
             if (area !== 'local') return;
 
@@ -834,7 +840,9 @@ class OverlayController {
 // === Entry point ===
 
 const controller = new OverlayController();
-const ready = controller.loadPrefs();
+const ready = controller.loadPrefs().catch(() => {
+    // Prefs unavailable (orphaned script / restricted frame) — keep defaults.
+});
 
 const BOOT_FLAG = '__styleDetectiveBooted__';
 const bootRoot = globalThis as typeof globalThis & { [BOOT_FLAG]?: boolean };
@@ -842,31 +850,35 @@ const bootRoot = globalThis as typeof globalThis & { [BOOT_FLAG]?: boolean };
 if (!bootRoot[BOOT_FLAG]) {
     bootRoot[BOOT_FLAG] = true;
 
-    chrome.runtime.onMessage.addListener((raw, _sender, sendResponse) => {
-        const message = parseExtensionMessage(raw);
-        if (!message) return;
+    try {
+        chrome.runtime?.onMessage.addListener((raw, _sender, sendResponse) => {
+            const message = parseExtensionMessage(raw);
+            if (!message) return;
 
-        if (message.type === MessageType.PingOverlay) {
-            sendResponse({ ok: true });
-            return;
-        }
+            if (message.type === MessageType.PingOverlay) {
+                sendResponse({ ok: true });
+                return;
+            }
 
-        if (message.type === MessageType.OverlayClaim) {
-            controller.onOverlayClaim(message.instanceId);
-            return;
-        }
+            if (message.type === MessageType.OverlayClaim) {
+                controller.onOverlayClaim(message.instanceId);
+                return;
+            }
 
-        if (message.type === MessageType.SetOverlayArmed) {
-            void ready
-                .then(() => {
-                    controller.setArmed(message.armed);
-                    sendResponse({ ok: true, enabled: controller.isEnabled() });
-                })
-                .catch((err: unknown) => {
-                    console.error('[Style Detective] setArmed failed', err);
-                    sendResponse({ ok: false, error: String(err) });
-                });
-            return true;
-        }
-    });
+            if (message.type === MessageType.SetOverlayArmed) {
+                void ready
+                    .then(() => {
+                        controller.setArmed(message.armed);
+                        sendResponse({ ok: true, enabled: controller.isEnabled() });
+                    })
+                    .catch((err: unknown) => {
+                        console.error('[Style Detective] setArmed failed', err);
+                        sendResponse({ ok: false, error: String(err) });
+                    });
+                return true;
+            }
+        });
+    } catch {
+        // Orphaned content script after reload/update.
+    }
 }

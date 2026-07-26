@@ -10,6 +10,74 @@
 
 import { z } from 'zod';
 
+// ---------------------------------------------------------------------------
+// Storage helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * chrome.storage can be missing in orphaned content scripts (after reload) and
+ * some sandboxed / odd frames. Touching `.local` there throws and shows up in
+ * Manage Extensions — prefer defaults / no-ops instead.
+ */
+function localArea(): chrome.storage.StorageArea | undefined {
+    try {
+        return globalThis.chrome?.storage?.local;
+    } catch {
+        return undefined;
+    }
+}
+
+async function localGet(
+    keys: string | string[],
+): Promise<Record<string, unknown> | undefined> {
+    const local = localArea();
+    if (!local) return undefined;
+    try {
+        return (await local.get(keys)) as Record<string, unknown>;
+    } catch {
+        return undefined;
+    }
+}
+
+async function localSet(items: Record<string, unknown>): Promise<void> {
+    const local = localArea();
+    if (!local) return;
+    try {
+        await local.set(items);
+    } catch {
+        // Orphaned / restricted context — ignore.
+    }
+}
+
+async function localRemove(keys: string | string[]): Promise<void> {
+    const local = localArea();
+    if (!local) return;
+    try {
+        await local.remove(keys);
+    } catch {
+        // Orphaned / restricted context — ignore.
+    }
+}
+
+/**
+ * Read a local storage key, parse with Zod, and rewrite the default when the
+ * stored value is present but invalid. Missing keys stay missing (return default).
+ */
+async function loadLocalPref<T>(
+    key: string,
+    schema: z.ZodType<T>,
+    defaultValue: T,
+): Promise<T> {
+    const stored = await localGet(key);
+    if (!stored || !(key in stored)) return defaultValue;
+
+    const result = schema.safeParse(stored[key]);
+    if (result.success) return result.data;
+
+    await localSet({ [key]: defaultValue });
+    return defaultValue;
+}
+
 // =============================================================================
 // OPTIONS_REVISION — bump when Options **Settings** UI grows
 // =============================================================================
@@ -26,47 +94,24 @@ export const LAST_SEEN_OPTIONS_REVISION_KEY = 'lastSeenOptionsRevision';
 export const lastSeenOptionsRevisionSchema = z.number().int().nonnegative();
 
 export async function loadLastSeenOptionsRevision(): Promise<number | null> {
-    const stored = await chrome.storage.local.get(LAST_SEEN_OPTIONS_REVISION_KEY);
-    if (!(LAST_SEEN_OPTIONS_REVISION_KEY in stored)) return null;
+    const stored = await localGet(LAST_SEEN_OPTIONS_REVISION_KEY);
+    if (!stored || !(LAST_SEEN_OPTIONS_REVISION_KEY in stored)) return null;
 
     const result = lastSeenOptionsRevisionSchema.safeParse(
         stored[LAST_SEEN_OPTIONS_REVISION_KEY],
     );
     if (result.success) return result.data;
 
-    await chrome.storage.local.set({
+    await localSet({
         [LAST_SEEN_OPTIONS_REVISION_KEY]: OPTIONS_REVISION,
     });
     return OPTIONS_REVISION;
 }
 
 export async function saveLastSeenOptionsRevision(revision: number): Promise<void> {
-    await chrome.storage.local.set({
+    await localSet({
         [LAST_SEEN_OPTIONS_REVISION_KEY]: lastSeenOptionsRevisionSchema.parse(revision),
     });
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Read a local storage key, parse with Zod, and rewrite the default when the
- * stored value is present but invalid. Missing keys stay missing (return default).
- */
-async function loadLocalPref<T>(
-    key: string,
-    schema: z.ZodType<T>,
-    defaultValue: T,
-): Promise<T> {
-    const stored = await chrome.storage.local.get(key);
-    if (!(key in stored)) return defaultValue;
-
-    const result = schema.safeParse(stored[key]);
-    if (result.success) return result.data;
-
-    await chrome.storage.local.set({ [key]: defaultValue });
-    return defaultValue;
 }
 
 // ---------------------------------------------------------------------------
@@ -92,7 +137,7 @@ export async function loadPanelThemePreference(): Promise<PanelThemePreference> 
 }
 
 export async function savePanelThemePreference(theme: PanelThemePreference): Promise<void> {
-    await chrome.storage.local.set({ [PANEL_THEME_KEY]: panelThemeSchema.parse(theme) });
+    await localSet({ [PANEL_THEME_KEY]: panelThemeSchema.parse(theme) });
 }
 
 /** Resolve a stored preference to the concrete scheme applied to the overlay. */
@@ -131,26 +176,26 @@ export function parsePanelFontSize(value: unknown): number {
 }
 
 export async function loadPanelFontSize(): Promise<number> {
-    const stored = await chrome.storage.local.get(PANEL_FONT_SIZE_KEY);
-    if (!(PANEL_FONT_SIZE_KEY in stored)) return PANEL_FONT_SIZE_DEFAULT;
+    const stored = await localGet(PANEL_FONT_SIZE_KEY);
+    if (!stored || !(PANEL_FONT_SIZE_KEY in stored)) return PANEL_FONT_SIZE_DEFAULT;
 
     const raw = stored[PANEL_FONT_SIZE_KEY];
     const result = panelFontSizeSchema.safeParse(raw);
     if (result.success) {
         // Heal out-of-band writes that still clamp (e.g. float → int).
         if (raw !== result.data) {
-            await chrome.storage.local.set({ [PANEL_FONT_SIZE_KEY]: result.data });
+            await localSet({ [PANEL_FONT_SIZE_KEY]: result.data });
         }
         return result.data;
     }
 
-    await chrome.storage.local.set({ [PANEL_FONT_SIZE_KEY]: PANEL_FONT_SIZE_DEFAULT });
+    await localSet({ [PANEL_FONT_SIZE_KEY]: PANEL_FONT_SIZE_DEFAULT });
     return PANEL_FONT_SIZE_DEFAULT;
 }
 
 export async function savePanelFontSize(size: number): Promise<void> {
     const next = panelFontSizeSchema.parse(size);
-    await chrome.storage.local.set({ [PANEL_FONT_SIZE_KEY]: next });
+    await localSet({ [PANEL_FONT_SIZE_KEY]: next });
 }
 
 // ---------------------------------------------------------------------------
@@ -173,15 +218,13 @@ export function parseShowCssClasses(value: unknown): boolean {
 }
 
 export async function loadShowCssClasses(): Promise<boolean> {
-    const stored = await chrome.storage.local.get([
-        SHOW_CSS_CLASSES_KEY,
-        LEGACY_HIDE_CSS_CLASSES_KEY,
-    ]);
+    const stored = await localGet([SHOW_CSS_CLASSES_KEY, LEGACY_HIDE_CSS_CLASSES_KEY]);
+    if (!stored) return SHOW_CSS_CLASSES_DEFAULT;
 
     if (SHOW_CSS_CLASSES_KEY in stored) {
         const result = showCssClassesSchema.safeParse(stored[SHOW_CSS_CLASSES_KEY]);
         if (result.success) return result.data;
-        await chrome.storage.local.set({ [SHOW_CSS_CLASSES_KEY]: SHOW_CSS_CLASSES_DEFAULT });
+        await localSet({ [SHOW_CSS_CLASSES_KEY]: SHOW_CSS_CLASSES_DEFAULT });
         return SHOW_CSS_CLASSES_DEFAULT;
     }
 
@@ -189,8 +232,8 @@ export async function loadShowCssClasses(): Promise<boolean> {
     if (LEGACY_HIDE_CSS_CLASSES_KEY in stored) {
         const legacy = z.boolean().safeParse(stored[LEGACY_HIDE_CSS_CLASSES_KEY]);
         const shown = legacy.success ? !legacy.data : SHOW_CSS_CLASSES_DEFAULT;
-        await chrome.storage.local.set({ [SHOW_CSS_CLASSES_KEY]: shown });
-        await chrome.storage.local.remove(LEGACY_HIDE_CSS_CLASSES_KEY);
+        await localSet({ [SHOW_CSS_CLASSES_KEY]: shown });
+        await localRemove(LEGACY_HIDE_CSS_CLASSES_KEY);
         return shown;
     }
 
@@ -198,7 +241,7 @@ export async function loadShowCssClasses(): Promise<boolean> {
 }
 
 export async function saveShowCssClasses(shown: boolean): Promise<void> {
-    await chrome.storage.local.set({
+    await localSet({
         [SHOW_CSS_CLASSES_KEY]: showCssClassesSchema.parse(shown),
     });
 }
@@ -234,7 +277,7 @@ export async function loadClassesChipLines(): Promise<number> {
 }
 
 export async function saveClassesChipLines(lines: number): Promise<void> {
-    await chrome.storage.local.set({
+    await localSet({
         [CLASSES_CHIP_LINES_KEY]: classesChipLinesSchema.parse(lines),
     });
 }

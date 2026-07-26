@@ -36,6 +36,62 @@ const ACTION_ICON_ARMED: Record<string, string> = {
     '48': 'images/48-active.png',
 };
 
+/**
+ * Edge (and sometimes Chrome) can log "Unchecked runtime.lastError: No tab with id"
+ * when a tab closes mid-flight, even if the Promise form is awaited/caught.
+ * Prefer callbacks and always read lastError so Manage Extensions stays quiet.
+ */
+function runTabCallback(run: (done: () => void) => void): Promise<boolean> {
+    return new Promise((resolve) => {
+        run(() => {
+            resolve(chrome.runtime.lastError == null);
+        });
+    });
+}
+
+function setTabIcon(tabId: number, path: Record<string, string>): Promise<boolean> {
+    return runTabCallback((done) => {
+        chrome.action.setIcon({ tabId, path }, done);
+    });
+}
+
+function setTabTitle(tabId: number, title: string): Promise<boolean> {
+    return runTabCallback((done) => {
+        chrome.action.setTitle({ tabId, title }, done);
+    });
+}
+
+function setTabPopup(tabId: number, popup: string): Promise<boolean> {
+    return runTabCallback((done) => {
+        chrome.action.setPopup({ tabId, popup }, done);
+    });
+}
+
+function getTab(tabId: number): Promise<chrome.tabs.Tab | undefined> {
+    return new Promise((resolve) => {
+        chrome.tabs.get(tabId, (tab) => {
+            if (chrome.runtime.lastError) {
+                resolve(undefined);
+                return;
+            }
+            resolve(tab);
+        });
+    });
+}
+
+function sendTabMessage(tabId: number, message: unknown): Promise<unknown> {
+    return new Promise((resolve, reject) => {
+        chrome.tabs.sendMessage(tabId, message, (response) => {
+            const err = chrome.runtime.lastError;
+            if (err) {
+                reject(new Error(err.message));
+                return;
+            }
+            resolve(response);
+        });
+    });
+}
+
 /** Pages where the content script is not injected / not allowed to run. */
 function isRestrictedUrl(url: string): boolean {
     return (
@@ -51,18 +107,9 @@ function isRestrictedUrl(url: string): boolean {
 
 /** Per-tab toolbar icon + tooltip so only the armed tab looks active. */
 async function syncActionUi(tabId: number, armed: boolean): Promise<void> {
-    try {
-        await chrome.action.setIcon({
-            tabId,
-            path: armed ? ACTION_ICON_ARMED : ACTION_ICON_DEFAULT,
-        });
-        await chrome.action.setTitle({
-            tabId,
-            title: armed ? ACTION_TITLE_ARMED : ACTION_TITLE_DEFAULT,
-        });
-    } catch {
-        // Tab may already be closed or restricted.
-    }
+    const ok = await setTabIcon(tabId, armed ? ACTION_ICON_ARMED : ACTION_ICON_DEFAULT);
+    if (!ok) return;
+    await setTabTitle(tabId, armed ? ACTION_TITLE_ARMED : ACTION_TITLE_DEFAULT);
 }
 
 /**
@@ -77,31 +124,29 @@ async function syncActionPopup(tabId: number, url: string | undefined): Promise<
     if (!url) return;
 
     const restricted = isRestrictedUrl(url);
-    try {
-        await chrome.action.setPopup({
-            tabId,
-            popup: restricted ? UNSUPPORTED_POPUP : '',
-        });
-        if (restricted) {
-            await chrome.action.setTitle({ tabId, title: ACTION_TITLE_RESTRICTED });
-            await chrome.action.setIcon({ tabId, path: ACTION_ICON_DEFAULT });
-        } else {
-            // Leaving a restricted page — restore idle title (armed state is cleared on navigate).
-            await chrome.action.setTitle({ tabId, title: ACTION_TITLE_DEFAULT });
-        }
-    } catch {
-        // Tab may already be closed.
+    const ok = await setTabPopup(tabId, restricted ? UNSUPPORTED_POPUP : '');
+    if (!ok) return;
+
+    if (restricted) {
+        await setTabTitle(tabId, ACTION_TITLE_RESTRICTED);
+        await setTabIcon(tabId, ACTION_ICON_DEFAULT);
+    } else {
+        // Leaving a restricted page — restore idle title (armed state is cleared on navigate).
+        await setTabTitle(tabId, ACTION_TITLE_DEFAULT);
     }
 }
 
 /** Force the unsupported popup for this tab and open it on the current gesture. */
 async function showUnsupportedForTab(tab: chrome.tabs.Tab): Promise<void> {
     if (tab.id == null) return;
+    const tabId = tab.id;
+
+    // Tab may have closed between click and here — don't open a fallback window then.
+    if (!(await setTabPopup(tabId, UNSUPPORTED_POPUP))) return;
+    await setTabTitle(tabId, ACTION_TITLE_RESTRICTED);
+    await setTabIcon(tabId, ACTION_ICON_DEFAULT);
 
     try {
-        await chrome.action.setPopup({ tabId: tab.id, popup: UNSUPPORTED_POPUP });
-        await chrome.action.setTitle({ tabId: tab.id, title: ACTION_TITLE_RESTRICTED });
-        await chrome.action.setIcon({ tabId: tab.id, path: ACTION_ICON_DEFAULT });
         await chrome.action.openPopup(
             tab.windowId != null ? { windowId: tab.windowId } : undefined,
         );
@@ -120,12 +165,9 @@ async function showUnsupportedForTab(tab: chrome.tabs.Tab): Promise<void> {
 }
 
 async function syncActionPopupForTab(tabId: number): Promise<void> {
-    try {
-        const tab = await chrome.tabs.get(tabId);
-        await syncActionPopup(tabId, tab.url);
-    } catch {
-        // Tab gone.
-    }
+    const tab = await getTab(tabId);
+    if (!tab) return;
+    await syncActionPopup(tabId, tab.url);
 }
 
 async function getTabArmed(tabId: number): Promise<boolean> {
@@ -151,7 +193,7 @@ async function setTabArmed(tabId: number, armed: boolean): Promise<void> {
 
     await syncActionUi(tabId, armed);
 
-    await chrome.tabs.sendMessage(tabId, Messages.setOverlayArmed(armed)).catch(() => {
+    await sendTabMessage(tabId, Messages.setOverlayArmed(armed)).catch(() => {
         // No receivers during navigation / restricted frames.
     });
 }
@@ -165,17 +207,30 @@ async function ensureContentScripts(tabId: number): Promise<void> {
     const inject = async (allFrames: boolean): Promise<void> => {
         const target: chrome.scripting.InjectionTarget = { tabId, allFrames };
         if (cssFiles.length > 0) {
-            await chrome.scripting.insertCSS({ target, files: cssFiles }).catch(() => {});
+            // CSS failure is non-fatal (same as before) — still try JS.
+            await runTabCallback((done) => {
+                chrome.scripting.insertCSS({ target, files: cssFiles }, done);
+            });
         }
-        await chrome.scripting.executeScript({ target, files: jsFiles });
+        const ok = await runTabCallback((done) => {
+            chrome.scripting.executeScript({ target, files: jsFiles }, () => done());
+        });
+        if (!ok) throw new Error('executeScript failed');
     };
 
     try {
         await inject(true);
     } catch (err) {
+        // Tab may have closed during inject.
+        if (!(await getTab(tabId))) return;
+
         // Ad / sandboxed iframes can make allFrames injection fail on busy sites.
         console.warn('[Style Detective] allFrames inject failed, trying main frame', err);
-        await inject(false);
+        try {
+            await inject(false);
+        } catch {
+            // Tab closed or inject blocked — caller handles readiness timeout.
+        }
     }
 }
 
@@ -183,7 +238,7 @@ async function ensureContentScripts(tabId: number): Promise<void> {
 async function waitForOverlay(tabId: number, attempts = 40, delayMs = 50): Promise<boolean> {
     for (let i = 0; i < attempts; i++) {
         try {
-            await chrome.tabs.sendMessage(tabId, Messages.pingOverlay());
+            await sendTabMessage(tabId, Messages.pingOverlay());
             return true;
         } catch {
             await new Promise((resolve) => setTimeout(resolve, delayMs));
@@ -196,7 +251,7 @@ async function toggleOverlay(tabId: number): Promise<void> {
     let coldInject = false;
 
     try {
-        await chrome.tabs.sendMessage(tabId, Messages.pingOverlay());
+        await sendTabMessage(tabId, Messages.pingOverlay());
     } catch {
         await ensureContentScripts(tabId);
         coldInject = true;
@@ -298,9 +353,7 @@ chrome.runtime.onMessage.addListener((raw, sender) => {
         const tabId = sender.tab?.id;
         if (tabId == null) return;
 
-        void chrome.tabs
-            .sendMessage(tabId, Messages.overlayClaim(message.instanceId))
-            .catch(() => {});
+        void sendTabMessage(tabId, Messages.overlayClaim(message.instanceId)).catch(() => {});
     }
 });
 
@@ -313,12 +366,8 @@ chrome.action.onClicked.addListener((tab) => {
     void (async () => {
         let url = tab.url;
         if (!url) {
-            try {
-                const fresh = await chrome.tabs.get(tabId);
-                url = fresh.url;
-            } catch {
-                // Tab may be gone.
-            }
+            const fresh = await getTab(tabId);
+            url = fresh?.url;
         }
 
         if (url && isRestrictedUrl(url)) {
@@ -339,7 +388,8 @@ chrome.action.onClicked.addListener((tab) => {
 });
 
 // Align popup state for the active tab when the worker wakes.
-void chrome.tabs.query({ active: true, lastFocusedWindow: true }).then((tabs) => {
+chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
+    if (chrome.runtime.lastError) return;
     const tab = tabs[0];
     if (tab?.id != null) void syncActionPopup(tab.id, tab.url);
 });

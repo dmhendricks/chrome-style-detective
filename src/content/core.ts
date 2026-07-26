@@ -19,8 +19,8 @@ import {
     createBlock,
     collapseSelectorHeader,
     refreshSelectorOverflow,
+    isHideCssClasses,
     setClassesCopyNotifier,
-    setClassesExpanded,
     setHideCssClasses,
     updateClassesPanel,
     updateHeader,
@@ -29,18 +29,16 @@ import {
 import { formatClassesForCopy, parseClassTokens } from './lib/classes';
 import {
     clampPanelFontSize,
-    loadClassesExpanded,
     loadHideCssClasses,
     loadPanelFontSize,
     loadPanelThemePreference,
-    parseClassesExpanded,
     parseHideCssClasses,
     parsePanelFontSize,
     parsePanelTheme,
     resolvePanelTheme,
+    saveHideCssClasses,
     savePanelFontSize,
     type PanelThemePreference,
-    CLASSES_EXPANDED_KEY,
     HIDE_CSS_CLASSES_KEY,
     PANEL_FONT_SIZE_DEFAULT,
     PANEL_FONT_SIZE_KEY,
@@ -224,7 +222,6 @@ class OverlayController {
             this.loadPanelFontSizePref(),
             this.loadPanelThemePref(),
             this.loadHideCssClassesPref(),
-            this.loadClassesExpandedPref(),
         ]);
         this.watchPrefs();
     }
@@ -343,10 +340,6 @@ class OverlayController {
         setHideCssClasses(await loadHideCssClasses());
     }
 
-    private async loadClassesExpandedPref(): Promise<void> {
-        setClassesExpanded(await loadClassesExpanded());
-    }
-
     private watchPrefs(): void {
         chrome.storage.onChanged.addListener((changes, area) => {
             if (area !== 'local') return;
@@ -364,11 +357,8 @@ class OverlayController {
                 if (this.inspectedElement?.isConnected) {
                     updateClassesPanel(this.inspectedElement);
                 }
-            }
-
-            const classesExpandedChange = changes[CLASSES_EXPANDED_KEY];
-            if (classesExpandedChange) {
-                setClassesExpanded(parseClassesExpanded(classesExpandedChange.newValue));
+                const block = document.getElementById(OVERLAY_ID);
+                if (block) keepOverlayInViewport(block);
             }
 
             const fontSizeChange = changes[PANEL_FONT_SIZE_KEY];
@@ -730,6 +720,11 @@ class OverlayController {
             else void this.copyCssDefinition();
             return;
         }
+        if (key === 'l') {
+            e.preventDefault();
+            this.toggleHideCssClasses();
+            return;
+        }
         if (key === 's') {
             e.preventDefault();
             void chrome.runtime.sendMessage({ type: 'openOptions' });
@@ -750,6 +745,18 @@ class OverlayController {
             e.preventDefault();
             this.resetPanelFontSize();
         }
+    }
+
+    private toggleHideCssClasses(): void {
+        const next = !isHideCssClasses();
+        setHideCssClasses(next);
+        void saveHideCssClasses(next);
+        this.flashMessage(next ? 'Classes hidden' : 'Classes shown', { tone: 'success' });
+        if (this.inspectedElement?.isConnected) {
+            updateClassesPanel(this.inspectedElement);
+        }
+        const block = document.getElementById(OVERLAY_ID);
+        if (block) keepOverlayInViewport(block);
     }
 
     private async copyElementClasses(): Promise<void> {

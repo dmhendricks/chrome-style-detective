@@ -142,35 +142,6 @@ export async function saveHideCssClasses(hidden: boolean): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Classes row expand/collapse
-// ---------------------------------------------------------------------------
-
-/**
- * Classes row expand/collapse. Default: expanded.
- * Persisted in chrome.storage.local so it sticks across tabs and reloads.
- */
-export const CLASSES_EXPANDED_KEY = 'classesExpanded';
-
-export const classesExpandedSchema = z.boolean();
-
-export const CLASSES_EXPANDED_DEFAULT = true;
-
-export function parseClassesExpanded(value: unknown): boolean {
-    const result = classesExpandedSchema.safeParse(value);
-    return result.success ? result.data : CLASSES_EXPANDED_DEFAULT;
-}
-
-export async function loadClassesExpanded(): Promise<boolean> {
-    return loadLocalPref(CLASSES_EXPANDED_KEY, classesExpandedSchema, CLASSES_EXPANDED_DEFAULT);
-}
-
-export async function saveClassesExpanded(expanded: boolean): Promise<void> {
-    await chrome.storage.local.set({
-        [CLASSES_EXPANDED_KEY]: classesExpandedSchema.parse(expanded),
-    });
-}
-
-// ---------------------------------------------------------------------------
 // Session: per-tab armed flag (service worker)
 // ---------------------------------------------------------------------------
 

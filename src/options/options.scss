@@ -567,8 +567,8 @@ kbd {
     display: inline-flex;
     justify-content: center;
     align-items: center;
-    min-width: 2.5rem;
-    padding: 0.35rem 0.45rem;
+    min-width: 0;
+    padding: 0.2rem 0.35rem;
     // Prefer open zeros (avoid SF Mono / Cascadia’s slashed 0).
     font-family: Menlo, Consolas, 'Courier New', ui-monospace, monospace;
     font-size: 0.78rem;
@@ -581,6 +581,12 @@ kbd {
     border-bottom-width: 2px;
     border-radius: 0.4rem;
     box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 8%, transparent);
+}
+
+// Shortcut list key caps keep the taller hit-target sizing.
+.shortcuts > li > kbd {
+    min-width: 2.5rem;
+    padding: 0.5rem 0.45rem;
 }
 
 .shortcuts span kbd {

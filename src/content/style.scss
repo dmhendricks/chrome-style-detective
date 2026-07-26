@@ -228,17 +228,22 @@
     .StyleDetectiveOverlay__classes {
         flex: 0 0 auto !important;
         display: block !important;
-        padding: 6px 10px 8px !important;
+        // Match &__center horizontal inset so "Classes" lines up with "Font & Text".
+        // Bottom 8px matches category ul padding-bottom.
+        padding: 6px 18px 8px !important;
         border-bottom: 1px solid var(--sd-divider) !important;
         background: var(--sd-panel-bg) !important;
 
         &--hidden {
             display: none !important;
         }
+    }
 
-        &--collapsed .StyleDetectiveOverlay__classes-body {
-            display: none !important;
-        }
+    // Classes sits above &__center — drop center's top pad so Font & Text isn't
+    // double-spaced (Classes bottom + center top + h2 top).
+    .StyleDetectiveOverlay__classes:not(.StyleDetectiveOverlay__classes--hidden)
+        + #StyleDetectiveOverlay__center {
+        padding-top: 0 !important;
     }
 
     .StyleDetectiveOverlay__classes-head {
@@ -246,14 +251,20 @@
         align-items: center !important;
         justify-content: space-between !important;
         gap: 8px !important;
+
+        // Same h2 rule as Font & Text — only layout overrides here.
+        > h2 {
+            flex: 1 1 auto !important;
+            padding-top: 0 !important;
+        }
     }
 
-    .StyleDetectiveOverlay__classes-toggle,
     .StyleDetectiveOverlay__classes-copy-all {
         box-sizing: border-box !important;
+        flex: 0 0 auto !important;
         margin: 0 !important;
         padding: 4px 8px !important;
-        color: var(--sd-text) !important;
+        color: var(--sd-heading) !important;
         font-size: calc(var(--sd-font-size) * 0.95) !important;
         line-height: calc(var(--sd-font-size) * 1.35) !important;
         background: var(--sd-kbd-bg) !important;
@@ -262,18 +273,6 @@
         cursor: pointer !important;
     }
 
-    .StyleDetectiveOverlay__classes-toggle {
-        flex: 1 1 auto !important;
-        text-align: left !important;
-        font-weight: 600 !important;
-    }
-
-    .StyleDetectiveOverlay__classes-copy-all {
-        flex: 0 0 auto !important;
-        color: var(--sd-heading) !important;
-    }
-
-    .StyleDetectiveOverlay__classes-toggle:hover,
     .StyleDetectiveOverlay__classes-copy-all:hover:not(:disabled) {
         border-color: var(--sd-heading) !important;
     }
@@ -283,18 +282,18 @@
         cursor: default !important;
     }
 
-    .StyleDetectiveOverlay__classes-body {
-        padding-top: 6px !important;
-    }
-
     .StyleDetectiveOverlay__class-chips {
         display: flex !important;
         flex-wrap: wrap !important;
         gap: 4px !important;
+        padding-top: 6px !important;
     }
 
     .StyleDetectiveOverlay__class-chip {
+        box-sizing: border-box !important;
         max-width: 100% !important;
+        margin: 0 !important;
+        padding: 1px 3px !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
         white-space: nowrap !important;
@@ -511,18 +510,19 @@
 
     .StyleDetectiveOverlay__value-group {
         // Shrink-to-content so the copy icon sits right after the value,
-        // not pinned to the panel's right edge.
+        // not pinned to the panel's right edge (flex-grow would do that).
         display: inline-flex !important;
         align-items: baseline !important;
-        flex: 1 1 auto !important;
+        flex: 0 1 auto !important;
         max-width: 100% !important;
         min-width: 0 !important;
+        width: fit-content !important;
         gap: 2px !important;
     }
 
     .StyleDetectiveOverlay__value-text {
         min-width: 0 !important;
-        flex: 1 1 auto !important;
+        flex: 0 1 auto !important;
         line-height: var(--sd-row-line-height) !important;
         overflow-wrap: anywhere !important;
         word-break: break-word !important;

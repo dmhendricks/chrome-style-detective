@@ -226,18 +226,13 @@ function copyAffordance(doc: Document): HTMLSpanElement {
     return affordance;
 }
 
-function wrapCopyableValue(doc: Document, copyValue: string): HTMLSpanElement {
-    const group = doc.createElement('span');
-    group.className = 'StyleDetectiveOverlay__value-group';
-
-    const text = doc.createElement('span');
-    text.className = 'StyleDetectiveOverlay__value-text';
-    text.append(textWithColorSwatches(doc, copyValue));
-
-    const affordance = copyAffordance(doc);
-    group.append(text, affordance);
-
-    const onCopy = (e: Event): void => {
+function attachFrozenCopy(
+    doc: Document,
+    target: HTMLElement,
+    affordance: HTMLElement,
+    copyValue: string,
+): void {
+    target.addEventListener('click', (e) => {
         if (!isOverlayFrozen(doc)) return;
         e.preventDefault();
         e.stopPropagation();
@@ -250,9 +245,20 @@ function wrapCopyableValue(doc: Document, copyValue: string): HTMLSpanElement {
             },
             () => {},
         );
-    };
+    });
+}
 
-    group.addEventListener('click', onCopy);
+function wrapCopyableValue(doc: Document, copyValue: string): HTMLSpanElement {
+    const group = doc.createElement('span');
+    group.className = 'StyleDetectiveOverlay__value-group';
+
+    const text = doc.createElement('span');
+    text.className = 'StyleDetectiveOverlay__value-text';
+    text.append(textWithColorSwatches(doc, copyValue));
+
+    const affordance = copyAffordance(doc);
+    group.append(text, affordance);
+    attachFrozenCopy(doc, group, affordance, copyValue);
 
     return group;
 }

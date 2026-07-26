@@ -50,14 +50,15 @@ import {
     SHOW_CSS_CLASSES_KEY,
 } from '../shared/prefs';
 import { MessageType, Messages, parseExtensionMessage } from '../shared/messages';
+import {
+    DARK_CLASS,
+    FROZEN_CLASS,
+    HIGHLIGHT_ID,
+    OVERLAY_ID,
+    TOAST_ID,
+    TOAST_SUCCESS_CLASS,
+} from '../shared/dom-ids';
 import './style.scss';
-
-const FROZEN_CLASS = 'StyleDetectiveOverlay--frozen';
-const DARK_CLASS = 'StyleDetectiveOverlay--dark';
-const HIGHLIGHT_ID = 'StyleDetectiveHighlight';
-const OVERLAY_ID = 'StyleDetectiveOverlay';
-const TOAST_ID = 'StyleDetectiveToast';
-const TOAST_SUCCESS_CLASS = 'StyleDetectiveToast--success';
 
 type Pointer = { clientX: number; clientY: number; pageX: number; pageY: number };
 
@@ -606,7 +607,7 @@ class OverlayController {
         this.highlightElement(el);
 
         if (!document.defaultView) return;
-        const style = document.defaultView.getComputedStyle(el, null);
+        const style = document.defaultView.getComputedStyle(el);
         updatePanel(style, el);
         removeElement(TOAST_ID);
 
@@ -617,7 +618,7 @@ class OverlayController {
     private refreshInspectedStyles(): void {
         const el = this.inspectedElement;
         if (!el?.isConnected || !document.defaultView) return;
-        updatePanel(document.defaultView.getComputedStyle(el, null), el);
+        updatePanel(document.defaultView.getComputedStyle(el), el);
     }
 
     private positionPanelAtPointer(e: { pageX: number; pageY: number }): void {
@@ -818,7 +819,7 @@ class OverlayController {
         }
 
         try {
-            const css = buildCssDefinition(el, view.getComputedStyle(el, null));
+            const css = buildCssDefinition(el, view.getComputedStyle(el));
             await copyTextToClipboard(css);
             this.flashMessage('CSS definition copied to clipboard', { tone: 'success' });
         } catch {

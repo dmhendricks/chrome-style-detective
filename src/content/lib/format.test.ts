@@ -7,6 +7,7 @@ import {
     formatBackgroundImage,
     formatCssColorDisplay,
     parseCssColor,
+    rgbToHex,
     textContrast,
     type RgbaColor,
 } from './format';
@@ -28,6 +29,11 @@ describe('parseCssColor / formatCssColorDisplay', () => {
 
     it('keeps pure black as #000000 in the value text', () => {
         expect(formatCssColorDisplay('rgb(0, 0, 0)')).toBe('#000000');
+    });
+
+    it('rgbToHex returns empty string when unparseable (not fake white)', () => {
+        expect(rgbToHex('not-a-color')).toBe('');
+        expect(rgbToHex('rgb(0, 0, 0)')).toBe('#000000');
     });
 
     it('emits rgba() for partial alpha (not funky 8-digit hex)', () => {

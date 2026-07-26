@@ -57,10 +57,11 @@ export function isFullyTransparent(color: RgbaColor): boolean {
  * Convert a CSS color string to a `#RRGGBB` hex string. Fully transparent
  * colors become `#000000` at zero alpha in parsing — callers that need a
  * human label should use `formatCssColorDisplay` instead.
+ * Returns an empty string when the color cannot be parsed (do not invent white).
  */
 export function rgbToHex(str: string): string {
     const color = parseCssColor(str);
-    if (!color) return '#FFFFFF';
+    if (!color) return '';
 
     return '#' + decToHex(color.r) + decToHex(color.g) + decToHex(color.b);
 }

@@ -41,8 +41,10 @@ let classesHeading: HTMLElement | null = null;
 let classesCopyAll: HTMLButtonElement | null = null;
 let classesChips: HTMLElement | null = null;
 let shortcutsContainer: HTMLElement | null = null;
-/** When true, the Classes row is suppressed (settings / L). */
-let hideCssClasses = false;
+/** When false, the Classes row is suppressed (settings / L). */
+let showCssClasses = true;
+/** Max wrap lines of chips before "+N more" (settings; default 3). */
+let classesChipLines = 3;
 let classesShowAllChips = false;
 let currentClassTokens: readonly string[] = [];
 let copyNotifier: CopyNotifier | null = null;
@@ -62,16 +64,27 @@ export function setClassesCopyNotifier(notifier: CopyNotifier | null): void {
     copyNotifier = notifier;
 }
 
-/** Current Hide CSS Classes preference (in-memory; storage is owned by callers). */
-export function isHideCssClasses(): boolean {
-    return hideCssClasses;
+/** Current Show CSS Classes preference (in-memory; storage is owned by callers). */
+export function isShowCssClasses(): boolean {
+    return showCssClasses;
 }
 
-/** Apply the Hide CSS Classes preference (does not write storage). */
-export function setHideCssClasses(hidden: boolean): void {
-    if (hideCssClasses === hidden) return;
-    hideCssClasses = hidden;
-    if (hidden) hideClassesPanel();
+/** Apply the Show CSS Classes preference (does not write storage). */
+export function setShowCssClasses(shown: boolean): void {
+    if (showCssClasses === shown) return;
+    showCssClasses = shown;
+    if (!shown) hideClassesPanel();
+}
+
+/** Apply the Classes chip line-cap preference (does not write storage). */
+export function setClassesChipLines(lines: number): void {
+    const next = Math.max(1, Math.round(lines));
+    if (classesChipLines === next) return;
+    classesChipLines = next;
+    classesShowAllChips = false;
+    if (classesRoot && showCssClasses && currentClassTokens.length > 0) {
+        refreshClassesChrome(classesRoot.ownerDocument);
+    }
 }
 
 function notifyCopy(message: string, tone: 'default' | 'success' = 'success'): void {
@@ -148,18 +161,18 @@ function renderClassChips(doc: Document): void {
         return;
     }
 
-    // Prefer showing every chip when it fits on three wrap lines.
+    // Prefer showing every chip when it fits within the configured wrap lines.
     paint(tokens.length, false);
-    if (countChipRows(classesChips) <= 3) return;
+    if (countChipRows(classesChips) <= classesChipLines) return;
 
-    // Binary-search the largest prefix that still fits in three lines with "+N more".
+    // Binary-search the largest prefix that still fits with "+N more".
     let lo = 1;
     let hi = tokens.length - 1;
     let best = 1;
     while (lo <= hi) {
         const mid = (lo + hi) >> 1;
         paint(mid, true);
-        if (countChipRows(classesChips) <= 3) {
+        if (countChipRows(classesChips) <= classesChipLines) {
             best = mid;
             lo = mid + 1;
         } else {
@@ -185,7 +198,7 @@ function refreshClassesChrome(doc: Document): void {
 
 /** Update the Classes row for the hovered element (hidden when opted out or empty). */
 export function updateClassesPanel(target: HTMLElement): void {
-    if (hideCssClasses || !classesRoot) {
+    if (!showCssClasses || !classesRoot) {
         hideClassesPanel();
         return;
     }

@@ -6,18 +6,26 @@
  */
 
 import {
-    loadHideCssClasses,
+    loadClassesChipLines,
     loadPanelThemePreference,
-    parseHideCssClasses,
+    loadShowCssClasses,
+    parseClassesChipLines,
     parsePanelTheme,
-    saveHideCssClasses,
+    parseShowCssClasses,
+    saveClassesChipLines,
     savePanelThemePreference,
+    saveShowCssClasses,
     type PanelThemePreference,
-    HIDE_CSS_CLASSES_KEY,
+    CLASSES_CHIP_LINES_KEY,
+    CLASSES_CHIP_LINES_MAX,
+    CLASSES_CHIP_LINES_MIN,
     PANEL_THEME_KEY,
+    SHOW_CSS_CLASSES_KEY,
 } from '../shared/prefs';
 
-const hideCssClassesToggle = document.querySelector<HTMLInputElement>('#hideCssClasses');
+const showCssClassesToggle = document.querySelector<HTMLInputElement>('#showCssClasses');
+const classesChipLinesInput = document.querySelector<HTMLInputElement>('#classesChipLines');
+const classesChipLinesRow = document.querySelector<HTMLElement>('#classesChipLines-row');
 const themeRadios = document.querySelectorAll<HTMLInputElement>('input[name="panelTheme"]');
 const storeRateLink = document.querySelector<HTMLAnchorElement>('#storeRateLink');
 
@@ -27,16 +35,52 @@ function wireStoreRateLink(): void {
     storeRateLink.href = `https://chromewebstore.google.com/detail/${chrome.runtime.id}`;
 }
 
-async function syncHideCssClassesFromStorage(): Promise<void> {
-    if (!hideCssClassesToggle) return;
-    hideCssClassesToggle.checked = await loadHideCssClasses();
+function syncChipLinesRowVisibility(showClasses: boolean): void {
+    if (!classesChipLinesRow) return;
+    classesChipLinesRow.hidden = !showClasses;
 }
 
-function wireHideCssClassesToggle(): void {
-    if (!hideCssClassesToggle) return;
+async function syncShowCssClassesFromStorage(): Promise<void> {
+    if (!showCssClassesToggle) return;
+    const shown = await loadShowCssClasses();
+    showCssClassesToggle.checked = shown;
+    syncChipLinesRowVisibility(shown);
+}
 
-    hideCssClassesToggle.addEventListener('change', () => {
-        void saveHideCssClasses(hideCssClassesToggle.checked);
+function wireShowCssClassesToggle(): void {
+    if (!showCssClassesToggle) return;
+
+    showCssClassesToggle.addEventListener('change', () => {
+        const shown = showCssClassesToggle.checked;
+        syncChipLinesRowVisibility(shown);
+        void saveShowCssClasses(shown);
+    });
+}
+
+function commitClassesChipLines(): void {
+    if (!classesChipLinesInput) return;
+    const next = parseClassesChipLines(Number(classesChipLinesInput.value));
+    classesChipLinesInput.value = String(next);
+    void saveClassesChipLines(next);
+}
+
+async function syncClassesChipLinesFromStorage(): Promise<void> {
+    if (!classesChipLinesInput) return;
+    classesChipLinesInput.value = String(await loadClassesChipLines());
+}
+
+function wireClassesChipLinesInput(): void {
+    if (!classesChipLinesInput) return;
+
+    classesChipLinesInput.min = String(CLASSES_CHIP_LINES_MIN);
+    classesChipLinesInput.max = String(CLASSES_CHIP_LINES_MAX);
+
+    classesChipLinesInput.addEventListener('change', () => {
+        commitClassesChipLines();
+    });
+
+    classesChipLinesInput.addEventListener('blur', () => {
+        commitClassesChipLines();
     });
 }
 
@@ -62,9 +106,16 @@ function wireThemeRadios(): void {
 chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
 
-    const hideClassesChange = changes[HIDE_CSS_CLASSES_KEY];
-    if (hideClassesChange && hideCssClassesToggle) {
-        hideCssClassesToggle.checked = parseHideCssClasses(hideClassesChange.newValue);
+    const showClassesChange = changes[SHOW_CSS_CLASSES_KEY];
+    if (showClassesChange && showCssClassesToggle) {
+        const shown = parseShowCssClasses(showClassesChange.newValue);
+        showCssClassesToggle.checked = shown;
+        syncChipLinesRowVisibility(shown);
+    }
+
+    const chipLinesChange = changes[CLASSES_CHIP_LINES_KEY];
+    if (chipLinesChange && classesChipLinesInput) {
+        classesChipLinesInput.value = String(parseClassesChipLines(chipLinesChange.newValue));
     }
 
     const themeChange = changes[PANEL_THEME_KEY];
@@ -73,8 +124,10 @@ chrome.storage.onChanged.addListener((changes, area) => {
     }
 });
 
-void syncHideCssClassesFromStorage();
-wireHideCssClassesToggle();
+void syncShowCssClassesFromStorage();
+wireShowCssClassesToggle();
+void syncClassesChipLinesFromStorage();
+wireClassesChipLinesInput();
 void syncThemeFromStorage();
 wireThemeRadios();
 wireStoreRateLink();

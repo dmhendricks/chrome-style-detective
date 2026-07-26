@@ -18,7 +18,7 @@ Features:
 
 ## Installation
 
-Until a release build is finished, the only way to run this extension is to clone the repo and run:
+Clone the repo and build:
 
 ```bash
 npm install
@@ -26,6 +26,8 @@ npm run build    # production build → dist/
 ```
 
 Then open `chrome://extensions`, turn on **Developer mode** (top-right), click **Load Unpacked** and choose the `dist/` directory.
+
+Published builds (when available) can also be loaded from a release zip the same way.
 
 ## Usage
 

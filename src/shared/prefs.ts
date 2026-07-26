@@ -4,9 +4,47 @@
  *
  * chrome.storage values are untyped across versions — schemas parse unknown
  * payloads and heal bad writes back to defaults (see docs/deferred-backlog P1d).
+ *
+ * When adding Options Settings UI, bump OPTIONS_REVISION (top of this file).
  */
 
 import { z } from 'zod';
+
+// =============================================================================
+// OPTIONS_REVISION — bump when Options **Settings** UI grows
+// =============================================================================
+//
+// Install always opens Options. Updates open Options only when this number is
+// greater than `lastSeenOptionsRevision` in chrome.storage.local.
+// Do not bump for overlay-only or unrelated code changes.
+// Wired from `background.ts` → onInstalled.
+//
+export const OPTIONS_REVISION = 1;
+
+export const LAST_SEEN_OPTIONS_REVISION_KEY = 'lastSeenOptionsRevision';
+
+export const lastSeenOptionsRevisionSchema = z.number().int().nonnegative();
+
+export async function loadLastSeenOptionsRevision(): Promise<number | null> {
+    const stored = await chrome.storage.local.get(LAST_SEEN_OPTIONS_REVISION_KEY);
+    if (!(LAST_SEEN_OPTIONS_REVISION_KEY in stored)) return null;
+
+    const result = lastSeenOptionsRevisionSchema.safeParse(
+        stored[LAST_SEEN_OPTIONS_REVISION_KEY],
+    );
+    if (result.success) return result.data;
+
+    await chrome.storage.local.set({
+        [LAST_SEEN_OPTIONS_REVISION_KEY]: OPTIONS_REVISION,
+    });
+    return OPTIONS_REVISION;
+}
+
+export async function saveLastSeenOptionsRevision(revision: number): Promise<void> {
+    await chrome.storage.local.set({
+        [LAST_SEEN_OPTIONS_REVISION_KEY]: lastSeenOptionsRevisionSchema.parse(revision),
+    });
+}
 
 // ---------------------------------------------------------------------------
 // Helpers

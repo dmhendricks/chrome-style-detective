@@ -1,8 +1,9 @@
 /*!
  * Style Detective — pure formatting helpers for CSS values.
  *
- * These take raw computed-style strings and normalize them for display. They do
- * no DOM work (see dom.ts for the colour-swatch element built from `rgbToHex`).
+ * These take raw computed-style / color strings and normalize them for display.
+ * DOM walks for effective backgrounds live in properties.ts; swatch remapping
+ * of pure black for panel visibility lives in dom.ts.
  */
 
 import { converter, parse } from 'culori';
@@ -47,21 +48,54 @@ export function parseCssColor(str: string): RgbaColor | null {
     };
 }
 
+/** True when the color contributes no paint (fully transparent). */
+export function isFullyTransparent(color: RgbaColor): boolean {
+    return color.a <= 0;
+}
+
 /**
- * Convert a CSS color string to a `#RRGGBB` hex string. Pure black is remapped
- * to white so a swatch stays visible against the panel background.
+ * Convert a CSS color string to a `#RRGGBB` hex string. Fully transparent
+ * colors become `#000000` at zero alpha in parsing — callers that need a
+ * human label should use `formatCssColorDisplay` instead.
  */
 export function rgbToHex(str: string): string {
     const color = parseCssColor(str);
     if (!color) return '#FFFFFF';
 
-    let hexStr = '#' + decToHex(color.r) + decToHex(color.g) + decToHex(color.b);
+    return '#' + decToHex(color.r) + decToHex(color.g) + decToHex(color.b);
+}
 
-    if (hexStr === '#000000') {
-        hexStr = '#FFFFFF';
+/**
+ * Panel display for a computed color: `transparent` when alpha is 0, otherwise
+ * `#RRGGBB` (and `#RRGGBBAA` when partially transparent). Does not remap black.
+ */
+export function formatCssColorDisplay(str: string): string {
+    const color = parseCssColor(str);
+    if (!color) return str.trim() || '';
+
+    if (isFullyTransparent(color)) return 'transparent';
+
+    const hex = '#' + decToHex(color.r) + decToHex(color.g) + decToHex(color.b);
+    if (color.a >= 1) return hex;
+
+    return hex + decToHex(Math.round(color.a * 255));
+}
+
+/**
+ * Composite background layers listed top→bottom (nearest ancestor first).
+ * Returns null when there is no opaque base (contrast would be a guess).
+ */
+export function compositeBackgroundLayers(layersTopFirst: readonly RgbaColor[]): RgbaColor | null {
+    if (layersTopFirst.length === 0) return null;
+
+    const base = layersTopFirst[layersTopFirst.length - 1]!;
+    if (base.a < 1) return null;
+
+    let result: RgbaColor = { r: base.r, g: base.g, b: base.b, a: 1 };
+    for (let i = layersTopFirst.length - 2; i >= 0; i--) {
+        result = alphaBlend(layersTopFirst[i]!, result);
     }
-
-    return hexStr;
+    return result;
 }
 
 /** WCAG relative luminance for an sRGB color. */
@@ -121,15 +155,17 @@ export interface TextContrast {
 }
 
 /**
- * Contrast of `color` on `background-color`, flattening partial alpha over white
- * then compositing the foreground over that backdrop (practical page estimate).
+ * WCAG contrast of a foreground CSS color against an already-resolved opaque
+ * (or flattened) background. Returns null when the foreground cannot be parsed.
  */
-export function textContrast(foregroundCss: string, backgroundCss: string): TextContrast | null {
+export function textContrast(foregroundCss: string, background: RgbaColor): TextContrast | null {
     const fg = parseCssColor(foregroundCss);
-    const bg = parseCssColor(backgroundCss);
-    if (!fg || !bg) return null;
+    if (!fg) return null;
 
-    const bgFlat = alphaBlend(bg, OPAQUE_WHITE);
+    const bgFlat =
+        background.a >= 1
+            ? { r: background.r, g: background.g, b: background.b, a: 1 }
+            : alphaBlend(background, OPAQUE_WHITE);
     const fgFlat = alphaBlend(fg, bgFlat);
     const ratio = contrastRatio(fgFlat, bgFlat);
     if (!Number.isFinite(ratio)) return null;
@@ -177,6 +213,22 @@ export function getFileName(str: string): string {
     const path = str.split('/');
 
     return path[path.length - 1] ?? '';
+}
+
+/**
+ * Panel display for background-image: hex for solid `color(...)` layers, file
+ * name for urls, otherwise the raw computed string (gradients, etc.).
+ */
+export function formatBackgroundImage(str: string): string {
+    const trimmed = str.trim();
+    if (!trimmed || trimmed === 'none') return trimmed;
+
+    const solid = parseCssColor(trimmed);
+    if (solid) return formatCssColorDisplay(trimmed);
+
+    if (/url\s*\(/i.test(trimmed)) return getFileName(trimmed);
+
+    return trimmed;
 }
 
 /** Round a `"12.34px"`-style value to a whole-pixel string; pass through otherwise. */

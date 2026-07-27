@@ -93,9 +93,9 @@ body:
       label: Panel theme
       description: The Style Detective panel theme (from settings), if relevant.
       options:
-        - Not sure / Not relevant
         - Light
         - Dark
+        - Not sure / Not relevant
     validations:
       required: false
 

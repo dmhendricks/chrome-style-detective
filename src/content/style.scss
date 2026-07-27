@@ -84,6 +84,8 @@
     --sd-panel-bg: #fff;
     --sd-label: #888;
     --sd-heading: #6a8e46;
+    // Copy All: blue in light mode so it doesn't compete with green headings.
+    --sd-copy-all: #3d6bb3;
     --sd-banner-bg: #f87575;
     --sd-banner-stripe: rgba(255, 255, 255, 0.15);
     --sd-bullet: #ff8f8f;
@@ -105,6 +107,7 @@
         --sd-panel-bg: #1a1f28;
         --sd-label: #9aa6b8;
         --sd-heading: #8fb86a;
+        --sd-copy-all: #8fb86a;
         --sd-banner-bg: #4169e1;
         --sd-banner-stripe: rgba(255, 255, 255, 0.14);
         --sd-bullet: #f87575;
@@ -264,7 +267,7 @@
         flex: 0 0 auto !important;
         margin: 0 !important;
         padding: 4px 8px !important;
-        color: var(--sd-heading) !important;
+        color: var(--sd-copy-all) !important;
         font-size: calc(var(--sd-font-size) * 0.95) !important;
         line-height: calc(var(--sd-font-size) * 1.35) !important;
         background: var(--sd-kbd-bg) !important;
@@ -274,7 +277,7 @@
     }
 
     .StyleDetectiveOverlay__classes-copy-all:hover:not(:disabled) {
-        border-color: var(--sd-heading) !important;
+        border-color: var(--sd-copy-all) !important;
     }
 
     .StyleDetectiveOverlay__classes-copy-all:disabled {

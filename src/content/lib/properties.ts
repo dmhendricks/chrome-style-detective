@@ -200,6 +200,21 @@ function isFlexOrGrid(ctx: InspectContext): boolean {
     );
 }
 
+/**
+ * Insets only matter when positioned. Under `relative`, computed `0px` is a
+ * common no-op (often from unset resolving to 0); under absolute/fixed/sticky,
+ * `0` is frequently intentional (pin to an edge).
+ */
+function showInset(side: 'top' | 'right' | 'bottom' | 'left') {
+    return (ctx: InspectContext): boolean => {
+        const position = ctx.get('position');
+        if (position === 'static') return false;
+        if (position !== 'relative') return true;
+        const value = ctx.get(side);
+        return value !== 'auto' && value !== '0px' && value !== '0';
+    };
+}
+
 function isRadiusZero(value: string): boolean {
     return value === '' || value.split(/\s+/).every((part) => part === '0px' || part === '0');
 }
@@ -420,10 +435,10 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
                 when: isFlexOrGrid,
             },
             { name: 'position', hideDefault: 'static' },
-            { name: 'top', hideDefault: 'auto' },
-            { name: 'right', hideDefault: 'auto' },
-            { name: 'bottom', hideDefault: 'auto' },
-            { name: 'left', hideDefault: 'auto' },
+            { name: 'top', hideDefault: 'auto', when: showInset('top') },
+            { name: 'right', hideDefault: 'auto', when: showInset('right') },
+            { name: 'bottom', hideDefault: 'auto', when: showInset('bottom') },
+            { name: 'left', hideDefault: 'auto', when: showInset('left') },
             { name: 'z-index', hideDefault: 'auto' },
             { name: 'float', enabled: false, hideDefault: 'none' },
             { name: 'clear', enabled: false, hideDefault: 'none' },

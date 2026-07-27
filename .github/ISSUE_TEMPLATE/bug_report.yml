@@ -125,10 +125,10 @@ body:
 #     validations:
 #       required: false
 
-  - type: textarea
-    # id: additional
-    # attributes:
-    #   label: Additional context
-    #   description: Anything else that might help (settings you changed, keyboard shortcuts, iframe pages, etc.).
-    # validations:
-    #   required: false
+#   - type: textarea
+#     id: additional
+#     attributes:
+#       label: Additional context
+#       description: Anything else that might help (settings you changed, keyboard shortcuts, iframe pages, etc.).
+#     validations:
+#       required: false

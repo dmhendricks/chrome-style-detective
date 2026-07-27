@@ -298,7 +298,7 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
                 hideDefault: 'none',
                 format: (raw) => formatBackgroundImage(raw),
             },
-            { name: 'background-position', hideDefault: '' },
+            { name: 'background-position', hideDefault: '0% 0%' },
             { name: 'background-size', hideDefault: 'auto' },
             { name: 'background-repeat', hideDefault: 'repeat' },
             { name: 'background-attachment', enabled: false, hideDefault: 'scroll' },

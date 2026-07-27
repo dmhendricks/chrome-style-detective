@@ -1,6 +1,6 @@
-# Style Detective Chrome Extension
+# Style Detective
 
-A modern rewrite of the popular [CSS Viewer](https://github.com/miled/cssviewer) extension. Hover over any element on a page to inspect its computed styles in a floating panel.
+A modern rewrite of the popular [CSS Viewer](https://github.com/miled/cssviewer) extension for Chromium-based browsers. Hover over any element on a page to inspect its computed styles in a floating panel.
 
 ![Style Detective](store/screenshot-1280x800-01.png)
 

@@ -733,10 +733,9 @@ class OverlayController {
 
         if (e.key === 'Escape') {
             e.preventDefault();
-            // Disarm every frame in the tab — local disable only closes this frame.
-            void chrome.runtime.sendMessage(Messages.disarmOverlay()).catch(() => {
-                this.disable();
-            });
+            // Close this frame immediately; broadcast disarms the rest of the tab.
+            this.disable();
+            void chrome.runtime.sendMessage(Messages.disarmOverlay()).catch(() => {});
             return;
         }
 
@@ -866,16 +865,23 @@ if (!bootRoot[BOOT_FLAG]) {
             }
 
             if (message.type === MessageType.SetOverlayArmed) {
+                // Respond immediately. Waiting on prefs (and returning `true`) made
+                // toggles/Esc stall on pages with many iframe content-script copies —
+                // Chrome can sit on a slow frame's async reply for seconds.
+                if (!message.armed) {
+                    controller.setArmed(false);
+                    sendResponse({ ok: true, enabled: false });
+                    return;
+                }
+                sendResponse({ ok: true });
                 void ready
                     .then(() => {
-                        controller.setArmed(message.armed);
-                        sendResponse({ ok: true, enabled: controller.isEnabled() });
+                        controller.setArmed(true);
                     })
                     .catch((err: unknown) => {
                         console.error('[Style Detective] setArmed failed', err);
-                        sendResponse({ ok: false, error: String(err) });
                     });
-                return true;
+                return;
             }
         });
     } catch {

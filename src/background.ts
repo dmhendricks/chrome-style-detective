@@ -79,9 +79,13 @@ function getTab(tabId: number): Promise<chrome.tabs.Tab | undefined> {
     });
 }
 
-function sendTabMessage(tabId: number, message: unknown): Promise<unknown> {
+function sendTabMessage(
+    tabId: number,
+    message: unknown,
+    options?: { frameId?: number },
+): Promise<unknown> {
     return new Promise((resolve, reject) => {
-        chrome.tabs.sendMessage(tabId, message, (response) => {
+        chrome.tabs.sendMessage(tabId, message, options ?? {}, (response) => {
             const err = chrome.runtime.lastError;
             if (err) {
                 reject(new Error(err.message));
@@ -89,6 +93,13 @@ function sendTabMessage(tabId: number, message: unknown): Promise<unknown> {
             }
             resolve(response);
         });
+    });
+}
+
+/** Broadcast to every frame; do not wait on a response (avoids multi-frame stalls). */
+function broadcastTabMessage(tabId: number, message: unknown): void {
+    chrome.tabs.sendMessage(tabId, message, () => {
+        void chrome.runtime.lastError;
     });
 }
 
@@ -191,11 +202,10 @@ async function setTabArmed(tabId: number, armed: boolean): Promise<void> {
         await chrome.storage.session.remove(key);
     }
 
-    await syncActionUi(tabId, armed);
-
-    await sendTabMessage(tabId, Messages.setOverlayArmed(armed)).catch(() => {
-        // No receivers during navigation / restricted frames.
-    });
+    // Icon/title and frame broadcast can run in parallel — neither should block
+    // the other, and the broadcast must not wait for every iframe to reply.
+    void syncActionUi(tabId, armed);
+    broadcastTabMessage(tabId, Messages.setOverlayArmed(armed));
 }
 
 async function ensureContentScripts(tabId: number): Promise<void> {
@@ -212,33 +222,29 @@ async function ensureContentScripts(tabId: number): Promise<void> {
                 chrome.scripting.insertCSS({ target, files: cssFiles }, done);
             });
         }
-        const ok = await runTabCallback((done) => {
-            chrome.scripting.executeScript({ target, files: jsFiles }, () => done());
+        const errMessage = await new Promise<string | null>((resolve) => {
+            chrome.scripting.executeScript({ target, files: jsFiles }, () => {
+                resolve(chrome.runtime.lastError?.message ?? null);
+            });
         });
-        if (!ok) throw new Error('executeScript failed');
+        if (errMessage) throw new Error(errMessage);
     };
 
-    try {
-        await inject(true);
-    } catch (err) {
-        // Tab may have closed during inject.
-        if (!(await getTab(tabId))) return;
+    // Main frame first so toggle isn't blocked by ad/sandbox iframe injection.
+    await inject(false);
 
-        // Ad / sandboxed iframes can make allFrames injection fail on busy sites.
-        console.warn('[Style Detective] allFrames inject failed, trying main frame', err);
-        try {
-            await inject(false);
-        } catch {
-            // Tab closed or inject blocked — caller handles readiness timeout.
-        }
-    }
+    // Best-effort iframe coverage in the background — don't await.
+    void inject(true).catch((err) => {
+        console.warn('[Style Detective] allFrames inject failed', err);
+    });
 }
 
-/** CRX loaders import the real content script async — wait until a frame answers. */
+/** CRX loaders import the real content script async — wait until the top frame answers. */
 async function waitForOverlay(tabId: number, attempts = 40, delayMs = 50): Promise<boolean> {
     for (let i = 0; i < attempts; i++) {
         try {
-            await sendTabMessage(tabId, Messages.pingOverlay());
+            // Prefer the top frame so a hung ad iframe can't stall readiness.
+            await sendTabMessage(tabId, Messages.pingOverlay(), { frameId: 0 });
             return true;
         } catch {
             await new Promise((resolve) => setTimeout(resolve, delayMs));
@@ -251,7 +257,7 @@ async function toggleOverlay(tabId: number): Promise<void> {
     let coldInject = false;
 
     try {
-        await sendTabMessage(tabId, Messages.pingOverlay());
+        await sendTabMessage(tabId, Messages.pingOverlay(), { frameId: 0 });
     } catch {
         await ensureContentScripts(tabId);
         coldInject = true;
@@ -302,9 +308,11 @@ chrome.runtime.onInstalled.addListener((details) => {
     })();
 });
 
-// Drop stale armed flags when the tab navigates or closes; keep popup in sync.
+// Drop stale armed flags on real navigations only. A bare status==="loading"
+// also fires for prerender / some subframe churn and was disarming the overlay
+// right after a successful toggle (flash open → closed).
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo.status === 'loading') {
+    if (changeInfo.url) {
         void setTabArmed(tabId, false);
     }
     if (changeInfo.url || changeInfo.status === 'complete') {
@@ -353,7 +361,7 @@ chrome.runtime.onMessage.addListener((raw, sender) => {
         const tabId = sender.tab?.id;
         if (tabId == null) return;
 
-        void sendTabMessage(tabId, Messages.overlayClaim(message.instanceId)).catch(() => {});
+        void broadcastTabMessage(tabId, Messages.overlayClaim(message.instanceId));
     }
 });
 

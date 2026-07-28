@@ -33,7 +33,8 @@ const storeRateLink = document.querySelector<HTMLAnchorElement>('#storeRateLink'
 /** Listing URL from the installed extension id (stable after store publish). */
 function wireStoreRateLink(): void {
     if (!storeRateLink) return;
-    storeRateLink.href = `https://chromewebstore.google.com/detail/${chrome.runtime.id}`;
+    storeRateLink.href =
+        'https://chromewebstore.google.com/detail/style-detective/fbfplfafboelbaogjidoamdjjcckemib';
 }
 
 /**

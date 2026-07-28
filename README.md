@@ -18,7 +18,7 @@ A modern rewrite of the popular [CSS Viewer](https://github.com/miled/cssviewer)
 
 ## Installation
 
-The easiest way to install this extension is from the [Chrome Web Store](https://chromewebstore.google.com/detail/podlfieffggllefapodbbghcpjjknghm).
+The easiest way to install this extension is from the [Chrome Web Store](https://chromewebstore.google.com/detail/style-detective/fbfplfafboelbaogjidoamdjjcckemib).
 
 ## Development
 

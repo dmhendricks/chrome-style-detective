@@ -8,23 +8,28 @@
 import {
     loadClassesChipLines,
     loadPanelThemePreference,
+    loadShowBoxModel,
     loadShowCssClasses,
     parseClassesChipLines,
     parsePanelTheme,
+    parseShowBoxModel,
     parseShowCssClasses,
     saveClassesChipLines,
     savePanelThemePreference,
+    saveShowBoxModel,
     saveShowCssClasses,
     type PanelThemePreference,
     CLASSES_CHIP_LINES_KEY,
     CLASSES_CHIP_LINES_MAX,
     CLASSES_CHIP_LINES_MIN,
     PANEL_THEME_KEY,
+    SHOW_BOX_MODEL_KEY,
     SHOW_CSS_CLASSES_KEY,
 } from '../shared/prefs';
 import { Messages } from '../shared/messages';
 
 const showCssClassesToggle = document.querySelector<HTMLInputElement>('#showCssClasses');
+const showBoxModelToggle = document.querySelector<HTMLInputElement>('#showBoxModelDiagram');
 const classesChipLinesInput = document.querySelector<HTMLInputElement>('#classesChipLines');
 const classesChipLinesRow = document.querySelector<HTMLElement>('#classesChipLines-row');
 const themeRadios = document.querySelectorAll<HTMLInputElement>('input[name="panelTheme"]');
@@ -74,6 +79,19 @@ function wireShowCssClassesToggle(): void {
         const shown = showCssClassesToggle.checked;
         syncChipLinesRowVisibility(shown);
         void saveShowCssClasses(shown);
+    });
+}
+
+async function syncShowBoxModelFromStorage(): Promise<void> {
+    if (!showBoxModelToggle) return;
+    showBoxModelToggle.checked = await loadShowBoxModel();
+}
+
+function wireShowBoxModelToggle(): void {
+    if (!showBoxModelToggle) return;
+
+    showBoxModelToggle.addEventListener('change', () => {
+        void saveShowBoxModel(showBoxModelToggle.checked);
     });
 }
 
@@ -133,6 +151,11 @@ chrome.storage.onChanged.addListener((changes, area) => {
         syncChipLinesRowVisibility(shown);
     }
 
+    const showBoxModelChange = changes[SHOW_BOX_MODEL_KEY];
+    if (showBoxModelChange && showBoxModelToggle) {
+        showBoxModelToggle.checked = parseShowBoxModel(showBoxModelChange.newValue);
+    }
+
     const chipLinesChange = changes[CLASSES_CHIP_LINES_KEY];
     if (chipLinesChange && classesChipLinesInput) {
         classesChipLinesInput.value = String(parseClassesChipLines(chipLinesChange.newValue));
@@ -146,6 +169,8 @@ chrome.storage.onChanged.addListener((changes, area) => {
 
 void syncShowCssClassesFromStorage();
 wireShowCssClassesToggle();
+void syncShowBoxModelFromStorage();
+wireShowBoxModelToggle();
 void syncClassesChipLinesFromStorage();
 wireClassesChipLinesInput();
 void syncThemeFromStorage();

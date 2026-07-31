@@ -131,6 +131,11 @@ export interface CssProperty {
      */
     panelOnly?: boolean;
     /**
+     * Covered by the Box diagram — omitted from panel rows but still included in
+     * the copied CSS definition when visible.
+     */
+    diagramCovers?: boolean;
+    /**
      * Hide the row when the raw computed value equals this string (or is in
      * this list). Compared before `format` / `value`.
      */
@@ -248,7 +253,114 @@ function boxShorthand(ctx: InspectContext, sides: readonly string[]): string {
 }
 
 export const CSS_CATEGORIES: readonly CssCategory[] = [
-    {
+{
+        key: 'pBox',
+        title: 'Box',
+        properties: [
+            {
+                name: 'width',
+                when: (ctx) => removeExtraFloat(ctx.get('width')) !== 'auto',
+            },
+            {
+                name: 'height',
+                when: (ctx) => removeExtraFloat(ctx.get('height')) !== 'auto',
+            },
+            {
+                name: 'aspect-ratio',
+                // Rendered box ratio (from layout), not only the CSS property.
+                value: (ctx) => {
+                    const rect = ctx.el.getBoundingClientRect();
+                    return formatAspectRatio(rect.width, rect.height);
+                },
+                when: (ctx) => {
+                    const rect = ctx.el.getBoundingClientRect();
+                    return formatAspectRatio(rect.width, rect.height) !== '';
+                },
+            },
+            { name: 'min-width', hideDefault: '0px' },
+            { name: 'min-height', hideDefault: '0px' },
+            { name: 'max-width', hideDefault: 'none' },
+            { name: 'max-height', hideDefault: 'none' },
+            {
+                name: 'margin',
+                diagramCovers: true,
+                value: (ctx) =>
+                    boxShorthand(ctx, [
+                        'margin-top',
+                        'margin-right',
+                        'margin-bottom',
+                        'margin-left',
+                    ]),
+                when: (ctx) =>
+                    boxShorthand(ctx, [
+                        'margin-top',
+                        'margin-right',
+                        'margin-bottom',
+                        'margin-left',
+                    ]) !== '0 0 0 0',
+            },
+            {
+                name: 'padding',
+                diagramCovers: true,
+                value: (ctx) =>
+                    boxShorthand(ctx, [
+                        'padding-top',
+                        'padding-right',
+                        'padding-bottom',
+                        'padding-left',
+                    ]),
+                when: (ctx) =>
+                    boxShorthand(ctx, [
+                        'padding-top',
+                        'padding-right',
+                        'padding-bottom',
+                        'padding-left',
+                    ]) !== '0 0 0 0',
+            },
+            {
+                name: 'border',
+                diagramCovers: true,
+                value: (ctx) => borderSide(ctx, 'top'),
+                when: (ctx) =>
+                    bordersUniform(ctx) && ctx.get('border-top-style') !== 'none',
+            },
+            {
+                name: 'border-top',
+                diagramCovers: true,
+                value: (ctx) => borderSide(ctx, 'top'),
+                when: (ctx) =>
+                    !bordersUniform(ctx) && ctx.get('border-top-style') !== 'none',
+            },
+            {
+                name: 'border-right',
+                diagramCovers: true,
+                value: (ctx) => borderSide(ctx, 'right'),
+                when: (ctx) =>
+                    !bordersUniform(ctx) && ctx.get('border-right-style') !== 'none',
+            },
+            {
+                name: 'border-bottom',
+                diagramCovers: true,
+                value: (ctx) => borderSide(ctx, 'bottom'),
+                when: (ctx) =>
+                    !bordersUniform(ctx) && ctx.get('border-bottom-style') !== 'none',
+            },
+            {
+                name: 'border-left',
+                diagramCovers: true,
+                value: (ctx) => borderSide(ctx, 'left'),
+                when: (ctx) =>
+                    !bordersUniform(ctx) && ctx.get('border-left-style') !== 'none',
+            },
+            {
+                name: 'border-radius',
+                when: (ctx) => !isRadiusZero(ctx.get('border-radius')),
+            },
+            { name: 'box-sizing', hideDefault: 'content-box' },
+            { name: 'object-fit', hideDefault: 'fill' },
+        ],
+    },
+{
         key: 'pFontText',
         title: 'Font & Text',
         properties: [
@@ -269,7 +381,7 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
             { name: 'word-spacing', enabled: false, hideDefault: 'normal' },
         ],
     },
-    {
+{
         key: 'pColorBg',
         title: 'Color & Background',
         properties: [
@@ -304,107 +416,7 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
             { name: 'background-attachment', enabled: false, hideDefault: 'scroll' },
         ],
     },
-    {
-        key: 'pBox',
-        title: 'Box',
-        properties: [
-            {
-                name: 'width',
-                when: (ctx) => removeExtraFloat(ctx.get('width')) !== 'auto',
-            },
-            {
-                name: 'height',
-                when: (ctx) => removeExtraFloat(ctx.get('height')) !== 'auto',
-            },
-            {
-                name: 'aspect-ratio',
-                // Rendered box ratio (from layout), not only the CSS property.
-                value: (ctx) => {
-                    const rect = ctx.el.getBoundingClientRect();
-                    return formatAspectRatio(rect.width, rect.height);
-                },
-                when: (ctx) => {
-                    const rect = ctx.el.getBoundingClientRect();
-                    return formatAspectRatio(rect.width, rect.height) !== '';
-                },
-            },
-            { name: 'min-width', hideDefault: '0px' },
-            { name: 'min-height', hideDefault: '0px' },
-            { name: 'max-width', hideDefault: 'none' },
-            { name: 'max-height', hideDefault: 'none' },
-            {
-                name: 'margin',
-                value: (ctx) =>
-                    boxShorthand(ctx, [
-                        'margin-top',
-                        'margin-right',
-                        'margin-bottom',
-                        'margin-left',
-                    ]),
-                when: (ctx) =>
-                    boxShorthand(ctx, [
-                        'margin-top',
-                        'margin-right',
-                        'margin-bottom',
-                        'margin-left',
-                    ]) !== '0 0 0 0',
-            },
-            {
-                name: 'padding',
-                value: (ctx) =>
-                    boxShorthand(ctx, [
-                        'padding-top',
-                        'padding-right',
-                        'padding-bottom',
-                        'padding-left',
-                    ]),
-                when: (ctx) =>
-                    boxShorthand(ctx, [
-                        'padding-top',
-                        'padding-right',
-                        'padding-bottom',
-                        'padding-left',
-                    ]) !== '0 0 0 0',
-            },
-            {
-                name: 'border',
-                value: (ctx) => borderSide(ctx, 'top'),
-                when: (ctx) =>
-                    bordersUniform(ctx) && ctx.get('border-top-style') !== 'none',
-            },
-            {
-                name: 'border-top',
-                value: (ctx) => borderSide(ctx, 'top'),
-                when: (ctx) =>
-                    !bordersUniform(ctx) && ctx.get('border-top-style') !== 'none',
-            },
-            {
-                name: 'border-right',
-                value: (ctx) => borderSide(ctx, 'right'),
-                when: (ctx) =>
-                    !bordersUniform(ctx) && ctx.get('border-right-style') !== 'none',
-            },
-            {
-                name: 'border-bottom',
-                value: (ctx) => borderSide(ctx, 'bottom'),
-                when: (ctx) =>
-                    !bordersUniform(ctx) && ctx.get('border-bottom-style') !== 'none',
-            },
-            {
-                name: 'border-left',
-                value: (ctx) => borderSide(ctx, 'left'),
-                when: (ctx) =>
-                    !bordersUniform(ctx) && ctx.get('border-left-style') !== 'none',
-            },
-            {
-                name: 'border-radius',
-                when: (ctx) => !isRadiusZero(ctx.get('border-radius')),
-            },
-            { name: 'box-sizing', hideDefault: 'content-box' },
-            { name: 'object-fit', hideDefault: 'fill' },
-        ],
-    },
-    {
+{
         key: 'pLayout',
         title: 'Layout',
         properties: [
@@ -444,7 +456,7 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
             { name: 'clear', enabled: false, hideDefault: 'none' },
         ],
     },
-    {
+{
         key: 'pList',
         title: 'List',
         tags: LIST_TAG_NAMES,
@@ -460,7 +472,7 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
             { name: 'list-style-position' },
         ],
     },
-    {
+{
         key: 'pTable',
         title: 'Table',
         tags: TABLE_TAG_NAMES,
@@ -473,7 +485,7 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
             { name: 'table-layout', hideDefault: 'auto' },
         ],
     },
-    {
+{
         key: 'pMisc',
         title: 'Miscellaneous',
         hideWhenEmpty: true,
@@ -484,7 +496,7 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
             { name: 'visibility', hideDefault: 'visible' },
         ],
     },
-    {
+{
         key: 'pEffect',
         title: 'Effects',
         hideWhenEmpty: true,
@@ -516,7 +528,8 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
             { name: 'border-bottom-left-radius', enabled: false, hideDefault: '0px' },
             { name: 'border-bottom-right-radius', enabled: false, hideDefault: '0px' },
         ],
-    },
+    }
+
 ];
 
 /** Look up a category's enabled property names by key. */

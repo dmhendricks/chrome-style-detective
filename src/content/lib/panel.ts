@@ -14,6 +14,11 @@ import {
     resolveProperty,
     type InspectContext,
 } from './properties';
+import {
+    clearBoxModelCache,
+    createBoxModelDiagram,
+    updateBoxModelDiagram,
+} from './box-model';
 import { countChipRows, formatClassesForCopy, parseClassTokens } from './classes';
 import { copyTextToClipboard } from './clipboard';
 import { notifyCopy } from './copy-feedback';
@@ -23,6 +28,7 @@ import { OVERLAY_ID } from '../../shared/dom-ids';
 const ID_PREFIX = `${OVERLAY_ID}__`;
 const ROW_HIDDEN = `${OVERLAY_ID}__row--hidden`;
 const CATEGORY_HIDDEN = `${OVERLAY_ID}__category--hidden`;
+const BOX_MODEL_HIDDEN = `${OVERLAY_ID}__box-model--hidden`;
 const HEADER_EXPANDABLE = `${OVERLAY_ID}__header--expandable`;
 const HEADER_EXPANDED = `${OVERLAY_ID}__header--expanded`;
 const CLASSES_HIDDEN = `${OVERLAY_ID}__classes--hidden`;
@@ -41,8 +47,11 @@ let classesHeading: HTMLElement | null = null;
 let classesCopyAll: HTMLButtonElement | null = null;
 let classesChips: HTMLElement | null = null;
 let shortcutsContainer: HTMLElement | null = null;
+let boxModelRoot: HTMLElement | null = null;
 /** When false, the Classes row is suppressed (settings / L). */
 let showCssClasses = true;
+/** When false, the box-model diagram is hidden and covered rows return. */
+let showBoxModelDiagram = true;
 /** Max wrap lines of chips before "+N more" (settings; default 3). */
 let classesChipLines = 3;
 let classesShowAllChips = false;
@@ -51,11 +60,13 @@ let currentClassTokens: readonly string[] = [];
 function clearPanelCache(): void {
     propertyRows.clear();
     categoryElements.clear();
+    clearBoxModelCache();
     classesRoot = null;
     classesHeading = null;
     classesCopyAll = null;
     classesChips = null;
     shortcutsContainer = null;
+    boxModelRoot = null;
 }
 
 /** Current Show CSS Classes preference (in-memory; storage is owned by callers). */
@@ -68,6 +79,18 @@ export function setShowCssClasses(shown: boolean): void {
     if (showCssClasses === shown) return;
     showCssClasses = shown;
     if (!shown) hideClassesPanel();
+}
+
+/** Current Show Box Model Diagram preference (in-memory; storage is owned by callers). */
+export function isShowBoxModelDiagram(): boolean {
+    return showBoxModelDiagram;
+}
+
+/** Apply the Show Box Model Diagram preference (does not write storage). */
+export function setShowBoxModelDiagram(shown: boolean): void {
+    if (showBoxModelDiagram === shown) return;
+    showBoxModelDiagram = shown;
+    boxModelRoot?.classList.toggle(BOX_MODEL_HIDDEN, !shown);
 }
 
 /** Apply the Classes chip line-cap preference (does not write storage). */
@@ -297,6 +320,13 @@ export function updatePanel(style: CSSStyleDeclaration, el: HTMLElement): void {
 
         for (const property of category.properties) {
             if (!isPropertyEnabled(property)) continue;
+            // When the diagram is on, covered rows stay in the catalog / CSS dump
+            // but are hidden in the panel.
+            if (property.diagramCovers && showBoxModelDiagram) {
+                const covered = propertyRows.get(property.name);
+                if (covered) setRowVisible(covered.li, false);
+                continue;
+            }
 
             const row = propertyRows.get(property.name);
             if (!row) continue;
@@ -309,6 +339,10 @@ export function updatePanel(style: CSSStyleDeclaration, el: HTMLElement): void {
             } else {
                 setRowVisible(row.li, false);
             }
+        }
+
+        if (category.key === 'pBox' && showBoxModelDiagram) {
+            updateBoxModelDiagram(ctx);
         }
 
         if (category.hideWhenEmpty) {
@@ -427,12 +461,21 @@ export function createBlock(doc: Document): HTMLDivElement {
         // Tag-gated / empty-gated categories start hidden until updatePanel.
         const gated = Boolean(category.tags || category.hideWhenEmpty);
 
+        const children: Node[] = [el(doc, 'h2', { text: category.title })];
+        if (category.key === 'pBox') {
+            const diagram = createBoxModelDiagram(doc);
+            diagram.classList.toggle(BOX_MODEL_HIDDEN, !showBoxModelDiagram);
+            boxModelRoot = diagram;
+            children.push(diagram);
+        }
+        children.push(el(doc, 'ul', { children: rows }));
+
         const categoryDiv = el(doc, 'div', {
             id: ID_PREFIX + category.key,
             className: gated
                 ? `StyleDetectiveOverlay__category ${CATEGORY_HIDDEN}`
                 : 'StyleDetectiveOverlay__category',
-            children: [el(doc, 'h2', { text: category.title }), el(doc, 'ul', { children: rows })],
+            children,
         });
         categoryElements.set(category.key, categoryDiv);
 

@@ -87,7 +87,7 @@ async function loadLocalPref<T>(
 // Do not bump for overlay-only or unrelated code changes.
 // Wired from `background.ts` → onInstalled.
 //
-export const OPTIONS_REVISION = 1;
+export const OPTIONS_REVISION = 2;
 
 export const LAST_SEEN_OPTIONS_REVISION_KEY = 'lastSeenOptionsRevision';
 
@@ -243,6 +243,32 @@ export async function loadShowCssClasses(): Promise<boolean> {
 export async function saveShowCssClasses(shown: boolean): Promise<void> {
     await localSet({
         [SHOW_CSS_CLASSES_KEY]: showCssClassesSchema.parse(shown),
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Show box-model diagram
+// ---------------------------------------------------------------------------
+
+/** Show the concentric box-model diagram in the Box section. Default: true. */
+export const SHOW_BOX_MODEL_KEY = 'showBoxModelDiagram';
+
+export const showBoxModelSchema = z.boolean();
+
+export const SHOW_BOX_MODEL_DEFAULT = true;
+
+export function parseShowBoxModel(value: unknown): boolean {
+    const result = showBoxModelSchema.safeParse(value);
+    return result.success ? result.data : SHOW_BOX_MODEL_DEFAULT;
+}
+
+export async function loadShowBoxModel(): Promise<boolean> {
+    return loadLocalPref(SHOW_BOX_MODEL_KEY, showBoxModelSchema, SHOW_BOX_MODEL_DEFAULT);
+}
+
+export async function saveShowBoxModel(shown: boolean): Promise<void> {
+    await localSet({
+        [SHOW_BOX_MODEL_KEY]: showBoxModelSchema.parse(shown),
     });
 }
 

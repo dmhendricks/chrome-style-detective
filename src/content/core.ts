@@ -22,6 +22,7 @@ import {
     refreshSelectorOverflow,
     isShowCssClasses,
     setClassesChipLines,
+    setShowBoxModelDiagram,
     setShowCssClasses,
     updateClassesPanel,
     updateHeader,
@@ -33,10 +34,12 @@ import {
     loadClassesChipLines,
     loadPanelFontSize,
     loadPanelThemePreference,
+    loadShowBoxModel,
     loadShowCssClasses,
     parseClassesChipLines,
     parsePanelFontSize,
     parsePanelTheme,
+    parseShowBoxModel,
     parseShowCssClasses,
     resolvePanelTheme,
     savePanelFontSize,
@@ -47,6 +50,7 @@ import {
     PANEL_FONT_SIZE_KEY,
     PANEL_FONT_SIZE_STEP,
     PANEL_THEME_KEY,
+    SHOW_BOX_MODEL_KEY,
     SHOW_CSS_CLASSES_KEY,
 } from '../shared/prefs';
 import { MessageType, Messages, parseExtensionMessage } from '../shared/messages';
@@ -235,6 +239,7 @@ class OverlayController {
             this.loadPanelFontSizePref(),
             this.loadPanelThemePref(),
             this.loadShowCssClassesPref(),
+            this.loadShowBoxModelPref(),
             this.loadClassesChipLinesPref(),
         ]);
         this.watchPrefs();
@@ -356,6 +361,10 @@ class OverlayController {
         setShowCssClasses(await loadShowCssClasses());
     }
 
+    private async loadShowBoxModelPref(): Promise<void> {
+        setShowBoxModelDiagram(await loadShowBoxModel());
+    }
+
     private async loadClassesChipLinesPref(): Promise<void> {
         setClassesChipLines(await loadClassesChipLines());
     }
@@ -382,6 +391,19 @@ class OverlayController {
                 setShowCssClasses(parseShowCssClasses(showClassesChange.newValue));
                 if (this.inspectedElement?.isConnected) {
                     updateClassesPanel(this.inspectedElement);
+                }
+                const block = document.getElementById(OVERLAY_ID);
+                if (block) keepOverlayInViewport(block);
+            }
+
+            const showBoxModelChange = changes[SHOW_BOX_MODEL_KEY];
+            if (showBoxModelChange) {
+                setShowBoxModelDiagram(parseShowBoxModel(showBoxModelChange.newValue));
+                if (this.inspectedElement?.isConnected) {
+                    const style = this.inspectedElement.ownerDocument.defaultView?.getComputedStyle(
+                        this.inspectedElement,
+                    );
+                    if (style) updatePanel(style, this.inspectedElement);
                 }
                 const block = document.getElementById(OVERLAY_ID);
                 if (block) keepOverlayInViewport(block);

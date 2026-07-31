@@ -26,6 +26,9 @@
 //     &__center                                 body (#id)
 //       .StyleDetectiveOverlay__category         one per property group (.class)
 //         h2                                    group heading
+//         .StyleDetectiveOverlay__box-model     Box diagram (pBox only)
+//           &-ring (--margin / --border / --padding)
+//           &-layer / &-mid / &-label (--top/…) / &-content
 //         ul > li                               property rows
 //           .StyleDetectiveOverlay__property     property name / label (.class)
 //           .StyleDetectiveOverlay__value        value cell (colon via ::before)
@@ -101,6 +104,16 @@
     --sd-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
     --sd-scrollbar-thumb: #9a9a9a;
     --sd-scrollbar-track: #e8e8e8;
+    // Box-model diagram rings (DevTools-adjacent, toned for the panel).
+    --sd-box-margin: #f5e6c8;
+    --sd-box-margin-text: #8a6a2b;
+    --sd-box-border: #f0d4a8;
+    --sd-box-border-text: #7a5a28;
+    --sd-box-padding: #d8e4c4;
+    --sd-box-padding-text: #4f6b32;
+    --sd-box-content: #c8daf0;
+    --sd-box-content-text: #2f4f7a;
+    --sd-box-outline: rgba(0, 0, 0, 0.08);
 
     &.StyleDetectiveOverlay--dark {
         --sd-text: #d8dee8;
@@ -122,6 +135,15 @@
         --sd-shadow: 0 4px 20px rgba(0, 0, 0, 0.55);
         --sd-scrollbar-thumb: #7a8494;
         --sd-scrollbar-track: #252d3a;
+        --sd-box-margin: #3d3424;
+        --sd-box-margin-text: #e0c888;
+        --sd-box-border: #4a3f2c;
+        --sd-box-border-text: #d4b878;
+        --sd-box-padding: #2e3a28;
+        --sd-box-padding-text: #a8c878;
+        --sd-box-content: #243448;
+        --sd-box-content-text: #9bb8d8;
+        --sd-box-outline: rgba(255, 255, 255, 0.08);
     }
 
     // Dimensions — width tracks font size (11px → 365/440 base) so larger
@@ -360,6 +382,117 @@
 
         &--hidden {
             display: none !important;
+        }
+    }
+
+    // DevTools-style concentric box (margin → border → padding → content).
+    // Ring thickness is fixed for scanability; labels carry the live values.
+    .StyleDetectiveOverlay__box-model {
+        box-sizing: border-box !important;
+        width: 100% !important;
+        margin: 4px 0 2px !important;
+        padding: 0 2px !important;
+        font-size: var(--sd-font-size) !important;
+        line-height: 1.2 !important;
+        user-select: none !important;
+
+        &--hidden {
+            display: none !important;
+        }
+
+        &-ring {
+            position: relative !important;
+            display: flex !important;
+            flex-direction: column !important;
+            box-sizing: border-box !important;
+            width: 100% !important;
+            min-width: 0 !important;
+            border: 1px solid var(--sd-box-outline) !important;
+
+            &--margin {
+                background: var(--sd-box-margin) !important;
+                color: var(--sd-box-margin-text) !important;
+            }
+
+            &--border {
+                background: var(--sd-box-border) !important;
+                color: var(--sd-box-border-text) !important;
+            }
+
+            &--padding {
+                background: var(--sd-box-padding) !important;
+                color: var(--sd-box-padding-text) !important;
+            }
+        }
+
+        &-layer {
+            position: absolute !important;
+            top: 1px !important;
+            left: 3px !important;
+            z-index: 1 !important;
+            color: inherit !important;
+            font-size: calc(var(--sd-font-size) * 0.85) !important;
+            line-height: 1 !important;
+            opacity: 0.7 !important;
+            pointer-events: none !important;
+        }
+
+        &-mid {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: stretch !important;
+            flex: 1 1 auto !important;
+            min-width: 0 !important;
+            min-height: 0 !important;
+        }
+
+        &-label {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            box-sizing: border-box !important;
+            flex: 0 0 auto !important;
+            color: inherit !important;
+            font-size: calc(var(--sd-font-size) * 0.95) !important;
+            font-variant-numeric: tabular-nums !important;
+            line-height: 1.1 !important;
+            text-align: center !important;
+            white-space: nowrap !important;
+
+            &--top,
+            &--bottom {
+                min-height: calc(var(--sd-font-size) * 1.55) !important;
+                padding: 2px 18px !important;
+            }
+
+            &--left,
+            &--right {
+                min-width: calc(var(--sd-font-size) * 2.8) !important;
+                max-width: calc(var(--sd-font-size) * 4.5) !important;
+                padding: 2px 1px !important;
+                writing-mode: horizontal-tb !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+            }
+        }
+
+        &-content {
+            display: flex !important;
+            flex: 1 1 auto !important;
+            align-items: center !important;
+            justify-content: center !important;
+            box-sizing: border-box !important;
+            min-width: calc(var(--sd-font-size) * 7) !important;
+            min-height: calc(var(--sd-font-size) * 2.4) !important;
+            padding: 4px 6px !important;
+            color: var(--sd-box-content-text) !important;
+            font-size: calc(var(--sd-font-size) * 0.95) !important;
+            font-variant-numeric: tabular-nums !important;
+            line-height: 1.2 !important;
+            text-align: center !important;
+            white-space: nowrap !important;
+            background: var(--sd-box-content) !important;
+            border: 1px solid var(--sd-box-outline) !important;
         }
     }
 

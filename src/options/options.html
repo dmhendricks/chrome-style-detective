@@ -83,6 +83,29 @@
                     </li>
                     <li class="settings__row">
                         <div class="settings__copy">
+                            <label class="settings__label" for="showBoxModelDiagram"
+                                >Show Box Model Diagram</label
+                            >
+                            <p class="settings__hint" id="showBoxModelDiagram-hint">
+                                Show a DevTools-style margin / border / padding diagram in the Box
+                                section. When off, those values appear as normal property rows.
+                            </p>
+                        </div>
+                        <label class="switch">
+                            <input
+                                type="checkbox"
+                                id="showBoxModelDiagram"
+                                role="switch"
+                                aria-describedby="showBoxModelDiagram-hint"
+                                checked
+                            />
+                            <span class="switch__track" aria-hidden="true">
+                                <span class="switch__thumb"></span>
+                            </span>
+                        </label>
+                    </li>
+                    <li class="settings__row">
+                        <div class="settings__copy">
                             <label class="settings__label" for="showCssClasses"
                                 >Show CSS Classes</label
                             >

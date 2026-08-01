@@ -5,6 +5,7 @@
  * update a live mock without booting the content-script controller.
  */
 
+import { countChipRows } from '../content/lib/classes';
 import { DARK_CLASS, OVERLAY_ID } from '../shared/dom-ids';
 import {
     resolvePanelTheme,
@@ -28,10 +29,11 @@ const MOCK_CLASSES = [
     'shadow-sm',
     'hover:opacity-90',
     'focus:ring-2',
+    'transition',
+    'duration-150',
+    'ease-out',
+    'disabled:opacity-50',
 ] as const;
-
-/** Chips that typically fit on one line in the mock at default font size. */
-const CHIPS_PER_LINE = 3;
 
 function systemPrefersDark(): boolean {
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -99,7 +101,7 @@ function buildOverlayHtml(): string {
 
   <div class="StyleDetectiveOverlay__classes" data-preview="classes">
     <div class="StyleDetectiveOverlay__classes-head">
-      <h2 data-preview="classes-heading">Classes (8)</h2>
+      <h2 data-preview="classes-heading">Classes (12)</h2>
       <button type="button" class="StyleDetectiveOverlay__classes-copy-all" tabindex="-1">Copy All</button>
     </div>
     <div class="StyleDetectiveOverlay__class-chips" data-preview="chips"></div>
@@ -183,30 +185,59 @@ function syncPreviewColumnWidth(fontSize: number): void {
     );
 }
 
+/**
+ * Paint mock class chips using the same wrap-line measurement as the live panel
+ * (`countChipRows` + binary search), not a fixed chips-per-line guess.
+ */
 function renderChips(container: HTMLElement, lines: number): void {
-    const maxVisible = Math.max(1, lines) * CHIPS_PER_LINE;
     const tokens = MOCK_CLASSES;
-    container.replaceChildren();
+    const maxLines = Math.max(1, lines);
 
-    const visible = Math.min(tokens.length, maxVisible);
-    for (let i = 0; i < visible; i++) {
+    const appendTokenChip = (token: string): void => {
         const chip = document.createElement('button');
         chip.type = 'button';
         chip.className = 'StyleDetectiveOverlay__class-chip';
-        chip.textContent = tokens[i] ?? '';
+        chip.textContent = token;
         chip.tabIndex = -1;
         container.append(chip);
-    }
+    };
 
-    const hidden = tokens.length - visible;
-    if (hidden > 0) {
+    const appendMoreChip = (hiddenCount: number): void => {
         const more = document.createElement('button');
         more.type = 'button';
         more.className =
             'StyleDetectiveOverlay__class-chip StyleDetectiveOverlay__class-chip--more';
-        more.textContent = `+${hidden} more`;
+        more.textContent = `+${hiddenCount} more`;
         more.tabIndex = -1;
         container.append(more);
+    };
+
+    const paint = (visibleCount: number, withMore: boolean): void => {
+        container.replaceChildren();
+        for (let i = 0; i < visibleCount; i++) {
+            const token = tokens[i];
+            if (token !== undefined) appendTokenChip(token);
+        }
+        if (withMore) appendMoreChip(tokens.length - visibleCount);
+    };
+
+    // Prefer showing every chip when it fits within the configured wrap lines.
+    paint(tokens.length, false);
+    if (countChipRows(container) > maxLines) {
+        let lo = 1;
+        let hi = tokens.length - 1;
+        let best = 1;
+        while (lo <= hi) {
+            const mid = (lo + hi) >> 1;
+            paint(mid, true);
+            if (countChipRows(container) <= maxLines) {
+                best = mid;
+                lo = mid + 1;
+            } else {
+                hi = mid - 1;
+            }
+        }
+        paint(best, true);
     }
 
     const heading = root?.querySelector('[data-preview="classes-heading"]');
@@ -261,6 +292,12 @@ export function renderPreview(state: PreviewState): void {
     const chips = root.querySelector<HTMLElement>('[data-preview="chips"]');
     if (chips && state.showCssClasses) {
         renderChips(chips, state.classesChipLines);
+        // Remeasure after column width / font-size layout settles (same as live panel).
+        requestAnimationFrame(() => {
+            if (latestState?.showCssClasses) {
+                renderChips(chips, latestState.classesChipLines);
+            }
+        });
     }
 
     const boxModel = root.querySelector<HTMLElement>('[data-preview="box-model"] .StyleDetectiveOverlay__box-model');

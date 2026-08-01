@@ -23,6 +23,28 @@ const ACTION_TITLE_DEFAULT = 'Style Detective';
 const ACTION_TITLE_ARMED = 'Style Detective is on — click to turn off';
 const ACTION_TITLE_RESTRICTED = 'Style Detective — not available on this page';
 const UNSUPPORTED_POPUP = 'unsupported.html';
+const OPTIONS_PAGE_PATH = 'src/options/options.html';
+
+/**
+ * `openOptionsPage()` cannot take a hash. Open (or focus) Options at `#settings`
+ * so S / install / revision bumps land on the Settings tab.
+ */
+async function openOptionsAtSettings(): Promise<void> {
+    const base = chrome.runtime.getURL(OPTIONS_PAGE_PATH);
+    const target = `${base}#settings`;
+    const tabs = await chrome.tabs.query({});
+    const existing = tabs.find((tab) => tab.url?.startsWith(base));
+
+    if (existing?.id != null) {
+        await chrome.tabs.update(existing.id, { url: target, active: true });
+        if (existing.windowId != null) {
+            await chrome.windows.update(existing.windowId, { focused: true });
+        }
+        return;
+    }
+
+    await chrome.tabs.create({ url: target });
+}
 
 const ACTION_ICON_DEFAULT: Record<string, string> = {
     '16': 'images/16.png',
@@ -287,7 +309,7 @@ async function toggleOverlay(tabId: number): Promise<void> {
 chrome.runtime.onInstalled.addListener((details) => {
     void (async () => {
         if (details.reason === 'install') {
-            chrome.runtime.openOptionsPage();
+            await openOptionsAtSettings();
             await saveLastSeenOptionsRevision(OPTIONS_REVISION);
             return;
         }
@@ -302,7 +324,7 @@ chrome.runtime.onInstalled.addListener((details) => {
         }
 
         if (OPTIONS_REVISION > lastSeen) {
-            chrome.runtime.openOptionsPage();
+            await openOptionsAtSettings();
             await saveLastSeenOptionsRevision(OPTIONS_REVISION);
         }
     })();
@@ -333,7 +355,7 @@ chrome.runtime.onMessage.addListener((raw, sender) => {
     if (!message) return;
 
     if (message.type === MessageType.OpenOptions) {
-        chrome.runtime.openOptionsPage();
+        void openOptionsAtSettings();
         return;
     }
 

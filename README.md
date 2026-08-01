@@ -8,13 +8,15 @@ A modern rewrite of the popular [CSS Viewer](https://github.com/miled/cssviewer)
 
 - Hover over any element to view its CSS properties in a floating panel
 - Freeze the panel in place to inspect it
+- DevTools-style box model diagram for margin, border, and padding — turn it off in settings for a shorter panel or plain text values
 - Copy an element's style to clipboard, or freeze the panel to copy individual property values
+- Copy the same properties as JSON (`J`) for diffing or feeding other tools
 - Keyboard shortcut to toggle the viewer (`Alt+Shift+S`; macOS: `Option+Shift+S`)
-- New: WCAG contrast ratio for color vs background-color
-- New: Ability to increase/decrease font size
-- New: Dark mode support
-- New: Iframe support
-- New: Classes section with click-to-copy chips or "Copy All"
+- WCAG contrast ratio for color vs background-color
+- Ability to increase/decrease font size
+- Dark mode support
+- Iframe support
+- Classes section with click-to-copy chips or "Copy All"
 
 ## Installation
 
@@ -58,4 +60,6 @@ Values are the element’s **current computed styles**—what the browser is ren
 
 That includes interaction state: hovering a link shows its `:hover` color (and any other hover styles), which matches what you see under the cursor. Press **`F`** to freeze while hovered if you want to keep that snapshot and move the mouse away.
 
-Copied CSS (`C`) uses the same live computed values as the panel.
+Copied CSS (`C`) and JSON (`J`) use the same live computed values as the panel, including colors in the form shown (hex when opaque, `rgba()` with alpha).
+
+The **Box** section shows a DevTools-style margin / border / padding diagram by default; turn off **Show Box Model Diagram** in settings to see those values as normal property rows instead.

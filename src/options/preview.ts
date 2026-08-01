@@ -62,15 +62,33 @@ function boxModelHtml(): string {
     return `<div class="StyleDetectiveOverlay__box-model">${margin}</div>`;
 }
 
-function propertyRow(name: string, value: string, hidden = false): string {
+/** Hex or rgb()/rgba() — mirrors `COLOR_TOKEN_RE` in content/lib/dom.ts. */
+const COLOR_TOKEN_RE =
+    /#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b|rgba?\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*(?:,\s*[\d.]+\s*)?\)/i;
+
+function colorSwatchMarkup(cssColor: string): string {
+    return `<span class="StyleDetectiveOverlay__color-swatch"><span class="StyleDetectiveOverlay__color-swatch-fill" style="background-color: ${cssColor} !important"></span></span>`;
+}
+
+function valueGroupMarkup(value: string, badge?: { text: string; tone: string }): string {
+    const leading = value.match(COLOR_TOKEN_RE)?.[0] ?? null;
+    const swatch = leading ? colorSwatchMarkup(leading) : '';
+    const pill = badge
+        ? `<span class="StyleDetectiveOverlay__contrast-badge StyleDetectiveOverlay__contrast-badge--${badge.tone}" title="WCAG ${badge.text}">${badge.text}</span>`
+        : '';
+    return `<span class="StyleDetectiveOverlay__value-group"><span class="StyleDetectiveOverlay__value-text">${swatch}${value}${pill}</span></span>`;
+}
+
+function propertyRow(
+    name: string,
+    value: string,
+    hidden = false,
+    badge?: { text: string; tone: string },
+): string {
     return `
       <li class="${hidden ? 'StyleDetectiveOverlay__row--hidden' : ''}">
         <span class="StyleDetectiveOverlay__property">${name}</span>
-        <span class="StyleDetectiveOverlay__value">
-          <span class="StyleDetectiveOverlay__value-group">
-            <span class="StyleDetectiveOverlay__value-text">${value}</span>
-          </span>
-        </span>
+        <span class="StyleDetectiveOverlay__value">${valueGroupMarkup(value, badge)}</span>
       </li>`;
 }
 
@@ -95,7 +113,6 @@ function buildOverlayHtml(): string {
         ${propertyRow('width', '101px')}
         ${propertyRow('height', '34px')}
         ${propertyRow('border-radius', '8px')}
-        ${propertyRow('box-sizing', 'border-box')}
         ${propertyRow('margin', '0', true)}
         ${propertyRow('padding', '0 14px', true)}
         ${propertyRow('border', '2px solid #9F1239', true)}
@@ -109,11 +126,12 @@ function buildOverlayHtml(): string {
         ${propertyRow('font-weight', '600')}
       </ul>
     </div>
-    <div class="StyleDetectiveOverlay__category">
+    <div class="StyleDetectiveOverlay__category" data-preview="color">
       <h2>Color &amp; Background</h2>
       <ul>
-        ${propertyRow('color', '#9F1239')}
-        ${propertyRow('background-color', '#FFF5F7')}
+        ${propertyRow('color', '#00D4AA')}
+        ${propertyRow('background-color', 'transparent')}
+        ${propertyRow('contrast', '11.00:1', false, { text: 'AAA', tone: 'aaa' })}
       </ul>
     </div>
   </div>

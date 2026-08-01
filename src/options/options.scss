@@ -2,6 +2,8 @@
  * Style Detective — options / about page
  */
 
+@use '../content/style.scss';
+
 :root {
     // Align accents with the overlay panel (coral banner, green headings).
     --sd-coral: #f87575;
@@ -313,12 +315,18 @@ body {
     max-width: 100%;
     padding: 0.35rem 0.15rem 0.5rem;
     overflow: hidden;
+    // Clicks go through to the page chrome; wheel still scrolls the panel body.
     pointer-events: none;
     user-select: none;
+
+    #StyleDetectiveOverlay__center {
+        pointer-events: auto;
+    }
 }
 
 // Overlay stylesheet expects a floating absolute panel — pin it for the mock.
 // Real panel min-width (~365px at 11px) can exceed the preview column; force fit.
+// Grow with content so Box … Color all stay visible (no clipped section headings).
 .preview-stage__frame #StyleDetectiveOverlay {
     display: flex !important;
     position: relative !important;
@@ -330,9 +338,14 @@ body {
     width: 100% !important;
     min-width: 0 !important;
     max-width: 100% !important;
-    max-height: min(70vh, 36rem) !important;
+    max-height: none !important;
     margin: 0 !important;
     z-index: 1 !important;
+
+    #StyleDetectiveOverlay__center {
+        flex: 0 0 auto !important;
+        overflow: visible !important;
+    }
 }
 
 // —— Intro ————————————————————————————————————————————————————————————————
@@ -981,9 +994,6 @@ a:focus-visible {
         gap: 0.65rem;
     }
 }
-
-// Overlay panel chrome for the live preview mock.
-@import '../content/style.scss';
 
 // Preview column is narrower than the live panel (~318 vs ~365px). Keep the
 // footer shortcuts on one row so the mock matches the real overlay layout.

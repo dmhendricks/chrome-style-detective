@@ -114,23 +114,27 @@ function cssDefinitionSelector(el: HTMLElement): string {
 }
 
 /**
- * Build a CSS definition for copy. Only includes properties that would appear
- * in the panel (same `when` / `hideDefault` visibility), omits `panelOnly`
- * rows, and skips tag-gated categories that don't match the element.
+ * Walk the catalog for copy: only properties that would appear in the panel
+ * (same `when` / `hideDefault` visibility), omitting `panelOnly` rows and
+ * tag-gated categories that don't match the element. Shared by every copy
+ * format so they cannot disagree about the same element.
  */
-function buildCssDefinition(el: HTMLElement, style: CSSStyleDeclaration): string {
-    let css = cssDefinitionSelector(el) + ' {\n';
-
+function collectCopyProperties(
+    el: HTMLElement,
+    style: CSSStyleDeclaration,
+): { title: string; entries: { name: string; value: string }[] }[] {
     const ctx: InspectContext = {
         style,
         el,
         get: (property) => style.getPropertyValue(property),
     };
 
+    const groups: { title: string; entries: { name: string; value: string }[] }[] = [];
+
     for (const category of CSS_CATEGORIES) {
         if (category.tags && !category.tags.includes(el.tagName)) continue;
 
-        let categoryCss = '';
+        const entries: { name: string; value: string }[] = [];
         for (const property of category.properties) {
             if (!isPropertyEnabled(property) || property.panelOnly) continue;
 
@@ -143,15 +147,45 @@ function buildCssDefinition(el: HTMLElement, style: CSSStyleDeclaration): string
             // display-only (e.g. filename) and would not round-trip.
             const value =
                 property.value || property.copySafe ? resolved.value : ctx.get(property.name);
-            categoryCss += '\t' + property.name + ': ' + value + ';\n';
+            entries.push({ name: property.name, value });
         }
 
-        if (categoryCss === '') continue;
-        css += `\n\t/* ${category.title} */\n` + categoryCss;
+        if (entries.length > 0) groups.push({ title: category.title, entries });
+    }
+
+    return groups;
+}
+
+/** Build a CSS definition for copy, grouped by category with heading comments. */
+function buildCssDefinition(el: HTMLElement, style: CSSStyleDeclaration): string {
+    let css = cssDefinitionSelector(el) + ' {\n';
+
+    for (const group of collectCopyProperties(el, style)) {
+        css += `\n\t/* ${group.title} */\n`;
+        for (const entry of group.entries) {
+            css += '\t' + entry.name + ': ' + entry.value + ';\n';
+        }
     }
 
     css += '}';
     return css;
+}
+
+/**
+ * Build a JSON snapshot for copy: the same selector and visible properties as
+ * the CSS definition, as a flat kebab-case map. Flat (not nested by category)
+ * so consumers can read `properties["width"]` without knowing the taxonomy.
+ */
+function buildJsonDefinition(el: HTMLElement, style: CSSStyleDeclaration): string {
+    const properties: Record<string, string> = {};
+
+    for (const group of collectCopyProperties(el, style)) {
+        for (const entry of group.entries) {
+            properties[entry.name] = entry.value;
+        }
+    }
+
+    return JSON.stringify({ selector: cssDefinitionSelector(el), properties }, null, 2);
 }
 
 /**
@@ -776,6 +810,11 @@ class OverlayController {
             else void this.copyCssDefinition();
             return;
         }
+        if (key === 'j') {
+            e.preventDefault();
+            void this.copyJsonDefinition();
+            return;
+        }
         if (key === 'l') {
             e.preventDefault();
             this.toggleShowCssClasses();
@@ -853,6 +892,28 @@ class OverlayController {
             const css = buildCssDefinition(el, view.getComputedStyle(el));
             await copyTextToClipboard(css);
             this.flashMessage('CSS definition copied to clipboard', { tone: 'success' });
+        } catch {
+            this.flashMessage('Could not copy to clipboard');
+        }
+    }
+
+    private async copyJsonDefinition(): Promise<void> {
+        const el = this.inspectedElement;
+        if (!el || !el.isConnected) {
+            this.flashMessage('Nothing to copy — hover an element first.');
+            return;
+        }
+
+        const view = document.defaultView;
+        if (!view) {
+            this.flashMessage('Could not copy to clipboard');
+            return;
+        }
+
+        try {
+            const json = buildJsonDefinition(el, view.getComputedStyle(el));
+            await copyTextToClipboard(json);
+            this.flashMessage('JSON copied to clipboard', { tone: 'success' });
         } catch {
             this.flashMessage('Could not copy to clipboard');
         }

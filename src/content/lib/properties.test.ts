@@ -26,9 +26,9 @@ function findProperty(name: string): CssProperty {
 }
 
 /**
- * Mirrors the value selection in `buildCssDefinition` (core.ts): synthesized
+ * Mirrors the value selection in `collectCopyProperties` (core.ts): synthesized
  * `value()` and `copySafe` formatters win; other `format` helpers are skipped
- * in favour of the raw computed value.
+ * in favour of the raw computed value. Shared by the CSS and JSON copy formats.
  */
 function copiedValue(name: string, raw: string): string {
     const property = findProperty(name);
@@ -102,5 +102,29 @@ describe('catalog invariants', () => {
     it('treats properties as enabled unless explicitly disabled', () => {
         expect(isPropertyEnabled({ name: 'width' })).toBe(true);
         expect(isPropertyEnabled({ name: 'width', enabled: false })).toBe(false);
+    });
+
+    it('uses kebab-case names, so JSON copy keys are real CSS properties', () => {
+        // buildJsonDefinition keys the map by property.name verbatim; camelCase
+        // or synthetic names would produce keys no CSS tooling accepts.
+        for (const category of CSS_CATEGORIES) {
+            for (const property of category.properties) {
+                if (property.panelOnly) continue;
+                expect(property.name).toMatch(/^-{0,2}[a-z][a-z0-9-]*$/);
+            }
+        }
+    });
+
+    it('has no duplicate property names across categories', () => {
+        // JSON copy flattens categories into one object — a duplicate name would
+        // silently overwrite whichever entry came first.
+        const seen = new Set<string>();
+        for (const category of CSS_CATEGORIES) {
+            for (const property of category.properties) {
+                if (property.panelOnly) continue;
+                expect(seen.has(property.name), `duplicate: ${property.name}`).toBe(false);
+                seen.add(property.name);
+            }
+        }
     });
 });

@@ -44,6 +44,7 @@ You can customize the toggle shortcut at `chrome://extensions/shortcuts`.
 - `F` to freeze or unfreeze the panel in place
 - `C` to copy a simple CSS definition for the selected element to the clipboard
 - `Shift+C` to copy the element's classes (space-separated)
+- `J` to copy the same properties as JSON (`{ selector, properties }`)
 - `L` to show or hide the Classes row
 - `+` / `-` to increase or decrease the panel font size (`0` / zero resets to default)
 - `S` to open the settings page

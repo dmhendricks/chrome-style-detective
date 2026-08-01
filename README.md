@@ -33,7 +33,7 @@ npm run lint
 npm run test
 ```
 
-Then open `chrome://extensions`, turn on **Developer mode** (top-right), click **Load Unpacked** and choose the `dist/` directory.
+Then open `chrome://extensions` (Google Chrome) or `edge://extensions` (Microsoft Edge), turn on **Developer mode** (top-right in Chrome, bottom left in Edge), click **Load Unpacked** and choose the `dist/` directory.
 
 ## Usage
 
@@ -53,6 +53,24 @@ You can customize the toggle shortcut at `chrome://extensions/shortcuts`.
 - `Esc` to close the viewer
 
 On elements with a `class` attribute, a **Classes** row appears below the header with click-to-copy chips and **Copy All** (long lists cap at a configurable number of wrap lines — default 3 — with `+N more`). The header shows the tag and `#id` only. Toggle the row anytime with **`L`** or **Show CSS Classes** in settings (`Shift+C` still copies classes).
+
+## Configuration
+
+![Style Detective settings](store/screenshot-1280x800-02.png)
+
+Press **`S`** while inspecting to open the settings page. A live **Panel Preview** beside the settings shows each change as you make it.
+
+| Setting | Default | What it does |
+| --- | --- | --- |
+| **Panel Theme** | System | Light, Dark, or System (follows your OS appearance). |
+| **Show Box Model Diagram** | On | Draws the DevTools-style margin / border / padding diagram in the Box section. Off shows those values as normal property rows instead. |
+| **Show CSS Classes** | On | Shows the Classes row with click-to-copy chips. Toggle without leaving the page with **`L`**; `Shift+C` still copies classes when the row is hidden. |
+| **CSS Class Lines** | 3 | How many lines of class chips to show before collapsing into `+N more` (1–9). |
+| **Panel Font Size** | 11px | Base font size for the overlay (8–18px). The panel width scales with it. Adjust while inspecting with `+` / `-`, or press `0` to reset. |
+
+Between the box model and Classes toggles you can trim the panel down to just the property rows, which is useful on small screens or when the diagram and chips crowd out what you are actually inspecting.
+
+**Reset to Defaults** at the bottom of the settings page restores every option above.
 
 ## What the Panel Shows
 

@@ -25,7 +25,9 @@
     --sd-font-sans: 'Avenir Next', 'Segoe UI', 'Helvetica Neue', ui-sans-serif, sans-serif;
     --sd-font-mono: 'SF Mono', 'Cascadia Code', 'Consolas', ui-monospace, monospace;
     --sd-radius: 12px;
-    --sd-max: 40rem;
+    --sd-max: 72rem;
+    --sd-nav-width: 10.5rem;
+    --sd-preview-width: 22rem;
 }
 
 @media (prefers-color-scheme: light) {
@@ -92,12 +94,12 @@ body {
     mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
 }
 
-main {
+.page {
     position: relative;
     z-index: 1;
     max-width: var(--sd-max);
     margin-inline: auto;
-    padding: 2.25rem 1.5rem 3.5rem;
+    padding: 1.75rem 1.5rem 3rem;
 }
 
 // —— Header ————————————————————————————————————————————————————————————————
@@ -107,7 +109,7 @@ main {
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
-    margin-bottom: 1.75rem;
+    margin-bottom: 1.5rem;
     animation: rise 0.55s ease both;
 }
 
@@ -185,14 +187,161 @@ main {
     height: 1.35rem;
 }
 
+// —— App shell (nav | content | preview) ————————————————————————————————
+
+.shell {
+    display: grid;
+    grid-template-columns: var(--sd-nav-width) minmax(0, 1fr) var(--sd-preview-width);
+    gap: 1.5rem 1.75rem;
+    align-items: start;
+    animation: rise 0.55s ease 0.06s both;
+}
+
+.shell__nav {
+    position: sticky;
+    top: 1rem;
+}
+
+.tablist {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.35rem;
+    background: color-mix(in srgb, var(--sd-bg-elevated) 75%, transparent);
+    border: 1px solid var(--sd-border);
+    border-radius: 0.85rem;
+}
+
+.tab {
+    appearance: none;
+    margin: 0;
+    padding: 0.7rem 0.85rem;
+    font: inherit;
+    font-size: 0.95rem;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    text-align: left;
+    color: var(--sd-text-muted);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 0.55rem;
+    cursor: pointer;
+    transition:
+        color 0.15s ease,
+        background 0.15s ease,
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.tab:hover {
+    color: var(--sd-text);
+    background: color-mix(in srgb, var(--sd-bg) 40%, transparent);
+}
+
+.tab[aria-selected='true'] {
+    color: var(--sd-text);
+    background: color-mix(in srgb, var(--sd-bg-elevated) 90%, var(--sd-coral-soft));
+    border-color: color-mix(in srgb, var(--sd-coral) 35%, var(--sd-border));
+    box-shadow: inset 3px 0 0 var(--sd-coral);
+}
+
+.tab:focus-visible {
+    outline: 2px solid var(--sd-link);
+    outline-offset: 2px;
+}
+
+.shell__main {
+    min-width: 0;
+}
+
+.tab-panel {
+    animation: panel-in 0.28s ease both;
+}
+
+.tab-panel[hidden] {
+    display: none !important;
+}
+
+@keyframes panel-in {
+    from {
+        opacity: 0;
+        transform: translateY(0.35rem);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.shell__preview {
+    position: sticky;
+    top: 1rem;
+    min-width: 0;
+}
+
+.preview-stage {
+    padding: 0.85rem;
+    overflow: hidden;
+    background:
+        radial-gradient(
+            ellipse 70% 50% at 50% 0%,
+            color-mix(in srgb, var(--sd-coral) 12%, transparent),
+            transparent 70%
+        ),
+        color-mix(in srgb, var(--sd-bg-elevated) 88%, transparent);
+    border: 1px solid var(--sd-border);
+    border-radius: 1rem;
+    box-shadow: 0 18px 40px -28px color-mix(in srgb, #000 55%, transparent);
+}
+
+.preview-stage__label {
+    margin: 0 0 0.65rem;
+    font-family: var(--sd-font-mono);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sd-text-muted);
+}
+
+.preview-stage__frame {
+    // Host for the real overlay mock; isolate stacking from the options chrome.
+    position: relative;
+    display: flex;
+    justify-content: center;
+    min-width: 0;
+    max-width: 100%;
+    padding: 0.35rem 0.15rem 0.5rem;
+    overflow: hidden;
+    pointer-events: none;
+    user-select: none;
+}
+
+// Overlay stylesheet expects a floating absolute panel — pin it for the mock.
+// Real panel min-width (~365px at 11px) can exceed the preview column; force fit.
+.preview-stage__frame #StyleDetectiveOverlay {
+    display: flex !important;
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    max-height: min(70vh, 36rem) !important;
+    margin: 0 !important;
+    z-index: 1 !important;
+}
+
 // —— Intro ————————————————————————————————————————————————————————————————
 
 .lede {
-    margin: 0 0 1.75rem;
+    margin: 0 0 1.5rem;
     max-width: 34rem;
-    font-size: 1.12rem;
+    font-size: 1.08rem;
     color: var(--sd-text-muted);
-    animation: rise 0.55s ease 0.06s both;
 }
 
 // —— Settings ——————————————————————————————————————————————————————————————
@@ -389,31 +538,44 @@ main {
     outline-offset: 1px;
 }
 
+.section .settings-reset {
+    margin: 1.5rem 0 0;
+}
+
+.settings-reset__btn {
+    appearance: none;
+    margin: 0;
+    padding: 0.55rem 0.9rem;
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 650;
+    color: var(--sd-text-muted);
+    background: var(--sd-kbd-bg);
+    border: 1px solid var(--sd-kbd-border);
+    border-radius: 0.55rem;
+    cursor: pointer;
+    transition:
+        color 0.15s ease,
+        border-color 0.15s ease,
+        background 0.15s ease;
+}
+
+.settings-reset__btn:hover,
+.settings-reset__btn:focus-visible {
+    color: var(--sd-text);
+    border-color: color-mix(in srgb, var(--sd-coral) 40%, var(--sd-kbd-border));
+    outline: none;
+}
+
+.settings-reset__btn:focus-visible {
+    outline: 2px solid var(--sd-link);
+    outline-offset: 2px;
+}
+
 // —— Sections ——————————————————————————————————————————————————————————————
 
 .section {
-    margin-bottom: 2.15rem;
-    animation: rise 0.55s ease both;
-}
-
-.section:nth-of-type(1) {
-    animation-delay: 0.12s;
-}
-
-.section:nth-of-type(2) {
-    animation-delay: 0.18s;
-}
-
-.section:nth-of-type(3) {
-    animation-delay: 0.24s;
-}
-
-.section:nth-of-type(4) {
-    animation-delay: 0.3s;
-}
-
-.section:nth-of-type(5) {
-    animation-delay: 0.36s;
+    margin-bottom: 2rem;
 }
 
 .section h2 {
@@ -771,13 +933,76 @@ a:focus-visible {
     }
 }
 
-@media (max-width: 480px) {
-    main {
-        padding: 1.5rem 1.1rem 2.75rem;
+@media (max-width: 1100px) {
+    .shell {
+        grid-template-columns: var(--sd-nav-width) minmax(0, 1fr);
+    }
+
+    .shell__preview {
+        grid-column: 1 / -1;
+        position: static;
+    }
+
+    .preview-stage__frame #StyleDetectiveOverlay {
+        max-width: 22rem !important;
+        margin-inline: auto !important;
+    }
+}
+
+@media (max-width: 720px) {
+    .page {
+        padding: 1.35rem 1.1rem 2.5rem;
+    }
+
+    .shell {
+        grid-template-columns: 1fr;
+        gap: 1.15rem;
+    }
+
+    .shell__nav {
+        position: static;
+    }
+
+    .tablist {
+        flex-direction: row;
+    }
+
+    .tab {
+        flex: 1 1 0;
+        text-align: center;
+    }
+
+    .tab[aria-selected='true'] {
+        box-shadow: inset 0 -3px 0 var(--sd-coral);
     }
 
     .shortcuts li {
         grid-template-columns: 3.25rem 1fr;
         gap: 0.65rem;
+    }
+}
+
+// Overlay panel chrome for the live preview mock.
+@import '../content/style.scss';
+
+// Preview column is narrower than the live panel (~318 vs ~365px). Keep the
+// footer shortcuts on one row so the mock matches the real overlay layout.
+.preview-stage__frame #StyleDetectiveOverlay {
+    #StyleDetectiveOverlay__footer {
+        padding: 6px 6px 8px !important;
+    }
+
+    .StyleDetectiveOverlay__shortcuts {
+        flex-wrap: nowrap !important;
+        gap: 4px 6px !important;
+    }
+
+    .StyleDetectiveOverlay__shortcut {
+        gap: 3px !important;
+    }
+
+    .StyleDetectiveOverlay__shortcut kbd {
+        min-width: calc(var(--sd-font-size) * 1.5) !important;
+        padding: 2px 4px !important;
     }
 }

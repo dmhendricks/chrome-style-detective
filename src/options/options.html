@@ -10,7 +10,7 @@
     <body>
         <div class="atmosphere" aria-hidden="true"></div>
 
-        <main>
+        <div class="page">
             <header class="site-header">
                 <div class="brand">
                     <img
@@ -45,235 +45,355 @@
                 </a>
             </header>
 
-            <p class="lede">
-                Inspect CSS properties of any element on a page in real time — hover to reveal,
-                freeze to study, copy to take with you.
-            </p>
-
-            <section class="section" id="settings">
-                <h2>Settings</h2>
-                <ul class="settings" role="list">
-                    <li class="settings__row settings__row--stack">
-                        <div class="settings__copy">
-                            <span class="settings__label" id="panelTheme-label">Panel Theme</span>
-                            <p class="settings__hint" id="panelTheme-hint">
-                                Color scheme for the inspection overlay. System follows your OS
-                                appearance and is the default.
-                            </p>
-                        </div>
-                        <div
-                            class="theme-seg"
-                            role="radiogroup"
-                            aria-labelledby="panelTheme-label"
-                            aria-describedby="panelTheme-hint"
+            <div class="shell">
+                <nav class="shell__nav" aria-label="Options">
+                    <div class="tablist" role="tablist" aria-orientation="vertical">
+                        <button
+                            type="button"
+                            class="tab"
+                            role="tab"
+                            id="tab-guide"
+                            aria-controls="panel-guide"
+                            aria-selected="true"
+                            tabindex="0"
+                            data-tab="guide"
                         >
-                            <label class="theme-seg__option">
-                                <input type="radio" name="panelTheme" value="light" />
-                                <span>Light</span>
-                            </label>
-                            <label class="theme-seg__option">
-                                <input type="radio" name="panelTheme" value="dark" />
-                                <span>Dark</span>
-                            </label>
-                            <label class="theme-seg__option">
-                                <input type="radio" name="panelTheme" value="system" />
-                                <span>System</span>
-                            </label>
-                        </div>
-                    </li>
-                    <li class="settings__row">
-                        <div class="settings__copy">
-                            <label class="settings__label" for="showBoxModelDiagram"
-                                >Show Box Model Diagram</label
-                            >
-                            <p class="settings__hint" id="showBoxModelDiagram-hint">
-                                Show a DevTools-style margin / border / padding diagram in the Box
-                                section. When off, those values appear as normal property rows.
-                            </p>
-                        </div>
-                        <label class="switch">
-                            <input
-                                type="checkbox"
-                                id="showBoxModelDiagram"
-                                role="switch"
-                                aria-describedby="showBoxModelDiagram-hint"
-                                checked
-                            />
-                            <span class="switch__track" aria-hidden="true">
-                                <span class="switch__thumb"></span>
-                            </span>
-                        </label>
-                    </li>
-                    <li class="settings__row">
-                        <div class="settings__copy">
-                            <label class="settings__label" for="showCssClasses"
-                                >Show CSS Classes</label
-                            >
-                            <p class="settings__hint" id="showCssClasses-hint">
-                                Show a Classes row with clickable chips on elements that have
-                                classes. Toggle anytime with <kbd>L</kbd> while inspecting.
-                                <kbd>Shift+C</kbd> still copies classes when the row is hidden.
-                            </p>
-                        </div>
-                        <label class="switch">
-                            <input
-                                type="checkbox"
-                                id="showCssClasses"
-                                role="switch"
-                                aria-describedby="showCssClasses-hint"
-                                checked
-                            />
-                            <span class="switch__track" aria-hidden="true">
-                                <span class="switch__thumb"></span>
-                            </span>
-                        </label>
-                    </li>
-                    <li class="settings__row" id="classesChipLines-row">
-                        <div class="settings__copy">
-                            <label class="settings__label" for="classesChipLines"
-                                >CSS Class Lines</label
-                            >
-                            <p class="settings__hint" id="classesChipLines-hint">
-                                Number of lines of CSS classes to display before collapsing into
-                                <code class="nobr">+N more</code>. Default is 3.
-                            </p>
-                        </div>
-                        <input
-                            class="settings-number"
-                            type="number"
-                            id="classesChipLines"
-                            min="1"
-                            max="9"
-                            step="1"
-                            value="3"
-                            inputmode="numeric"
-                            aria-describedby="classesChipLines-hint"
-                        />
-                    </li>
-                </ul>
-            </section>
+                            Guide
+                        </button>
+                        <button
+                            type="button"
+                            class="tab"
+                            role="tab"
+                            id="tab-settings"
+                            aria-controls="panel-settings"
+                            aria-selected="false"
+                            tabindex="-1"
+                            data-tab="settings"
+                        >
+                            Settings
+                        </button>
+                    </div>
+                </nav>
 
-            <section class="section" id="how-to-use">
-                <h2>How to Use</h2>
-                <ol class="steps">
-                    <li>
-                        Click the toolbar icon or press <kbd>Alt+Shift+S</kbd> (Windows/Linux) or
-                        <kbd>Option+Shift+S</kbd> (macOS) to enable Style Detective on the current
-                        page.
-                    </li>
-                    <li>Hover any element to inspect its computed CSS in the floating panel.</li>
-                    <!--
-                    <li>Works on <code>http</code>, <code>https</code>, and local pages.</li>
-                    -->
-                </ol>
-
-                <p class="shortcut-customize">
-                    To customize the toggle shortcut, open <strong>Manage Extensions</strong> in your browser, then select <strong>Keyboard Shortcuts</strong>
-                    in the left sidebar.
-                </p>
-
-                <aside class="tip" aria-label="Tip">
-                    <span class="tip__icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                d="M9 18h6M10 21h4"
-                                stroke="currentColor"
-                                stroke-width="1.75"
-                                stroke-linecap="round"
-                            />
-                            <path
-                                d="M12 3a6 6 0 0 0-3.5 10.8c.6.45 1 1.1 1.15 1.85h4.7c.15-.75.55-1.4 1.15-1.85A6 6 0 0 0 12 3Z"
-                                stroke="currentColor"
-                                stroke-width="1.75"
-                                stroke-linejoin="round"
-                            />
-                            <path
-                                d="M12 7.25v2.5"
-                                stroke="currentColor"
-                                stroke-width="1.75"
-                                stroke-linecap="round"
-                            />
-                        </svg>
-                    </span>
-                    <div class="tip__body">
-                        <p class="tip__label">Tip</p>
-                        <p class="tip__text">
-                            Press <kbd>F</kbd> to freeze the panel in place and <kbd>Esc</kbd> to
-                            disable it. Freezing lets you click class chips and copy property values
-                            to the clipboard.
+                <main class="shell__main">
+                    <div
+                        class="tab-panel"
+                        role="tabpanel"
+                        id="panel-guide"
+                        aria-labelledby="tab-guide"
+                        data-tab-panel="guide"
+                    >
+                        <p class="lede">
+                            Inspect CSS properties of any element on a page in real time — hover to
+                            reveal, freeze to study, copy to take with you.
                         </p>
+
+                        <section class="section" id="how-to-use">
+                            <h2>How to Use</h2>
+                            <ol class="steps">
+                                <li>
+                                    Click the toolbar icon or press <kbd>Alt+Shift+S</kbd>
+                                    (Windows/Linux) or <kbd>Option+Shift+S</kbd> (macOS) to enable
+                                    Style Detective on the current page.
+                                </li>
+                                <li>
+                                    Hover any element to inspect its computed CSS in the floating
+                                    panel.
+                                </li>
+                            </ol>
+
+                            <p class="shortcut-customize">
+                                To customize the toggle shortcut, open
+                                <strong>Manage Extensions</strong> in your browser, then select
+                                <strong>Keyboard Shortcuts</strong> in the left sidebar.
+                            </p>
+
+                            <aside class="tip" aria-label="Tip">
+                                <span class="tip__icon" aria-hidden="true">
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                        <path
+                                            d="M9 18h6M10 21h4"
+                                            stroke="currentColor"
+                                            stroke-width="1.75"
+                                            stroke-linecap="round"
+                                        />
+                                        <path
+                                            d="M12 3a6 6 0 0 0-3.5 10.8c.6.45 1 1.1 1.15 1.85h4.7c.15-.75.55-1.4 1.15-1.85A6 6 0 0 0 12 3Z"
+                                            stroke="currentColor"
+                                            stroke-width="1.75"
+                                            stroke-linejoin="round"
+                                        />
+                                        <path
+                                            d="M12 7.25v2.5"
+                                            stroke="currentColor"
+                                            stroke-width="1.75"
+                                            stroke-linecap="round"
+                                        />
+                                    </svg>
+                                </span>
+                                <div class="tip__body">
+                                    <p class="tip__label">Tip</p>
+                                    <p class="tip__text">
+                                        Press <kbd>F</kbd> to freeze the panel in place and
+                                        <kbd>Esc</kbd> to disable it. Freezing lets you click class
+                                        chips and copy property values to the clipboard.
+                                    </p>
+                                </div>
+                            </aside>
+                        </section>
+
+                        <section class="section" id="shortcuts">
+                            <h2>Keyboard Shortcuts</h2>
+                            <ul class="shortcuts">
+                                <li>
+                                    <kbd>F</kbd>
+                                    <span>Freeze / unfreeze the panel in place</span>
+                                </li>
+                                <li>
+                                    <kbd>C</kbd>
+                                    <span>Copy the selected element's CSS to the clipboard</span>
+                                </li>
+                                <li>
+                                    <kbd>Shift+C</kbd>
+                                    <span>Copy the element's classes to the clipboard</span>
+                                </li>
+                                <li>
+                                    <kbd>L</kbd>
+                                    <span
+                                        >Show / hide the Classes row (same as Show CSS Classes in
+                                        Settings)</span
+                                    >
+                                </li>
+                                <li>
+                                    <kbd>+/-</kbd>
+                                    <span
+                                        >Increase or decrease the panel font size. Press
+                                        <kbd title="Zero">0</kbd> (zero) to reset to the default
+                                        size.</span
+                                    >
+                                </li>
+                                <li>
+                                    <kbd>S</kbd>
+                                    <span>Open this settings page</span>
+                                </li>
+                                <li>
+                                    <kbd>Esc</kbd>
+                                    <span>Disable the viewer</span>
+                                </li>
+                            </ul>
+                        </section>
+
+                        <section class="section">
+                            <h2>Privacy</h2>
+                            <p>
+                                Style Detective needs access to the current page so it can read
+                                styles. It neither collects nor transmits any of your private data.
+                            </p>
+                        </section>
+
+                        <section class="section rate" id="storeRate">
+                            <a
+                                class="rate__card"
+                                id="storeRateLink"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                <div class="rate__stars" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24">
+                                        <path
+                                            d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.5L12 17.8 6.1 20.6l1.2-6.5L2.5 9.5l6.6-.9L12 2.5z"
+                                        />
+                                    </svg>
+                                    <svg viewBox="0 0 24 24">
+                                        <path
+                                            d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.5L12 17.8 6.1 20.6l1.2-6.5L2.5 9.5l6.6-.9L12 2.5z"
+                                        />
+                                    </svg>
+                                    <svg viewBox="0 0 24 24">
+                                        <path
+                                            d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.5L12 17.8 6.1 20.6l1.2-6.5L2.5 9.5l6.6-.9L12 2.5z"
+                                        />
+                                    </svg>
+                                    <svg viewBox="0 0 24 24">
+                                        <path
+                                            d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.5L12 17.8 6.1 20.6l1.2-6.5L2.5 9.5l6.6-.9L12 2.5z"
+                                        />
+                                    </svg>
+                                    <svg viewBox="0 0 24 24">
+                                        <path
+                                            d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.5L12 17.8 6.1 20.6l1.2-6.5L2.5 9.5l6.6-.9L12 2.5z"
+                                        />
+                                    </svg>
+                                </div>
+                                <h2>Enjoying Style Detective?</h2>
+                                <p>
+                                    If it helps your workflow, a 5-star rating goes a long way — and
+                                    takes only a moment.
+                                </p>
+                                <span class="rate__cta">Rate this Extension</span>
+                            </a>
+                        </section>
+                    </div>
+
+                    <div
+                        class="tab-panel"
+                        role="tabpanel"
+                        id="panel-settings"
+                        aria-labelledby="tab-settings"
+                        data-tab-panel="settings"
+                        hidden
+                    >
+                        <section class="section" id="settings">
+                            <h2>Settings</h2>
+                            <ul class="settings" role="list">
+                                <li class="settings__row settings__row--stack">
+                                    <div class="settings__copy">
+                                        <span class="settings__label" id="panelTheme-label"
+                                            >Panel Theme</span
+                                        >
+                                        <p class="settings__hint" id="panelTheme-hint">
+                                            Color scheme for the inspection overlay. System follows
+                                            your OS appearance and is the default.
+                                        </p>
+                                    </div>
+                                    <div
+                                        class="theme-seg"
+                                        role="radiogroup"
+                                        aria-labelledby="panelTheme-label"
+                                        aria-describedby="panelTheme-hint"
+                                    >
+                                        <label class="theme-seg__option">
+                                            <input type="radio" name="panelTheme" value="light" />
+                                            <span>Light</span>
+                                        </label>
+                                        <label class="theme-seg__option">
+                                            <input type="radio" name="panelTheme" value="dark" />
+                                            <span>Dark</span>
+                                        </label>
+                                        <label class="theme-seg__option">
+                                            <input type="radio" name="panelTheme" value="system" />
+                                            <span>System</span>
+                                        </label>
+                                    </div>
+                                </li>
+                                <li class="settings__row">
+                                    <div class="settings__copy">
+                                        <label class="settings__label" for="showBoxModelDiagram"
+                                            >Show Box Model Diagram</label
+                                        >
+                                        <p class="settings__hint" id="showBoxModelDiagram-hint">
+                                            Show a DevTools-style margin / border / padding diagram
+                                            in the Box section. When off, those values appear as
+                                            normal property rows.
+                                        </p>
+                                    </div>
+                                    <label class="switch">
+                                        <input
+                                            type="checkbox"
+                                            id="showBoxModelDiagram"
+                                            role="switch"
+                                            aria-describedby="showBoxModelDiagram-hint"
+                                            checked
+                                        />
+                                        <span class="switch__track" aria-hidden="true">
+                                            <span class="switch__thumb"></span>
+                                        </span>
+                                    </label>
+                                </li>
+                                <li class="settings__row">
+                                    <div class="settings__copy">
+                                        <label class="settings__label" for="showCssClasses"
+                                            >Show CSS Classes</label
+                                        >
+                                        <p class="settings__hint" id="showCssClasses-hint">
+                                            Show a Classes row with clickable chips on elements that
+                                            have classes. Toggle anytime with <kbd>L</kbd> while
+                                            inspecting. <kbd>Shift+C</kbd> still copies classes when
+                                            the row is hidden.
+                                        </p>
+                                    </div>
+                                    <label class="switch">
+                                        <input
+                                            type="checkbox"
+                                            id="showCssClasses"
+                                            role="switch"
+                                            aria-describedby="showCssClasses-hint"
+                                            checked
+                                        />
+                                        <span class="switch__track" aria-hidden="true">
+                                            <span class="switch__thumb"></span>
+                                        </span>
+                                    </label>
+                                </li>
+                                <li class="settings__row" id="classesChipLines-row">
+                                    <div class="settings__copy">
+                                        <label class="settings__label" for="classesChipLines"
+                                            >CSS Class Lines</label
+                                        >
+                                        <p class="settings__hint" id="classesChipLines-hint">
+                                            Number of lines of CSS classes to display before
+                                            collapsing into <code class="nobr">+N more</code>.
+                                            Default is 3.
+                                        </p>
+                                    </div>
+                                    <input
+                                        class="settings-number"
+                                        type="number"
+                                        id="classesChipLines"
+                                        min="1"
+                                        max="9"
+                                        step="1"
+                                        value="3"
+                                        inputmode="numeric"
+                                        aria-describedby="classesChipLines-hint"
+                                    />
+                                </li>
+                                <li class="settings__row">
+                                    <div class="settings__copy">
+                                        <label class="settings__label" for="panelFontSize"
+                                            >Panel Font Size</label
+                                        >
+                                        <p class="settings__hint" id="panelFontSize-hint">
+                                            Base font size for the overlay (px). Same as
+                                            <kbd>+/-</kbd> while inspecting; <kbd>0</kbd> resets to
+                                            default.
+                                        </p>
+                                    </div>
+                                    <input
+                                        class="settings-number"
+                                        type="number"
+                                        id="panelFontSize"
+                                        min="8"
+                                        max="18"
+                                        step="1"
+                                        value="11"
+                                        inputmode="numeric"
+                                        aria-describedby="panelFontSize-hint"
+                                    />
+                                </li>
+                            </ul>
+
+                            <p class="settings-reset">
+                                <button type="button" class="settings-reset__btn" id="resetDefaults">
+                                    Reset to Defaults
+                                </button>
+                            </p>
+                        </section>
+                    </div>
+                </main>
+
+                <aside class="shell__preview" aria-label="Panel preview">
+                    <div class="preview-stage">
+                        <p class="preview-stage__label">Panel preview</p>
+                        <div class="preview-stage__frame" id="previewMount"></div>
                     </div>
                 </aside>
-            </section>
-
-            <section class="section" id="shortcuts">
-                <h2>Keyboard Shortcuts</h2>
-                <ul class="shortcuts">
-                    <li>
-                        <kbd>F</kbd>
-                        <span>Freeze / unfreeze the panel in place</span>
-                    </li>
-                    <li>
-                        <kbd>C</kbd>
-                        <span>Copy the selected element's CSS to the clipboard</span>
-                    </li>
-                    <li>
-                        <kbd>Shift+C</kbd>
-                        <span>Copy the element's classes to the clipboard</span>
-                    </li>
-                    <li>
-                        <kbd>L</kbd>
-                        <span>Show / hide the Classes row (same as Show CSS Classes in Settings)</span>
-                    </li>
-                    <li>
-                        <kbd>+/-</kbd>
-                        <span
-                            >Increase or decrease the panel font size. Press
-                            <kbd title="Zero">0</kbd> (zero) to reset to the default size.</span
-                        >
-                    </li>
-                    <li>
-                        <kbd>S</kbd>
-                        <span>Open this settings page</span>
-                    </li>
-                    <li>
-                        <kbd>Esc</kbd>
-                        <span>Disable the viewer</span>
-                    </li>
-                </ul>
-            </section>
-
-            <section class="section">
-                <h2>Privacy</h2>
-                <p>
-                    Style Detective needs access to the current page so it can read styles.
-                    It neither collects nor transmits any of your private data.
-                </p>
-            </section>
-
-            <section class="section rate" id="storeRate">
-                <a
-                    class="rate__card"
-                    id="storeRateLink"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                    <div class="rate__stars" aria-hidden="true">
-                        <svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.5L12 17.8 6.1 20.6l1.2-6.5L2.5 9.5l6.6-.9L12 2.5z"/></svg>
-                        <svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.5L12 17.8 6.1 20.6l1.2-6.5L2.5 9.5l6.6-.9L12 2.5z"/></svg>
-                        <svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.5L12 17.8 6.1 20.6l1.2-6.5L2.5 9.5l6.6-.9L12 2.5z"/></svg>
-                        <svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.5L12 17.8 6.1 20.6l1.2-6.5L2.5 9.5l6.6-.9L12 2.5z"/></svg>
-                        <svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.5L12 17.8 6.1 20.6l1.2-6.5L2.5 9.5l6.6-.9L12 2.5z"/></svg>
-                    </div>
-                    <h2>Enjoying Style Detective?</h2>
-                    <p>
-                        If it helps your workflow, a 5-star rating goes a long way — and takes
-                        only a moment.
-                    </p>
-                    <span class="rate__cta">Rate this Extension</span>
-                </a>
-            </section>
-        </main>
+            </div>
+        </div>
 
         <script type="module" src="./options.ts"></script>
     </body>

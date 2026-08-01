@@ -153,6 +153,36 @@ let systemThemeMedia: MediaQueryList | null = null;
 let onSystemThemeChange: (() => void) | null = null;
 let latestState: PreviewState | null = null;
 
+/** Live panel min-width factor — keep in sync with content/style.scss. */
+const LIVE_MIN_WIDTH_FACTOR = 33.2;
+/** Floor matching the default `--sd-preview-width: 22rem` at 16px root. */
+const PREVIEW_COLUMN_FLOOR_PX = 22 * 16;
+/** Cap so the sticky column doesn't dominate small desktops. */
+const PREVIEW_COLUMN_CEIL_PX = 40 * 16;
+/** Stage padding + frame inset so the mock isn't tight against the card edge. */
+const PREVIEW_STAGE_CHROME_PX = 36;
+/** Floor matching the default `--sd-max: 72rem` at 16px root. */
+const PAGE_MAX_FLOOR_PX = 72 * 16;
+
+/**
+ * Widen the sticky preview column with panel font size so the mock can use the
+ * same font-scaled min-width as the live overlay. Grow `--sd-max` by the same
+ * delta so the centered page shell expands outward instead of crushing Settings.
+ */
+function syncPreviewColumnWidth(fontSize: number): void {
+    const natural = fontSize * LIVE_MIN_WIDTH_FACTOR + PREVIEW_STAGE_CHROME_PX;
+    const width = Math.min(
+        PREVIEW_COLUMN_CEIL_PX,
+        Math.max(PREVIEW_COLUMN_FLOOR_PX, Math.round(natural)),
+    );
+    const previewGrowth = width - PREVIEW_COLUMN_FLOOR_PX;
+    document.documentElement.style.setProperty('--sd-preview-width', `${width}px`);
+    document.documentElement.style.setProperty(
+        '--sd-max',
+        `${PAGE_MAX_FLOOR_PX + previewGrowth}px`,
+    );
+}
+
 function renderChips(container: HTMLElement, lines: number): void {
     const maxVisible = Math.max(1, lines) * CHIPS_PER_LINE;
     const tokens = MOCK_CLASSES;
@@ -218,6 +248,10 @@ export function renderPreview(state: PreviewState): void {
     if (!overlay) return;
 
     overlay.style.setProperty('--sd-font-size', `${state.panelFontSize}px`);
+    // Live max-width uses 100vw (options tab here). Pin it so min-width can
+    // follow font size instead of the options viewport.
+    overlay.style.setProperty('--sd-max-width', `${PREVIEW_COLUMN_CEIL_PX}px`);
+    syncPreviewColumnWidth(state.panelFontSize);
     applyTheme(overlay, state.theme);
     bindSystemThemeListener();
 

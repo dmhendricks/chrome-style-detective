@@ -27,9 +27,9 @@
     --sd-font-sans: 'Avenir Next', 'Segoe UI', 'Helvetica Neue', ui-sans-serif, sans-serif;
     --sd-font-mono: 'SF Mono', 'Cascadia Code', 'Consolas', ui-monospace, monospace;
     --sd-radius: 12px;
-    --sd-max: 72rem;
+    --sd-max: 72rem; // widened with preview via preview.ts when font size grows
     --sd-nav-width: 10.5rem;
-    --sd-preview-width: 22rem;
+    --sd-preview-width: 22rem; // widened with panel font size via preview.ts
 }
 
 @media (prefers-color-scheme: light) {
@@ -325,7 +325,8 @@ body {
 }
 
 // Overlay stylesheet expects a floating absolute panel — pin it for the mock.
-// Real panel min-width (~365px at 11px) can exceed the preview column; force fit.
+// Width tracks the live panel's font-scaled min-width; the preview column grows
+// with --sd-preview-width (set from preview.ts) so the mock isn't smushed.
 // Grow with content so Box … Color all stay visible (no clipped section headings).
 .preview-stage__frame #StyleDetectiveOverlay {
     display: flex !important;
@@ -335,7 +336,7 @@ body {
     right: auto !important;
     bottom: auto !important;
     box-sizing: border-box !important;
-    width: 100% !important;
+    width: var(--sd-min-width) !important;
     min-width: 0 !important;
     max-width: 100% !important;
     max-height: none !important;
@@ -955,11 +956,6 @@ a:focus-visible {
         grid-column: 1 / -1;
         position: static;
     }
-
-    .preview-stage__frame #StyleDetectiveOverlay {
-        max-width: 22rem !important;
-        margin-inline: auto !important;
-    }
 }
 
 @media (max-width: 720px) {
@@ -995,8 +991,7 @@ a:focus-visible {
     }
 }
 
-// Preview column is narrower than the live panel (~318 vs ~365px). Keep the
-// footer shortcuts on one row so the mock matches the real overlay layout.
+// Keep footer shortcuts on one row so the mock matches the real overlay layout.
 .preview-stage__frame #StyleDetectiveOverlay {
     #StyleDetectiveOverlay__footer {
         padding: 6px 6px 8px !important;

@@ -105,6 +105,15 @@ function parseTabHash(): TabId {
     return hash === 'settings' ? 'settings' : 'guide';
 }
 
+function isUpdateHighlight(): boolean {
+    return new URLSearchParams(location.search).get('update') === 'true';
+}
+
+function applyUpdateHighlights(): void {
+    const boxModelNew = document.querySelector<HTMLElement>('#showBoxModelDiagram-new');
+    if (boxModelNew) boxModelNew.hidden = !isUpdateHighlight();
+}
+
 function setActiveTab(tab: TabId, pushHash: boolean): void {
     for (const btn of tabButtons) {
         const selected = btn.dataset.tab === tab;
@@ -116,8 +125,10 @@ function setActiveTab(tab: TabId, pushHash: boolean): void {
         panel.hidden = !match;
     }
     if (pushHash) {
-        const next = `#${tab}`;
-        if (location.hash !== next) {
+        // Keep `?update=true` (and any other search) when switching tabs.
+        const next = new URL(location.href);
+        next.hash = tab;
+        if (location.href !== next.href) {
             history.replaceState(null, '', next);
         }
     }
@@ -165,6 +176,7 @@ function wireTabs(): void {
     });
 
     setActiveTab(parseTabHash(), true);
+    applyUpdateHighlights();
 }
 
 async function syncShowCssClassesFromStorage(): Promise<void> {

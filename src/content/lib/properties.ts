@@ -142,6 +142,13 @@ export interface CssProperty {
     hideDefault?: string | readonly string[];
     /** Replace the raw computed value for display. */
     format?: (raw: string, ctx: InspectContext) => string;
+    /**
+     * Marks `format` output as valid, equivalent CSS, so copy uses the formatted
+     * value instead of the raw computed one (panel and clipboard then agree).
+     * Omit when the formatter is display-only and would not round-trip — e.g.
+     * `background-image` renders `url("…/a.png")` as a bare URL.
+     */
+    copySafe?: boolean;
     /** Compute the displayed value from scratch (ignores raw getPropertyValue). */
     value?: (ctx: InspectContext) => string;
     /** Extra visibility gate; combined with hideDefault when both are set. */
@@ -253,7 +260,7 @@ function boxShorthand(ctx: InspectContext, sides: readonly string[]): string {
 }
 
 export const CSS_CATEGORIES: readonly CssCategory[] = [
-{
+    {
         key: 'pBox',
         title: 'Box',
         properties: [
@@ -321,36 +328,31 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
                 name: 'border',
                 diagramCovers: true,
                 value: (ctx) => borderSide(ctx, 'top'),
-                when: (ctx) =>
-                    bordersUniform(ctx) && ctx.get('border-top-style') !== 'none',
+                when: (ctx) => bordersUniform(ctx) && ctx.get('border-top-style') !== 'none',
             },
             {
                 name: 'border-top',
                 diagramCovers: true,
                 value: (ctx) => borderSide(ctx, 'top'),
-                when: (ctx) =>
-                    !bordersUniform(ctx) && ctx.get('border-top-style') !== 'none',
+                when: (ctx) => !bordersUniform(ctx) && ctx.get('border-top-style') !== 'none',
             },
             {
                 name: 'border-right',
                 diagramCovers: true,
                 value: (ctx) => borderSide(ctx, 'right'),
-                when: (ctx) =>
-                    !bordersUniform(ctx) && ctx.get('border-right-style') !== 'none',
+                when: (ctx) => !bordersUniform(ctx) && ctx.get('border-right-style') !== 'none',
             },
             {
                 name: 'border-bottom',
                 diagramCovers: true,
                 value: (ctx) => borderSide(ctx, 'bottom'),
-                when: (ctx) =>
-                    !bordersUniform(ctx) && ctx.get('border-bottom-style') !== 'none',
+                when: (ctx) => !bordersUniform(ctx) && ctx.get('border-bottom-style') !== 'none',
             },
             {
                 name: 'border-left',
                 diagramCovers: true,
                 value: (ctx) => borderSide(ctx, 'left'),
-                when: (ctx) =>
-                    !bordersUniform(ctx) && ctx.get('border-left-style') !== 'none',
+                when: (ctx) => !bordersUniform(ctx) && ctx.get('border-left-style') !== 'none',
             },
             {
                 name: 'border-radius',
@@ -360,7 +362,7 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
             { name: 'object-fit', hideDefault: 'fill' },
         ],
     },
-{
+    {
         key: 'pFontText',
         title: 'Font & Text',
         properties: [
@@ -381,13 +383,14 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
             { name: 'word-spacing', enabled: false, hideDefault: 'normal' },
         ],
     },
-{
+    {
         key: 'pColorBg',
         title: 'Color & Background',
         properties: [
-            { name: 'color', format: (raw) => formatCssColorDisplay(raw) },
+            { name: 'color', copySafe: true, format: (raw) => formatCssColorDisplay(raw) },
             {
                 name: 'background-color',
+                copySafe: true,
                 format: (raw) => formatCssColorDisplay(raw),
             },
             {
@@ -416,7 +419,7 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
             { name: 'background-attachment', enabled: false, hideDefault: 'scroll' },
         ],
     },
-{
+    {
         key: 'pLayout',
         title: 'Layout',
         properties: [
@@ -456,7 +459,7 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
             { name: 'clear', enabled: false, hideDefault: 'none' },
         ],
     },
-{
+    {
         key: 'pList',
         title: 'List',
         tags: LIST_TAG_NAMES,
@@ -472,7 +475,7 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
             { name: 'list-style-position' },
         ],
     },
-{
+    {
         key: 'pTable',
         title: 'Table',
         tags: TABLE_TAG_NAMES,
@@ -485,7 +488,7 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
             { name: 'table-layout', hideDefault: 'auto' },
         ],
     },
-{
+    {
         key: 'pMisc',
         title: 'Miscellaneous',
         hideWhenEmpty: true,
@@ -496,7 +499,7 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
             { name: 'visibility', hideDefault: 'visible' },
         ],
     },
-{
+    {
         key: 'pEffect',
         title: 'Effects',
         hideWhenEmpty: true,
@@ -528,8 +531,7 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
             { name: 'border-bottom-left-radius', enabled: false, hideDefault: '0px' },
             { name: 'border-bottom-right-radius', enabled: false, hideDefault: '0px' },
         ],
-    }
-
+    },
 ];
 
 /** Look up a category's enabled property names by key. */

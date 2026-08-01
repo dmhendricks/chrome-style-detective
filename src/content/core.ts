@@ -137,9 +137,12 @@ function buildCssDefinition(el: HTMLElement, style: CSSStyleDeclaration): string
             const resolved = resolveProperty(property, ctx);
             if (!resolved.visible) continue;
 
-            // Prefer synthesized values (margin/padding/border shorthands, etc.).
-            // Skip panel `format` helpers — they can be display-only (e.g. filename).
-            const value = property.value ? resolved.value : ctx.get(property.name);
+            // Prefer synthesized values (margin/padding/border shorthands, etc.)
+            // and `copySafe` formatters, whose output is valid equivalent CSS so
+            // the clipboard matches the panel. Other `format` helpers are
+            // display-only (e.g. filename) and would not round-trip.
+            const value =
+                property.value || property.copySafe ? resolved.value : ctx.get(property.name);
             categoryCss += '\t' + property.name + ': ' + value + ';\n';
         }
 
@@ -582,11 +585,9 @@ class OverlayController {
 
         this.claimFrame = requestAnimationFrame(() => {
             this.claimFrame = null;
-            void chrome.runtime
-                .sendMessage(Messages.overlayClaim(this.instanceId))
-                .catch(() => {
-                    // Service worker may be asleep mid-navigation.
-                });
+            void chrome.runtime.sendMessage(Messages.overlayClaim(this.instanceId)).catch(() => {
+                // Service worker may be asleep mid-navigation.
+            });
         });
     }
 

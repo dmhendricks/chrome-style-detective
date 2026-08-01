@@ -30,6 +30,10 @@
     --sd-max: 72rem; // widened with preview via preview.ts when font size grows
     --sd-nav-width: 10.5rem;
     --sd-preview-width: 22rem; // widened with panel font size via preview.ts
+
+    // "New" badge — lime pops on dark; royal blue has more weight on light.
+    --sd-new-bg: #b6f34c;
+    --sd-new-text: #15210a;
 }
 
 @media (prefers-color-scheme: light) {
@@ -46,6 +50,10 @@
         --sd-kbd-text: #1a2230;
         --sd-glow: color-mix(in srgb, var(--sd-coral) 20%, transparent);
         --sd-grid: color-mix(in srgb, #1a2230 5%, transparent);
+
+        // Royal blue carries more weight than lime on a light background.
+        --sd-new-bg: #2f4fe0;
+        --sd-new-text: #ffffff;
     }
 }
 
@@ -394,12 +402,62 @@ body {
 }
 
 .settings__label {
-    display: block;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem 0.55rem;
     margin: 0 0 0.35rem;
     font-size: 1rem;
     font-weight: 600;
     color: var(--sd-text);
     cursor: pointer;
+}
+
+// Bright "New" pill — stands apart from the coral/pink UI (lime on dark, royal
+// blue on light). Soft pulse on update auto-open; static for reduced motion.
+.settings__new-badge {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.5rem;
+    font-family: var(--sd-font-mono);
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    line-height: 1.15;
+    text-transform: uppercase;
+    color: var(--sd-new-text);
+    background: var(--sd-new-bg);
+    border: none;
+    border-radius: 999px;
+    box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--sd-new-bg) 45%, transparent),
+        0 0 14px color-mix(in srgb, var(--sd-new-bg) 55%, transparent);
+    animation: settings-new-pulse 2.6s ease-in-out 3;
+}
+
+.settings__new-badge[hidden] {
+    display: none !important;
+}
+
+@keyframes settings-new-pulse {
+    0%,
+    100% {
+        box-shadow:
+            0 0 0 1px color-mix(in srgb, var(--sd-new-bg) 45%, transparent),
+            0 0 10px color-mix(in srgb, var(--sd-new-bg) 35%, transparent);
+    }
+    50% {
+        box-shadow:
+            0 0 0 1px color-mix(in srgb, var(--sd-new-bg) 45%, transparent),
+            0 0 20px color-mix(in srgb, var(--sd-new-bg) 75%, transparent);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .settings__new-badge {
+        animation: none;
+    }
 }
 
 .settings__hint {

@@ -82,8 +82,9 @@ async function loadLocalPref<T>(
 // OPTIONS_REVISION — bump when Options **Settings** UI grows
 // =============================================================================
 //
-// Install always opens Options. Updates open Options only when this number is
-// greater than `lastSeenOptionsRevision` in chrome.storage.local.
+// Install opens Options on Guide with `?update=true`. Updates open Options on
+// Settings with `?update=true` only when this number is greater than
+// `lastSeenOptionsRevision` in chrome.storage.local.
 // Do not bump for overlay-only or unrelated code changes.
 // Wired from `background.ts` → onInstalled.
 //

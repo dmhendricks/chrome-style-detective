@@ -26,14 +26,21 @@ const UNSUPPORTED_POPUP = 'unsupported.html';
 const OPTIONS_PAGE_PATH = 'src/options/options.html';
 
 /**
- * `openOptionsPage()` cannot take a hash. Open (or focus) Options at `#settings`
- * so S / install / revision bumps land on the Settings tab.
+ * `openOptionsPage()` cannot take a hash. Open (or focus) Options at `#guide`
+ * or `#settings` so callers can land on the right tab.
+ * Pass `highlightUpdate` on install / OPTIONS_REVISION bumps so the page can
+ * show "New" affordances (`?update=true`); omit for S / manual opens.
  */
-async function openOptionsAtSettings(): Promise<void> {
+async function openOptionsAt(
+    tab: 'guide' | 'settings',
+    options: { highlightUpdate?: boolean } = {},
+): Promise<void> {
     const base = chrome.runtime.getURL(OPTIONS_PAGE_PATH);
-    const target = `${base}#settings`;
+    const target = options.highlightUpdate
+        ? `${base}?update=true#${tab}`
+        : `${base}#${tab}`;
     const tabs = await chrome.tabs.query({});
-    const existing = tabs.find((tab) => tab.url?.startsWith(base));
+    const existing = tabs.find((t) => t.url?.startsWith(base));
 
     if (existing?.id != null) {
         await chrome.tabs.update(existing.id, { url: target, active: true });
@@ -302,14 +309,14 @@ async function toggleOverlay(tabId: number): Promise<void> {
 }
 
 /**
- * First install → always open Options (onboarding).
- * Updates → open only when OPTIONS_REVISION was bumped for new Settings UI.
+ * First install → open Options on Guide (onboarding).
+ * Updates → open Settings only when OPTIONS_REVISION was bumped for new UI.
  * First encounter of the revision system seeds storage without opening a tab.
  */
 chrome.runtime.onInstalled.addListener((details) => {
     void (async () => {
         if (details.reason === 'install') {
-            await openOptionsAtSettings();
+            await openOptionsAt('guide', { highlightUpdate: true });
             await saveLastSeenOptionsRevision(OPTIONS_REVISION);
             return;
         }
@@ -324,7 +331,7 @@ chrome.runtime.onInstalled.addListener((details) => {
         }
 
         if (OPTIONS_REVISION > lastSeen) {
-            await openOptionsAtSettings();
+            await openOptionsAt('settings', { highlightUpdate: true });
             await saveLastSeenOptionsRevision(OPTIONS_REVISION);
         }
     })();
@@ -355,7 +362,7 @@ chrome.runtime.onMessage.addListener((raw, sender) => {
     if (!message) return;
 
     if (message.type === MessageType.OpenOptions) {
-        void openOptionsAtSettings();
+        void openOptionsAt('settings');
         return;
     }
 

@@ -469,7 +469,8 @@
             &--right {
                 min-width: calc(var(--sd-font-size) * 2.8) !important;
                 max-width: calc(var(--sd-font-size) * 4.5) !important;
-                padding: 2px 1px !important;
+                // Keep values off the ring edge (esp. wider labels like 224px).
+                padding: 2px 3px !important;
                 writing-mode: horizontal-tb !important;
                 overflow: hidden !important;
                 text-overflow: ellipsis !important;

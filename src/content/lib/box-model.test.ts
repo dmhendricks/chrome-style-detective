@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+    formatBoxContentCopy,
+    formatBoxContentSize,
     formatBoxLength,
     readBorderWidths,
     readBoxSides,
@@ -17,6 +19,16 @@ describe('formatBoxLength', () => {
 
     it('passes through non-px lengths', () => {
         expect(formatBoxLength('1.5em')).toBe('1.5em');
+    });
+});
+
+describe('formatBoxContentSize / formatBoxContentCopy', () => {
+    it('formats display with spaced multiplication sign', () => {
+        expect(formatBoxContentSize(541, 54)).toBe('541 × 54');
+    });
+
+    it('formats clipboard payload without spaces', () => {
+        expect(formatBoxContentCopy(541, 54)).toBe('541x54');
     });
 });
 

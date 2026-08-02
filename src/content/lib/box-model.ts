@@ -6,7 +6,7 @@
  * helpers used by the catalog rows.
  */
 
-import { el } from './dom';
+import { attachFrozenCopyTarget, el, setCopyTargetValue } from './dom';
 import { removeExtraFloat } from './format';
 import type { InspectContext } from './properties';
 
@@ -36,6 +36,16 @@ export interface BoxModelValues {
 export function formatBoxLength(raw: string): string {
     const v = removeExtraFloat(raw.trim());
     return v === '0px' ? '0' : v;
+}
+
+/** Display label for content size (`541 × 54`). */
+export function formatBoxContentSize(width: number, height: number): string {
+    return `${width} × ${height}`;
+}
+
+/** Clipboard payload for content size (`541x54`). */
+export function formatBoxContentCopy(width: number, height: number): string {
+    return `${width}x${height}`;
 }
 
 export function readBoxSides(
@@ -129,10 +139,18 @@ function createRing(
 }
 
 function setSideLabels(labels: RingLabels, sides: BoxSides): void {
-    labels.top.textContent = sides.top;
-    labels.right.textContent = sides.right;
-    labels.bottom.textContent = sides.bottom;
-    labels.left.textContent = sides.left;
+    for (const side of BOX_SIDES) {
+        const node = labels[side];
+        const value = sides[side];
+        node.textContent = value;
+        setCopyTargetValue(node, value);
+    }
+}
+
+function wireSideCopyTargets(labels: RingLabels): void {
+    for (const side of BOX_SIDES) {
+        attachFrozenCopyTarget(labels[side]);
+    }
 }
 
 /** Build the diagram once; call `updateBoxModelDiagram` on each hover. */
@@ -142,8 +160,14 @@ export function createBoxModelDiagram(doc: Document): HTMLElement {
     const padding = createLabels(doc);
     const content = el(doc, 'div', {
         className: `${PREFIX}-content`,
-        text: '0 × 0',
+        text: formatBoxContentSize(0, 0),
     });
+    setCopyTargetValue(content, formatBoxContentCopy(0, 0));
+
+    wireSideCopyTargets(margin);
+    wireSideCopyTargets(border);
+    wireSideCopyTargets(padding);
+    attachFrozenCopyTarget(content);
 
     const paddingRing = createRing(doc, 'padding', padding, content);
     const borderRing = createRing(doc, 'border', border, paddingRing);
@@ -169,5 +193,9 @@ export function updateBoxModelDiagram(ctx: InspectContext): void {
     setSideLabels(cached.margin, values.margin);
     setSideLabels(cached.border, values.border);
     setSideLabels(cached.padding, values.padding);
-    cached.content.textContent = `${values.width} × ${values.height}`;
+    cached.content.textContent = formatBoxContentSize(values.width, values.height);
+    setCopyTargetValue(
+        cached.content,
+        formatBoxContentCopy(values.width, values.height),
+    );
 }

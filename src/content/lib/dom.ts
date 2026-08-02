@@ -258,26 +258,31 @@ function performFrozenCopy(
     );
 }
 
+/** Class for compact frozen-copy targets (box-model labels) without an icon slot. */
+export const COPY_TARGET_CLASS = 'StyleDetectiveOverlay__copy-target';
+
 function applyCopyGroupAccessibility(group: HTMLElement, frozen: boolean): void {
     if (frozen) {
         group.setAttribute('role', 'button');
         group.setAttribute('tabindex', '0');
         group.setAttribute('aria-label', 'Copy value');
+        group.title = 'Copy';
     } else {
         group.removeAttribute('role');
         group.removeAttribute('tabindex');
         group.removeAttribute('aria-label');
+        group.removeAttribute('title');
     }
 }
 
 /**
- * When the overlay freezes, value groups become keyboard-activatable copy
- * buttons. Unfreeze removes them from the tab order so live hover isn't noisy.
+ * When the overlay freezes, value groups and diagram copy targets become
+ * keyboard-activatable. Unfreeze removes them from the tab order.
  */
 export function syncCopyValueAccessibility(doc: Document = document): void {
     const frozen = isOverlayFrozen(doc);
     for (const group of doc.querySelectorAll<HTMLElement>(
-        '.StyleDetectiveOverlay__value-group',
+        `.StyleDetectiveOverlay__value-group, .${COPY_TARGET_CLASS}`,
     )) {
         applyCopyGroupAccessibility(group, frozen);
     }
@@ -305,6 +310,49 @@ function attachFrozenCopy(
         e.stopPropagation();
         performFrozenCopy(doc, affordance, copyValue);
     });
+}
+
+/**
+ * Make an element copy its `data-sd-copy` value when the overlay is frozen.
+ * Used where a clipboard icon would not fit (box-model diagram labels).
+ */
+export function attachFrozenCopyTarget(target: HTMLElement): void {
+    const doc = target.ownerDocument;
+    target.classList.add(COPY_TARGET_CLASS);
+    applyCopyGroupAccessibility(target, isOverlayFrozen(doc));
+
+    const copyFromDataset = (): void => {
+        const copyValue = target.dataset.sdCopy;
+        if (copyValue === undefined || copyValue === '') return;
+        void copyTextToClipboard(copyValue).then(
+            () => {
+                notifyCopy(`Copied "${copyValue}" to clipboard`, 'success');
+            },
+            () => {
+                notifyCopy('Could not copy to clipboard', 'default');
+            },
+        );
+    };
+
+    target.addEventListener('click', (e) => {
+        if (!isOverlayFrozen(doc)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        copyFromDataset();
+    });
+
+    target.addEventListener('keydown', (e) => {
+        if (!isOverlayFrozen(doc)) return;
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        e.stopPropagation();
+        copyFromDataset();
+    });
+}
+
+/** Update the clipboard payload for a frozen copy target. */
+export function setCopyTargetValue(target: HTMLElement, copyValue: string): void {
+    target.dataset.sdCopy = copyValue;
 }
 
 function wrapCopyableValue(doc: Document, copyValue: string): HTMLSpanElement {

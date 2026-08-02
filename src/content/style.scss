@@ -458,6 +458,7 @@
             line-height: 1.1 !important;
             text-align: center !important;
             white-space: nowrap !important;
+            border-radius: 2px !important;
 
             &--top,
             &--bottom {
@@ -494,6 +495,7 @@
             white-space: nowrap !important;
             background: var(--sd-box-content) !important;
             border: 1px solid var(--sd-box-outline) !important;
+            border-radius: 2px !important;
         }
     }
 
@@ -754,6 +756,20 @@
             visibility: visible !important;
             pointer-events: auto !important;
             color: var(--sd-copy-affordance-hover) !important;
+        }
+
+        // Box-model labels have no icon slot — pointer + focus ring signal copy.
+        .StyleDetectiveOverlay__copy-target {
+            cursor: pointer !important;
+        }
+
+        .StyleDetectiveOverlay__copy-target:hover {
+            filter: brightness(1.15) !important;
+        }
+
+        .StyleDetectiveOverlay__copy-target:focus-visible {
+            outline: 2px solid var(--sd-copy-affordance-hover) !important;
+            outline-offset: 1px !important;
         }
 
         .StyleDetectiveOverlay__header--expandable,

@@ -6,6 +6,7 @@
  */
 
 import { countChipRows } from '../content/lib/classes';
+import { extractFirstCssGradient } from '../content/lib/format';
 import { DARK_CLASS, OVERLAY_ID } from '../shared/dom-ids';
 import {
     resolvePanelTheme,
@@ -68,13 +69,21 @@ function boxModelHtml(): string {
 const COLOR_TOKEN_RE =
     /#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b|rgba?\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*(?:,\s*[\d.]+\s*)?\)/i;
 
-function colorSwatchMarkup(cssColor: string): string {
-    return `<span class="StyleDetectiveOverlay__color-swatch"><span class="StyleDetectiveOverlay__color-swatch-fill" style="background-color: ${cssColor} !important"></span></span>`;
+function colorSwatchMarkup(cssFill: string, asImage = false): string {
+    const style = asImage
+        ? `background-image: ${cssFill} !important`
+        : `background-color: ${cssFill} !important`;
+    return `<span class="StyleDetectiveOverlay__color-swatch"><span class="StyleDetectiveOverlay__color-swatch-fill" style="${style}"></span></span>`;
 }
 
 function valueGroupMarkup(value: string, badge?: { text: string; tone: string }): string {
-    const leading = value.match(COLOR_TOKEN_RE)?.[0] ?? null;
-    const swatch = leading ? colorSwatchMarkup(leading) : '';
+    const gradient = extractFirstCssGradient(value);
+    const swatch = gradient
+        ? colorSwatchMarkup(gradient, true)
+        : (() => {
+              const leading = value.match(COLOR_TOKEN_RE)?.[0] ?? null;
+              return leading ? colorSwatchMarkup(leading) : '';
+          })();
     const pill = badge
         ? `<span class="StyleDetectiveOverlay__contrast-badge StyleDetectiveOverlay__contrast-badge--${badge.tone}" title="WCAG ${badge.text}">${badge.text}</span>`
         : '';

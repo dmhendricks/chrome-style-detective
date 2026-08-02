@@ -4,6 +4,7 @@ import {
     compositeBackgroundLayers,
     contrastLabel,
     contrastRatio,
+    extractFirstCssGradient,
     formatBackgroundImage,
     formatCssColorDisplay,
     parseCssColor,
@@ -74,6 +75,35 @@ describe('formatBackgroundImage', () => {
             ),
         ).toBe(
             'https://media.townhall.com/cdn/hodl/2026/194/8111978c-5bb2-42d5-bb24-768f8843d900-180x180.jpg',
+        );
+    });
+});
+
+describe('extractFirstCssGradient', () => {
+    it('returns null when there is no gradient', () => {
+        expect(extractFirstCssGradient('rgb(59, 130, 246)')).toBeNull();
+        expect(extractFirstCssGradient('url("a.png")')).toBeNull();
+    });
+
+    it('extracts a linear-gradient with nested rgb() stops', () => {
+        const value = 'linear-gradient(to right, rgb(59, 130, 246), rgb(45, 212, 191))';
+        expect(extractFirstCssGradient(value)).toBe(value);
+    });
+
+    it('extracts the first gradient from a multi-layer background', () => {
+        expect(
+            extractFirstCssGradient(
+                'linear-gradient(red, blue), url("a.png"), radial-gradient(circle, white, black)',
+            ),
+        ).toBe('linear-gradient(red, blue)');
+    });
+
+    it('supports repeating- and conic- gradients', () => {
+        expect(extractFirstCssGradient('repeating-linear-gradient(red, blue 10px)')).toBe(
+            'repeating-linear-gradient(red, blue 10px)',
+        );
+        expect(extractFirstCssGradient('conic-gradient(from 45deg, red, blue)')).toBe(
+            'conic-gradient(from 45deg, red, blue)',
         );
     });
 });

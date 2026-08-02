@@ -256,3 +256,27 @@ export function removeExtraFloat(nb: string): string {
 
     return `${Math.round(n)}px`;
 }
+
+/** Start of a CSS gradient function (linear / radial / conic, optional repeating-). */
+const GRADIENT_START_RE = /(?:repeating-)?(?:linear|radial|conic)-gradient\s*\(/i;
+
+/**
+ * First `*-gradient(...)` in a CSS value, balanced across nested parentheses
+ * (e.g. color stops like `rgb(...)`). Returns null when none is present.
+ */
+export function extractFirstCssGradient(str: string): string | null {
+    const match = GRADIENT_START_RE.exec(str);
+    if (!match || match.index == null) return null;
+
+    const start = match.index;
+    let depth = 0;
+    for (let i = start; i < str.length; i++) {
+        const ch = str[i];
+        if (ch === '(') depth += 1;
+        else if (ch === ')') {
+            depth -= 1;
+            if (depth === 0) return str.slice(start, i + 1);
+        }
+    }
+    return null;
+}

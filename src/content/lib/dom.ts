@@ -7,6 +7,7 @@
 
 import { copyTextToClipboard } from './clipboard';
 import { notifyCopy } from './copy-feedback';
+import { extractFirstCssGradient } from './format';
 import { FROZEN_CLASS, OVERLAY_ID } from '../../shared/dom-ids';
 
 /** Tag names we construct, mapped to their element types for `el()`. */
@@ -41,14 +42,23 @@ export function el<K extends TagName>(
  * Build the small colour swatch shown next to a colour value.
  * Semi-transparent fills sit on a light checkerboard so they match page paint
  * better than compositing onto the dark panel chrome.
+ * Pass `asImage: true` for gradients (painted via background-image).
  */
-export function colorSwatch(doc: Document, cssColor: string): HTMLSpanElement {
+export function colorSwatch(
+    doc: Document,
+    cssFill: string,
+    options: { asImage?: boolean } = {},
+): HTMLSpanElement {
     const swatch = doc.createElement('span');
     swatch.className = 'StyleDetectiveOverlay__color-swatch';
 
     const fill = doc.createElement('span');
     fill.className = 'StyleDetectiveOverlay__color-swatch-fill';
-    fill.style.setProperty('background-color', cssColor, 'important');
+    if (options.asImage) {
+        fill.style.setProperty('background-image', cssFill, 'important');
+    } else {
+        fill.style.setProperty('background-color', cssFill, 'important');
+    }
     swatch.append(fill);
 
     return swatch;
@@ -184,10 +194,16 @@ function firstColorToken(text: string): string | null {
 /** Build display nodes for a value, adding a leading swatch when a color is present. */
 function textWithColorSwatches(doc: Document, text: string): DocumentFragment {
     const frag = doc.createDocumentFragment();
-    const leading = firstColorToken(text);
+    const gradient = extractFirstCssGradient(text);
 
-    if (leading) {
-        frag.append(colorSwatch(doc, swatchCssColor(leading)));
+    if (gradient) {
+        // Paint the gradient itself — first-stop solid would misrepresent it.
+        frag.append(colorSwatch(doc, gradient, { asImage: true }));
+    } else {
+        const leading = firstColorToken(text);
+        if (leading) {
+            frag.append(colorSwatch(doc, swatchCssColor(leading)));
+        }
     }
 
     let lastIndex = 0;

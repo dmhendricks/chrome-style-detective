@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
     CSS_CATEGORIES,
+    borderColorsUniform,
+    borderSideColor,
+    hasVisibleBorder,
     isPropertyEnabled,
     resolveProperty,
     type CssProperty,
@@ -14,6 +17,31 @@ function ctxOf(values: Record<string, string>): InspectContext {
         el: {} as HTMLElement,
         get: (name: string) => values[name] ?? '',
     };
+}
+
+/** Fill all four border longhands for width/style/color tests. */
+function borderCtx(opts: {
+    style?: string | { top?: string; right?: string; bottom?: string; left?: string };
+    color?: string | { top?: string; right?: string; bottom?: string; left?: string };
+    width?: string;
+}): InspectContext {
+    const sideValue = (
+        map: string | { top?: string; right?: string; bottom?: string; left?: string } | undefined,
+        side: 'top' | 'right' | 'bottom' | 'left',
+        fallback: string,
+    ): string => {
+        if (map == null) return fallback;
+        if (typeof map === 'string') return map;
+        return map[side] ?? fallback;
+    };
+
+    const values: Record<string, string> = {};
+    for (const side of ['top', 'right', 'bottom', 'left'] as const) {
+        values[`border-${side}-style`] = sideValue(opts.style, side, 'none');
+        values[`border-${side}-color`] = sideValue(opts.color, side, 'rgba(0, 0, 0, 0)');
+        values[`border-${side}-width`] = opts.width ?? '0px';
+    }
+    return ctxOf(values);
 }
 
 function findProperty(name: string): CssProperty {
@@ -126,5 +154,87 @@ describe('catalog invariants', () => {
                 seen.add(property.name);
             }
         }
+    });
+});
+
+describe('border color helpers (diagram-only rows)', () => {
+    it('formats a side color for display', () => {
+        const ctx = borderCtx({ color: 'rgb(50, 115, 220)', style: 'solid', width: '4px' });
+        expect(borderSideColor(ctx, 'top')).toBe('#3273DC');
+    });
+
+    it('detects uniform vs mixed border colors', () => {
+        expect(
+            borderColorsUniform(
+                borderCtx({ color: 'rgb(50, 115, 220)', style: 'solid', width: '4px' }),
+            ),
+        ).toBe(true);
+        expect(
+            borderColorsUniform(
+                borderCtx({
+                    style: 'solid',
+                    width: '4px',
+                    color: {
+                        top: 'rgb(255, 0, 0)',
+                        right: 'rgb(0, 255, 0)',
+                        bottom: 'rgb(255, 0, 0)',
+                        left: 'rgb(255, 0, 0)',
+                    },
+                }),
+            ),
+        ).toBe(false);
+    });
+
+    it('detects any visible border style', () => {
+        expect(hasVisibleBorder(borderCtx({ style: 'none' }))).toBe(false);
+        expect(
+            hasVisibleBorder(
+                borderCtx({
+                    style: { top: 'solid', right: 'none', bottom: 'none', left: 'none' },
+                    color: 'rgb(0, 0, 0)',
+                    width: '1px',
+                }),
+            ),
+        ).toBe(true);
+    });
+
+    it('shows border-color when uniform and diagram-only catalog flags are set', () => {
+        const property = findProperty('border-color');
+        expect(property.diagramOnly).toBe(true);
+        expect(property.panelOnly).toBe(true);
+
+        const visible = borderCtx({
+            style: 'solid',
+            color: 'rgba(50, 115, 220, 0.3)',
+            width: '4px',
+        });
+        const resolved = resolveProperty(property, visible);
+        expect(resolved.visible).toBe(true);
+        expect(resolved.value).toBe('rgba(50, 115, 220, 0.3)');
+
+        expect(resolveProperty(property, borderCtx({ style: 'none' })).visible).toBe(false);
+        expect(
+            resolveProperty(
+                property,
+                borderCtx({ style: 'solid', color: 'rgba(0, 0, 0, 0)', width: '4px' }),
+            ).visible,
+        ).toBe(false);
+    });
+
+    it('shows per-side border-*-color when colors differ', () => {
+        const mixed = borderCtx({
+            style: 'solid',
+            width: '2px',
+            color: {
+                top: 'rgb(255, 0, 0)',
+                right: 'rgb(0, 128, 0)',
+                bottom: 'rgb(255, 0, 0)',
+                left: 'rgb(255, 0, 0)',
+            },
+        });
+        expect(resolveProperty(findProperty('border-color'), mixed).visible).toBe(false);
+        expect(resolveProperty(findProperty('border-top-color'), mixed).visible).toBe(true);
+        expect(resolveProperty(findProperty('border-right-color'), mixed).value).toBe('#008000');
+        expect(findProperty('border-top-color').diagramOnly).toBe(true);
     });
 });

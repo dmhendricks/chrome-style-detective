@@ -327,6 +327,13 @@ export function updatePanel(style: CSSStyleDeclaration, el: HTMLElement): void {
                 if (covered) setRowVisible(covered.li, false);
                 continue;
             }
+            // Inverse: color/detail rows that only make sense while the diagram
+            // hides the full border shorthand.
+            if (property.diagramOnly && !showBoxModelDiagram) {
+                const diagramOnly = propertyRows.get(property.name);
+                if (diagramOnly) setRowVisible(diagramOnly.li, false);
+                continue;
+            }
 
             const row = propertyRows.get(property.name);
             if (!row) continue;

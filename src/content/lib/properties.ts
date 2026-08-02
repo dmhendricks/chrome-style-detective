@@ -136,6 +136,12 @@ export interface CssProperty {
      */
     diagramCovers?: boolean;
     /**
+     * Shown in the panel only while the Box diagram is on (inverse of
+     * `diagramCovers`). Use for color/detail rows that the diagram does not
+     * replace (e.g. border-color).
+     */
+    diagramOnly?: boolean;
+    /**
      * Hide the row when the raw computed value equals this string (or is in
      * this list). Compared before `format` / `value`.
      */
@@ -250,6 +256,30 @@ function bordersUniform(ctx: InspectContext): boolean {
     );
 }
 
+const BORDER_SIDES = ['top', 'right', 'bottom', 'left'] as const;
+
+/** Display color for one border side (hex / rgba / transparent). */
+export function borderSideColor(ctx: InspectContext, side: (typeof BORDER_SIDES)[number]): string {
+    return formatCssColorDisplay(ctx.get(`border-${side}-color`));
+}
+
+/** True when all four sides share the same display color. */
+export function borderColorsUniform(ctx: InspectContext): boolean {
+    const top = borderSideColor(ctx, 'top');
+    return BORDER_SIDES.every((side) => borderSideColor(ctx, side) === top);
+}
+
+/** True when any side has a non-none border style. */
+export function hasVisibleBorder(ctx: InspectContext): boolean {
+    return BORDER_SIDES.some((side) => ctx.get(`border-${side}-style`) !== 'none');
+}
+
+/** True when a border side has a visible (non-transparent) color. */
+function borderSideHasColor(ctx: InspectContext, side: (typeof BORDER_SIDES)[number]): boolean {
+    const parsed = parseCssColor(ctx.get(`border-${side}-color`));
+    return parsed != null && !isFullyTransparent(parsed);
+}
+
 function boxShorthand(ctx: InspectContext, sides: readonly string[]): string {
     return sides
         .map((side) => {
@@ -353,6 +383,64 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
                 diagramCovers: true,
                 value: (ctx) => borderSide(ctx, 'left'),
                 when: (ctx) => !bordersUniform(ctx) && ctx.get('border-left-style') !== 'none',
+            },
+            // Diagram-only color rows: widths live in the diagram; keep a swatchable
+            // color while the full border shorthand is hidden. panelOnly so Copy All
+            // does not duplicate color already present on the border* dump rows.
+            {
+                name: 'border-color',
+                diagramOnly: true,
+                panelOnly: true,
+                copySafe: true,
+                value: (ctx) => borderSideColor(ctx, 'top'),
+                when: (ctx) =>
+                    hasVisibleBorder(ctx) &&
+                    borderColorsUniform(ctx) &&
+                    borderSideHasColor(ctx, 'top'),
+            },
+            {
+                name: 'border-top-color',
+                diagramOnly: true,
+                panelOnly: true,
+                copySafe: true,
+                value: (ctx) => borderSideColor(ctx, 'top'),
+                when: (ctx) =>
+                    !borderColorsUniform(ctx) &&
+                    ctx.get('border-top-style') !== 'none' &&
+                    borderSideHasColor(ctx, 'top'),
+            },
+            {
+                name: 'border-right-color',
+                diagramOnly: true,
+                panelOnly: true,
+                copySafe: true,
+                value: (ctx) => borderSideColor(ctx, 'right'),
+                when: (ctx) =>
+                    !borderColorsUniform(ctx) &&
+                    ctx.get('border-right-style') !== 'none' &&
+                    borderSideHasColor(ctx, 'right'),
+            },
+            {
+                name: 'border-bottom-color',
+                diagramOnly: true,
+                panelOnly: true,
+                copySafe: true,
+                value: (ctx) => borderSideColor(ctx, 'bottom'),
+                when: (ctx) =>
+                    !borderColorsUniform(ctx) &&
+                    ctx.get('border-bottom-style') !== 'none' &&
+                    borderSideHasColor(ctx, 'bottom'),
+            },
+            {
+                name: 'border-left-color',
+                diagramOnly: true,
+                panelOnly: true,
+                copySafe: true,
+                value: (ctx) => borderSideColor(ctx, 'left'),
+                when: (ctx) =>
+                    !borderColorsUniform(ctx) &&
+                    ctx.get('border-left-style') !== 'none' &&
+                    borderSideHasColor(ctx, 'left'),
             },
             {
                 name: 'border-radius',

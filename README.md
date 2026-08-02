@@ -1,3 +1,8 @@
+[![GitHub Release](https://img.shields.io/github/v/release/dmhendricks/style-detective?style=flat-square)](https://github.com/dmhendricks/style-detective/releases)
+[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/dmhendricks/style-detective/release.yml?style=flat-square)](https://github.com/dmhendricks/style-detective/actions)
+[![Chrome Web Store Users](https://img.shields.io/chrome-web-store/users/fbfplfafboelbaogjidoamdjjcckemib?style=flat-square)](https://chromewebstore.google.com/detail/style-detective/fbfplfafboelbaogjidoamdjjcckemib)
+[![License](https://img.shields.io/github/license/dmhendricks/style-detective.svg?style=flat-square)](https://github.com/dmhendricks/style-detective/blob/main/LICENSE)
+
 # Style Detective
 
 A modern rewrite of the popular [CSS Viewer](https://github.com/miled/cssviewer) extension for Chromium-based browsers. Hover over any element on a page to inspect its computed styles in a floating panel.

@@ -85,6 +85,29 @@ function isInsidePanel(el: HTMLElement | null): boolean {
     return !!el && !!el.closest && el.closest(`#${OVERLAY_ID}`) !== null;
 }
 
+/**
+ * False after the extension is reloaded/updated while this content script is
+ * still attached to the page. Touching chrome.* then throws "Extension context
+ * invalidated" — callers should tear down and stop.
+ */
+function isExtensionContextValid(): boolean {
+    try {
+        return typeof chrome !== 'undefined' && Boolean(chrome.runtime?.id);
+    } catch {
+        return false;
+    }
+}
+
+/** Fire-and-forget runtime message; no-ops when the extension context is dead. */
+function sendRuntimeMessage(message: unknown): void {
+    if (!isExtensionContextValid()) return;
+    try {
+        void chrome.runtime.sendMessage(message).catch(() => {});
+    } catch {
+        // Orphaned content script after reload/update.
+    }
+}
+
 function isElementInViewport(el: HTMLElement): boolean {
     const rect = el.getBoundingClientRect();
 
@@ -619,9 +642,7 @@ class OverlayController {
 
         this.claimFrame = requestAnimationFrame(() => {
             this.claimFrame = null;
-            void chrome.runtime.sendMessage(Messages.overlayClaim(this.instanceId)).catch(() => {
-                // Service worker may be asleep mid-navigation.
-            });
+            sendRuntimeMessage(Messages.overlayClaim(this.instanceId));
         });
     }
 
@@ -787,12 +808,18 @@ class OverlayController {
 
     private handleKey(e: KeyboardEvent): void {
         if (!this.armed) return;
+        // After `npm run dev` / Reload in chrome://extensions, this script can
+        // outlive the extension. Drop listeners instead of spamming the console.
+        if (!isExtensionContextValid()) {
+            this.disable();
+            return;
+        }
 
         if (e.key === 'Escape') {
             e.preventDefault();
             // Close this frame immediately; broadcast disarms the rest of the tab.
             this.disable();
-            void chrome.runtime.sendMessage(Messages.disarmOverlay()).catch(() => {});
+            sendRuntimeMessage(Messages.disarmOverlay());
             return;
         }
 
@@ -822,7 +849,7 @@ class OverlayController {
         }
         if (key === 's') {
             e.preventDefault();
-            void chrome.runtime.sendMessage(Messages.openOptions());
+            sendRuntimeMessage(Messages.openOptions());
             return;
         }
 

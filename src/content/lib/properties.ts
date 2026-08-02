@@ -258,6 +258,24 @@ function bordersUniform(ctx: InspectContext): boolean {
 
 const BORDER_SIDES = ['top', 'right', 'bottom', 'left'] as const;
 
+/** True when a border width string is non-zero (after float cleanup). */
+function isNonZeroBorderWidth(raw: string): boolean {
+    const width = removeExtraFloat(raw).trim();
+    return width !== '' && width !== '0' && width !== '0px';
+}
+
+/**
+ * True when a side would paint: style is not `none` and width is non-zero.
+ * Zero-width borders still carry a computed color — ignore those.
+ */
+export function borderSideIsPainted(
+    ctx: InspectContext,
+    side: (typeof BORDER_SIDES)[number],
+): boolean {
+    if (ctx.get(`border-${side}-style`) === 'none') return false;
+    return isNonZeroBorderWidth(ctx.get(`border-${side}-width`));
+}
+
 /** Display color for one border side (hex / rgba / transparent). */
 export function borderSideColor(ctx: InspectContext, side: (typeof BORDER_SIDES)[number]): string {
     return formatCssColorDisplay(ctx.get(`border-${side}-color`));
@@ -269,9 +287,9 @@ export function borderColorsUniform(ctx: InspectContext): boolean {
     return BORDER_SIDES.every((side) => borderSideColor(ctx, side) === top);
 }
 
-/** True when any side has a non-none border style. */
+/** True when any side has a painted (non-none, non-zero-width) border. */
 export function hasVisibleBorder(ctx: InspectContext): boolean {
-    return BORDER_SIDES.some((side) => ctx.get(`border-${side}-style`) !== 'none');
+    return BORDER_SIDES.some((side) => borderSideIsPainted(ctx, side));
 }
 
 /** True when a border side has a visible (non-transparent) color. */
@@ -358,31 +376,31 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
                 name: 'border',
                 diagramCovers: true,
                 value: (ctx) => borderSide(ctx, 'top'),
-                when: (ctx) => bordersUniform(ctx) && ctx.get('border-top-style') !== 'none',
+                when: (ctx) => bordersUniform(ctx) && borderSideIsPainted(ctx, 'top'),
             },
             {
                 name: 'border-top',
                 diagramCovers: true,
                 value: (ctx) => borderSide(ctx, 'top'),
-                when: (ctx) => !bordersUniform(ctx) && ctx.get('border-top-style') !== 'none',
+                when: (ctx) => !bordersUniform(ctx) && borderSideIsPainted(ctx, 'top'),
             },
             {
                 name: 'border-right',
                 diagramCovers: true,
                 value: (ctx) => borderSide(ctx, 'right'),
-                when: (ctx) => !bordersUniform(ctx) && ctx.get('border-right-style') !== 'none',
+                when: (ctx) => !bordersUniform(ctx) && borderSideIsPainted(ctx, 'right'),
             },
             {
                 name: 'border-bottom',
                 diagramCovers: true,
                 value: (ctx) => borderSide(ctx, 'bottom'),
-                when: (ctx) => !bordersUniform(ctx) && ctx.get('border-bottom-style') !== 'none',
+                when: (ctx) => !bordersUniform(ctx) && borderSideIsPainted(ctx, 'bottom'),
             },
             {
                 name: 'border-left',
                 diagramCovers: true,
                 value: (ctx) => borderSide(ctx, 'left'),
-                when: (ctx) => !bordersUniform(ctx) && ctx.get('border-left-style') !== 'none',
+                when: (ctx) => !bordersUniform(ctx) && borderSideIsPainted(ctx, 'left'),
             },
             // Diagram-only color rows: widths live in the diagram; keep a swatchable
             // color while the full border shorthand is hidden. panelOnly so Copy All
@@ -406,7 +424,7 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
                 value: (ctx) => borderSideColor(ctx, 'top'),
                 when: (ctx) =>
                     !borderColorsUniform(ctx) &&
-                    ctx.get('border-top-style') !== 'none' &&
+                    borderSideIsPainted(ctx, 'top') &&
                     borderSideHasColor(ctx, 'top'),
             },
             {
@@ -417,7 +435,7 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
                 value: (ctx) => borderSideColor(ctx, 'right'),
                 when: (ctx) =>
                     !borderColorsUniform(ctx) &&
-                    ctx.get('border-right-style') !== 'none' &&
+                    borderSideIsPainted(ctx, 'right') &&
                     borderSideHasColor(ctx, 'right'),
             },
             {
@@ -428,7 +446,7 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
                 value: (ctx) => borderSideColor(ctx, 'bottom'),
                 when: (ctx) =>
                     !borderColorsUniform(ctx) &&
-                    ctx.get('border-bottom-style') !== 'none' &&
+                    borderSideIsPainted(ctx, 'bottom') &&
                     borderSideHasColor(ctx, 'bottom'),
             },
             {
@@ -439,7 +457,7 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
                 value: (ctx) => borderSideColor(ctx, 'left'),
                 when: (ctx) =>
                     !borderColorsUniform(ctx) &&
-                    ctx.get('border-left-style') !== 'none' &&
+                    borderSideIsPainted(ctx, 'left') &&
                     borderSideHasColor(ctx, 'left'),
             },
             {

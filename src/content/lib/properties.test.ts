@@ -196,6 +196,10 @@ describe('border color helpers (diagram-only rows)', () => {
                 }),
             ),
         ).toBe(true);
+        // Zero-width borders do not paint — ignore them even when style is solid.
+        expect(
+            hasVisibleBorder(borderCtx({ style: 'solid', color: 'rgb(0, 0, 0)', width: '0px' })),
+        ).toBe(false);
     });
 
     it('shows border-color when uniform and diagram-only catalog flags are set', () => {
@@ -219,6 +223,28 @@ describe('border color helpers (diagram-only rows)', () => {
                 borderCtx({ style: 'solid', color: 'rgba(0, 0, 0, 0)', width: '4px' }),
             ).visible,
         ).toBe(false);
+        expect(
+            resolveProperty(
+                property,
+                borderCtx({ style: 'solid', color: 'rgb(166, 132, 255)', width: '0px' }),
+            ).visible,
+        ).toBe(false);
+    });
+
+    it('hides the border shorthand when width is zero', () => {
+        const property = findProperty('border');
+        expect(
+            resolveProperty(
+                property,
+                borderCtx({ style: 'solid', color: 'rgb(166, 132, 255)', width: '0px' }),
+            ).visible,
+        ).toBe(false);
+        expect(
+            resolveProperty(
+                property,
+                borderCtx({ style: 'solid', color: 'rgb(166, 132, 255)', width: '2px' }),
+            ).visible,
+        ).toBe(true);
     });
 
     it('shows per-side border-*-color when colors differ', () => {

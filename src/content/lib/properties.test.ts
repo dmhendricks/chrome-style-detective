@@ -229,3 +229,41 @@ describe('border shorthand (stays visible with box model)', () => {
         expect(borderSideIsPainted(mixed, 'top')).toBe(true);
     });
 });
+
+describe('overflow axis visibility (N2)', () => {
+    it('shows the overflow shorthand when both axes match and are non-default', () => {
+        const uniform = ctxOf({
+            overflow: 'hidden',
+            'overflow-x': 'hidden',
+            'overflow-y': 'hidden',
+        });
+        expect(resolveProperty(findProperty('overflow'), uniform).visible).toBe(true);
+        expect(resolveProperty(findProperty('overflow'), uniform).value).toBe('hidden');
+        expect(resolveProperty(findProperty('overflow-x'), uniform).visible).toBe(false);
+        expect(resolveProperty(findProperty('overflow-y'), uniform).visible).toBe(false);
+    });
+
+    it('hides overflow when both axes are the visible default', () => {
+        const defaults = ctxOf({
+            overflow: 'visible',
+            'overflow-x': 'visible',
+            'overflow-y': 'visible',
+        });
+        expect(resolveProperty(findProperty('overflow'), defaults).visible).toBe(false);
+        expect(resolveProperty(findProperty('overflow-x'), defaults).visible).toBe(false);
+        expect(resolveProperty(findProperty('overflow-y'), defaults).visible).toBe(false);
+    });
+
+    it('shows overflow-x and overflow-y when axes differ', () => {
+        const mixed = ctxOf({
+            overflow: 'hidden auto',
+            'overflow-x': 'hidden',
+            'overflow-y': 'auto',
+        });
+        expect(resolveProperty(findProperty('overflow'), mixed).visible).toBe(false);
+        expect(resolveProperty(findProperty('overflow-x'), mixed).visible).toBe(true);
+        expect(resolveProperty(findProperty('overflow-x'), mixed).value).toBe('hidden');
+        expect(resolveProperty(findProperty('overflow-y'), mixed).visible).toBe(true);
+        expect(resolveProperty(findProperty('overflow-y'), mixed).value).toBe('auto');
+    });
+});

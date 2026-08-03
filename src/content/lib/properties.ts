@@ -281,6 +281,11 @@ function boxShorthand(ctx: InspectContext, sides: readonly string[]): string {
         .join(' ');
 }
 
+/** True when overflow-x and overflow-y resolve to the same keyword. */
+export function overflowAxesUniform(ctx: InspectContext): boolean {
+    return ctx.get('overflow-x') === ctx.get('overflow-y');
+}
+
 export const CSS_CATEGORIES: readonly CssCategory[] = [
     {
         key: 'pBox',
@@ -514,7 +519,20 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
         hideWhenEmpty: true,
         properties: [
             { name: 'opacity', hideDefault: '1' },
-            { name: 'overflow', hideDefault: 'visible' },
+            // Uniform axes → overflow shorthand; mixed → overflow-x / overflow-y (N2).
+            {
+                name: 'overflow',
+                hideDefault: 'visible',
+                when: (ctx) => overflowAxesUniform(ctx),
+            },
+            {
+                name: 'overflow-x',
+                when: (ctx) => !overflowAxesUniform(ctx),
+            },
+            {
+                name: 'overflow-y',
+                when: (ctx) => !overflowAxesUniform(ctx),
+            },
             {
                 name: 'cursor',
                 hideDefault: 'auto',

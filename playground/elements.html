@@ -32,6 +32,32 @@
       border-radius: 0.5rem;
     }
     .demo-cursor-crosshair { cursor: crosshair; }
+    .demo-overflow {
+      width: 11rem;
+      height: 5.5rem;
+      padding: 0.5rem 0.65rem;
+      border: 1px solid #ced4da;
+      border-radius: 0.5rem;
+      background: #fff;
+      font-size: 0.85rem;
+      line-height: 1.35;
+    }
+    .demo-overflow--x {
+      overflow-x: auto;
+      overflow-y: hidden;
+      white-space: nowrap;
+    }
+    .demo-overflow--y {
+      overflow-x: hidden;
+      overflow-y: scroll;
+    }
+    .demo-overflow--both {
+      overflow: hidden;
+    }
+    .demo-overflow__wide {
+      display: inline-block;
+      min-width: 22rem;
+    }
     .demo-iframe-host {
       width: 100%;
       max-width: 720px;
@@ -102,13 +128,13 @@
       <div class="card-header fw-semibold">Colors &amp; surfaces</div>
       <div class="card-body">
         <div class="d-flex flex-wrap gap-2 mb-3">
-          <div class="demo-swatch bg-primary" title="bg-primary"></div>
-          <div class="demo-swatch bg-success" title="bg-success"></div>
-          <div class="demo-swatch bg-danger" title="bg-danger"></div>
-          <div class="demo-swatch bg-warning" title="bg-warning"></div>
-          <div class="demo-swatch bg-info" title="bg-info"></div>
-          <div class="demo-swatch bg-dark" title="bg-dark"></div>
-          <div class="demo-swatch bg-body-tertiary" title="bg-body-tertiary"></div>
+          <div class="demo-swatch bg-primary" alt="bg-primary"></div>
+          <div class="demo-swatch bg-success" alt="bg-success"></div>
+          <div class="demo-swatch bg-danger" alt="bg-danger"></div>
+          <div class="demo-swatch bg-warning" alt="bg-warning"></div>
+          <div class="demo-swatch bg-info" alt="bg-info"></div>
+          <div class="demo-swatch bg-dark" alt="bg-dark"></div>
+          <div class="demo-swatch bg-body-tertiary" alt="bg-body-tertiary"></div>
         </div>
         <p class="mb-3">
           <span class="text-primary">primary</span> ·
@@ -256,7 +282,7 @@
             height="100"
           />
           <div class="flex-grow-1" style="min-width: 12rem">
-            <div class="demo-gradient mb-2" title="CSS gradient"></div>
+            <div class="demo-gradient mb-2" alt="CSS gradient"></div>
             <p class="small text-secondary mb-0">Gradient fill · object-fit image · shadows below</p>
           </div>
         </div>
@@ -270,6 +296,44 @@
         <p class="demo-cursor-crosshair border rounded p-3 bg-white mb-0">
           Hover this box for <code>cursor: crosshair</code>.
         </p>
+      </div>
+    </section>
+
+    <!-- Overflow axes (N2) -->
+    <section class="demo-section card mb-4 shadow-sm" id="overflow">
+      <div class="card-header fw-semibold">Overflow axes</div>
+      <div class="card-body">
+        <p class="text-secondary small mb-3">
+          Uniform axes should show the <code>overflow</code> shorthand; mixed axes should
+          show <code>overflow-x</code> and <code>overflow-y</code> separately.
+        </p>
+        <div class="d-flex flex-wrap gap-3 align-items-start">
+          <div>
+            <div class="small text-secondary mb-1"><code>overflow-x: auto</code> · <code>overflow-y: hidden</code></div>
+            <div class="demo-overflow demo-overflow--x" alt="Mixed axes — inspect for overflow-x / overflow-y">
+              <span class="demo-overflow__wide">
+                Horizontal clip only — scroll sideways to see the rest of this long line of text.
+              </span>
+            </div>
+          </div>
+          <div>
+            <div class="small text-secondary mb-1"><code>overflow-x: hidden</code> · <code>overflow-y: scroll</code></div>
+            <div class="demo-overflow demo-overflow--y" alt="Mixed axes — vertical scroll gutter">
+              Vertical scroll only.<br />
+              Line two.<br />
+              Line three.<br />
+              Line four.<br />
+              Line five still here.
+            </div>
+          </div>
+          <div>
+            <div class="small text-secondary mb-1"><code>overflow: hidden</code> (both axes)</div>
+            <div class="demo-overflow demo-overflow--both" alt="Uniform axes — inspect for overflow shorthand">
+              Both axes clipped — no scrollbars, leftover content stays hidden.
+              Extra words pad this box past its height and width limits.
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 

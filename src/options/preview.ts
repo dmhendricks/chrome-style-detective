@@ -126,8 +126,7 @@ function buildOverlayHtml(): string {
         ${propertyRow('border-radius', '8px')}
         ${propertyRow('margin', '0', true)}
         ${propertyRow('padding', '0 14px', true)}
-        ${propertyRow('border', '2px solid #9F1239', true)}
-        ${propertyRow('border-color', '#9F1239', true)}
+        ${propertyRow('border', '2px solid #9F1239')}
       </ul>
     </div>
     <div class="StyleDetectiveOverlay__category">
@@ -313,16 +312,13 @@ export function renderPreview(state: PreviewState): void {
     const boxModel = root.querySelector<HTMLElement>('[data-preview="box-model"] .StyleDetectiveOverlay__box-model');
     boxModel?.classList.toggle('StyleDetectiveOverlay__box-model--hidden', !state.showBoxModel);
 
-    // When diagram is off, reveal the covered shorthand rows; when on, reveal
-    // diagram-only color detail (border-color) instead of the full border row.
+    // When diagram is on, hide covered length shorthands (margin / padding).
+    // Border stays visible — style + color are not shown by the diagram.
     const boxUl = root.querySelectorAll('#StyleDetectiveOverlay__pBox ul > li');
     for (const li of boxUl) {
         const prop = li.querySelector('.StyleDetectiveOverlay__property')?.textContent?.trim();
-        if (prop === 'margin' || prop === 'padding' || prop === 'border') {
+        if (prop === 'margin' || prop === 'padding') {
             li.classList.toggle('StyleDetectiveOverlay__row--hidden', state.showBoxModel);
-        }
-        if (prop === 'border-color') {
-            li.classList.toggle('StyleDetectiveOverlay__row--hidden', !state.showBoxModel);
         }
     }
 }

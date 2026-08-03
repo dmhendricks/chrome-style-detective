@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     CSS_CATEGORIES,
-    borderColorsUniform,
-    borderSideColor,
-    hasVisibleBorder,
+    borderSideIsPainted,
     isPropertyEnabled,
     resolveProperty,
     type CssProperty,
@@ -174,81 +172,28 @@ describe('catalog invariants', () => {
     });
 });
 
-describe('border color helpers (diagram-only rows)', () => {
-    it('formats a side color for display', () => {
-        const ctx = borderCtx({ color: 'rgb(50, 115, 220)', style: 'solid', width: '4px' });
-        expect(borderSideColor(ctx, 'top')).toBe('#3273DC');
+describe('border shorthand (stays visible with box model)', () => {
+    it('is not diagramCovers — style + color must remain in the panel', () => {
+        expect(findProperty('border').diagramCovers).toBeFalsy();
+        expect(findProperty('border-top').diagramCovers).toBeFalsy();
+        expect(CSS_CATEGORIES.flatMap((c) => c.properties).some((p) => p.name === 'border-color')).toBe(
+            false,
+        );
     });
 
-    it('detects uniform vs mixed border colors', () => {
-        expect(
-            borderColorsUniform(
-                borderCtx({ color: 'rgb(50, 115, 220)', style: 'solid', width: '4px' }),
-            ),
-        ).toBe(true);
-        expect(
-            borderColorsUniform(
-                borderCtx({
-                    style: 'solid',
-                    width: '4px',
-                    color: {
-                        top: 'rgb(255, 0, 0)',
-                        right: 'rgb(0, 255, 0)',
-                        bottom: 'rgb(255, 0, 0)',
-                        left: 'rgb(255, 0, 0)',
-                    },
-                }),
-            ),
-        ).toBe(false);
-    });
-
-    it('detects any visible border style', () => {
-        expect(hasVisibleBorder(borderCtx({ style: 'none' }))).toBe(false);
-        expect(
-            hasVisibleBorder(
-                borderCtx({
-                    style: { top: 'solid', right: 'none', bottom: 'none', left: 'none' },
-                    color: 'rgb(0, 0, 0)',
-                    width: '1px',
-                }),
-            ),
-        ).toBe(true);
-        // Zero-width borders do not paint — ignore them even when style is solid.
-        expect(
-            hasVisibleBorder(borderCtx({ style: 'solid', color: 'rgb(0, 0, 0)', width: '0px' })),
-        ).toBe(false);
-    });
-
-    it('shows border-color when uniform and diagram-only catalog flags are set', () => {
-        const property = findProperty('border-color');
-        expect(property.diagramOnly).toBe(true);
-        expect(property.panelOnly).toBe(true);
-
-        const visible = borderCtx({
-            style: 'solid',
-            color: 'rgba(50, 115, 220, 0.3)',
-            width: '4px',
+    it('shows width, style, and color together (including dashed)', () => {
+        const property = findProperty('border');
+        const dashed = borderCtx({
+            style: 'dashed',
+            color: 'rgb(148, 163, 184)',
+            width: '1px',
         });
-        const resolved = resolveProperty(property, visible);
+        const resolved = resolveProperty(property, dashed);
         expect(resolved.visible).toBe(true);
-        expect(resolved.value).toBe('rgba(50, 115, 220, 0.3)');
-
-        expect(resolveProperty(property, borderCtx({ style: 'none' })).visible).toBe(false);
-        expect(
-            resolveProperty(
-                property,
-                borderCtx({ style: 'solid', color: 'rgba(0, 0, 0, 0)', width: '4px' }),
-            ).visible,
-        ).toBe(false);
-        expect(
-            resolveProperty(
-                property,
-                borderCtx({ style: 'solid', color: 'rgb(166, 132, 255)', width: '0px' }),
-            ).visible,
-        ).toBe(false);
+        expect(resolved.value).toBe('1px dashed #94A3B8');
     });
 
-    it('hides the border shorthand when width is zero', () => {
+    it('hides the border shorthand when width is zero or style is none', () => {
         const property = findProperty('border');
         expect(
             resolveProperty(
@@ -256,6 +201,9 @@ describe('border color helpers (diagram-only rows)', () => {
                 borderCtx({ style: 'solid', color: 'rgb(166, 132, 255)', width: '0px' }),
             ).visible,
         ).toBe(false);
+        expect(resolveProperty(property, borderCtx({ style: 'none', width: '2px' })).visible).toBe(
+            false,
+        );
         expect(
             resolveProperty(
                 property,
@@ -264,7 +212,7 @@ describe('border color helpers (diagram-only rows)', () => {
         ).toBe(true);
     });
 
-    it('shows per-side border-*-color when colors differ', () => {
+    it('shows per-side border-* when sides differ', () => {
         const mixed = borderCtx({
             style: 'solid',
             width: '2px',
@@ -275,9 +223,9 @@ describe('border color helpers (diagram-only rows)', () => {
                 left: 'rgb(255, 0, 0)',
             },
         });
-        expect(resolveProperty(findProperty('border-color'), mixed).visible).toBe(false);
-        expect(resolveProperty(findProperty('border-top-color'), mixed).visible).toBe(true);
-        expect(resolveProperty(findProperty('border-right-color'), mixed).value).toBe('#008000');
-        expect(findProperty('border-top-color').diagramOnly).toBe(true);
+        expect(resolveProperty(findProperty('border'), mixed).visible).toBe(false);
+        expect(resolveProperty(findProperty('border-top'), mixed).visible).toBe(true);
+        expect(resolveProperty(findProperty('border-right'), mixed).value).toBe('2px solid #008000');
+        expect(borderSideIsPainted(mixed, 'top')).toBe(true);
     });
 });

@@ -138,12 +138,6 @@ export interface CssProperty {
      */
     diagramCovers?: boolean;
     /**
-     * Shown in the panel only while the Box diagram is on (inverse of
-     * `diagramCovers`). Use for color/detail rows that the diagram does not
-     * replace (e.g. border-color).
-     */
-    diagramOnly?: boolean;
-    /**
      * Hide the row when the raw computed value equals this string (or is in
      * this list). Compared before `format` / `value`.
      */
@@ -278,28 +272,6 @@ export function borderSideIsPainted(
     return isNonZeroBorderWidth(ctx.get(`border-${side}-width`));
 }
 
-/** Display color for one border side (hex / rgba / transparent). */
-export function borderSideColor(ctx: InspectContext, side: (typeof BORDER_SIDES)[number]): string {
-    return formatCssColorDisplay(ctx.get(`border-${side}-color`));
-}
-
-/** True when all four sides share the same display color. */
-export function borderColorsUniform(ctx: InspectContext): boolean {
-    const top = borderSideColor(ctx, 'top');
-    return BORDER_SIDES.every((side) => borderSideColor(ctx, side) === top);
-}
-
-/** True when any side has a painted (non-none, non-zero-width) border. */
-export function hasVisibleBorder(ctx: InspectContext): boolean {
-    return BORDER_SIDES.some((side) => borderSideIsPainted(ctx, side));
-}
-
-/** True when a border side has a visible (non-transparent) color. */
-function borderSideHasColor(ctx: InspectContext, side: (typeof BORDER_SIDES)[number]): boolean {
-    const parsed = parseCssColor(ctx.get(`border-${side}-color`));
-    return parsed != null && !isFullyTransparent(parsed);
-}
-
 function boxShorthand(ctx: InspectContext, sides: readonly string[]): string {
     return sides
         .map((side) => {
@@ -374,93 +346,32 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
                         'padding-left',
                     ]) !== '0 0 0 0',
             },
+            // Keep full border shorthand visible with the Box diagram — widths are
+            // also labeled there, but style + color (with swatch) are not.
             {
                 name: 'border',
-                diagramCovers: true,
                 value: (ctx) => borderSide(ctx, 'top'),
                 when: (ctx) => bordersUniform(ctx) && borderSideIsPainted(ctx, 'top'),
             },
             {
                 name: 'border-top',
-                diagramCovers: true,
                 value: (ctx) => borderSide(ctx, 'top'),
                 when: (ctx) => !bordersUniform(ctx) && borderSideIsPainted(ctx, 'top'),
             },
             {
                 name: 'border-right',
-                diagramCovers: true,
                 value: (ctx) => borderSide(ctx, 'right'),
                 when: (ctx) => !bordersUniform(ctx) && borderSideIsPainted(ctx, 'right'),
             },
             {
                 name: 'border-bottom',
-                diagramCovers: true,
                 value: (ctx) => borderSide(ctx, 'bottom'),
                 when: (ctx) => !bordersUniform(ctx) && borderSideIsPainted(ctx, 'bottom'),
             },
             {
                 name: 'border-left',
-                diagramCovers: true,
                 value: (ctx) => borderSide(ctx, 'left'),
                 when: (ctx) => !bordersUniform(ctx) && borderSideIsPainted(ctx, 'left'),
-            },
-            // Diagram-only color rows: widths live in the diagram; keep a swatchable
-            // color while the full border shorthand is hidden. panelOnly so Copy All
-            // does not duplicate color already present on the border* dump rows.
-            {
-                name: 'border-color',
-                diagramOnly: true,
-                panelOnly: true,
-                copySafe: true,
-                value: (ctx) => borderSideColor(ctx, 'top'),
-                when: (ctx) =>
-                    hasVisibleBorder(ctx) &&
-                    borderColorsUniform(ctx) &&
-                    borderSideHasColor(ctx, 'top'),
-            },
-            {
-                name: 'border-top-color',
-                diagramOnly: true,
-                panelOnly: true,
-                copySafe: true,
-                value: (ctx) => borderSideColor(ctx, 'top'),
-                when: (ctx) =>
-                    !borderColorsUniform(ctx) &&
-                    borderSideIsPainted(ctx, 'top') &&
-                    borderSideHasColor(ctx, 'top'),
-            },
-            {
-                name: 'border-right-color',
-                diagramOnly: true,
-                panelOnly: true,
-                copySafe: true,
-                value: (ctx) => borderSideColor(ctx, 'right'),
-                when: (ctx) =>
-                    !borderColorsUniform(ctx) &&
-                    borderSideIsPainted(ctx, 'right') &&
-                    borderSideHasColor(ctx, 'right'),
-            },
-            {
-                name: 'border-bottom-color',
-                diagramOnly: true,
-                panelOnly: true,
-                copySafe: true,
-                value: (ctx) => borderSideColor(ctx, 'bottom'),
-                when: (ctx) =>
-                    !borderColorsUniform(ctx) &&
-                    borderSideIsPainted(ctx, 'bottom') &&
-                    borderSideHasColor(ctx, 'bottom'),
-            },
-            {
-                name: 'border-left-color',
-                diagramOnly: true,
-                panelOnly: true,
-                copySafe: true,
-                value: (ctx) => borderSideColor(ctx, 'left'),
-                when: (ctx) =>
-                    !borderColorsUniform(ctx) &&
-                    borderSideIsPainted(ctx, 'left') &&
-                    borderSideHasColor(ctx, 'left'),
             },
             {
                 name: 'border-radius',

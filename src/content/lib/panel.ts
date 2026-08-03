@@ -321,17 +321,10 @@ export function updatePanel(style: CSSStyleDeclaration, el: HTMLElement): void {
         for (const property of category.properties) {
             if (!isPropertyEnabled(property)) continue;
             // When the diagram is on, covered rows stay in the catalog / CSS dump
-            // but are hidden in the panel.
+            // but are hidden in the panel (margin / padding lengths).
             if (property.diagramCovers && showBoxModelDiagram) {
                 const covered = propertyRows.get(property.name);
                 if (covered) setRowVisible(covered.li, false);
-                continue;
-            }
-            // Inverse: color/detail rows that only make sense while the diagram
-            // hides the full border shorthand.
-            if (property.diagramOnly && !showBoxModelDiagram) {
-                const diagramOnly = propertyRows.get(property.name);
-                if (diagramOnly) setRowVisible(diagramOnly.li, false);
                 continue;
             }
 

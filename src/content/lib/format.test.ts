@@ -10,6 +10,8 @@ import {
     parseCssColor,
     rgbToHex,
     textContrast,
+    truncateCssDataUrls,
+    truncateDataUrl,
     type RgbaColor,
 } from './format';
 
@@ -75,6 +77,36 @@ describe('formatBackgroundImage', () => {
             ),
         ).toBe(
             'https://media.townhall.com/cdn/hodl/2026/194/8111978c-5bb2-42d5-bb24-768f8843d900-180x180.jpg',
+        );
+    });
+
+    it('collapses long data: URLs in the panel', () => {
+        const long =
+            'data:application/octet-stream;base64,' + 'A'.repeat(80);
+        expect(formatBackgroundImage(`url("${long}")`)).toBe('data:…');
+    });
+});
+
+describe('truncateCssDataUrls / truncateDataUrl', () => {
+    it('keeps short data URLs and http(s) urls unchanged', () => {
+        expect(truncateDataUrl('data:text/plain,hi')).toBe('data:text/plain,hi');
+        expect(truncateDataUrl('https://example.com/a.png')).toBe(
+            'https://example.com/a.png',
+        );
+    });
+
+    it('collapses long data: cursor values but keeps the fallback keyword', () => {
+        const long =
+            'data:application/octet-stream;base64,' + 'A'.repeat(80);
+        expect(truncateCssDataUrls(`url("${long}"), move`)).toBe(
+            'url("data:…"), move',
+        );
+    });
+
+    it('preserves unquoted url() syntax when collapsing', () => {
+        const long = 'data:image/png;base64,' + 'B'.repeat(80);
+        expect(truncateCssDataUrls(`url(${long}), pointer`)).toBe(
+            'url("data:…"), pointer',
         );
     });
 });

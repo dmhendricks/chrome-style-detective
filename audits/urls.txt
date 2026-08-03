@@ -14,3 +14,4 @@ https://posthog.com
 https://docs.imgproxy.net/usage/getting_info
 https://tailwindcss.com/docs/display
 https://cssreference.io/property/border-color/
+https://animista.net/

@@ -6,6 +6,11 @@
  * getComputedStyle (the "second opinion"). Writes audits/report/index.html
  * for you to skim — this is not a pass/fail CI gate.
  *
+ * Noise controls:
+ *   - Skip images and wrappers with no direct text
+ *   - Flag own-bg vs effective only when the WCAG tier changes
+ *   - Cluster identical note patterns per URL (one row + count)
+ *
  * Usage: npm run audit:field
  */
 
@@ -18,6 +23,7 @@ import {
     formatCssColorDisplay,
     parseCssColor,
     textContrast,
+    truncateCssDataUrls,
 } from '../src/content/lib/format';
 import {
     effectiveBackgroundFromSnapshots,
@@ -52,7 +58,11 @@ type Finding = {
     weShowBgImage: string;
     contrast: string;
     notes: string[];
+    /** Highest severity among notes (for report ordering). */
+    severity: 'investigate' | 'spot-check';
 };
+
+type ClusteredFinding = Finding & { count: number; examples: string[] };
 
 /** Resolve http(s)/file URLs as-is; treat other lines as paths under the repo root. */
 function resolveTarget(entry: string): string {
@@ -75,10 +85,13 @@ async function loadUrls(): Promise<string[]> {
 
 /** Pull raw computed styles from the page (Chrome's answers). */
 async function samplePage(page: Page): Promise<SampleWire[]> {
+    // Keep this callback free of nested function *declarations* — tsx/esbuild
+    // injects a `__name` helper that is not defined in the page context.
     return page.evaluate((maxSamples) => {
         const pick = Array.from(
             document.querySelectorAll(
-                'a, button, h1, h2, h3, h4, p, span, li, td, th, label, input, img',
+                // No `img` — contrast/color on images is almost always noise.
+                'a, button, h1, h2, h3, h4, p, span, li, td, th, label, input',
             ),
         );
 
@@ -89,6 +102,22 @@ async function samplePage(page: Page): Promise<SampleWire[]> {
             if (!(el instanceof HTMLElement)) continue;
             if (seen.has(el)) continue;
             seen.add(el);
+
+            // Prefer elements that paint their own text (skip wrapper-only LIs).
+            let hasDirectText = false;
+            for (const node of el.childNodes) {
+                if (node.nodeType === Node.TEXT_NODE && (node.textContent || '').trim()) {
+                    hasDirectText = true;
+                    break;
+                }
+            }
+            if (
+                !hasDirectText &&
+                (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)
+            ) {
+                hasDirectText = Boolean(el.value || el.placeholder);
+            }
+            if (!hasDirectText) continue;
 
             const rect = el.getBoundingClientRect();
             if (rect.width < 2 || rect.height < 2) continue;
@@ -124,6 +153,24 @@ async function samplePage(page: Page): Promise<SampleWire[]> {
     }, MAX_SAMPLES_PER_PAGE);
 }
 
+function noteSeverity(note: string): Finding['severity'] {
+    if (
+        note.startsWith('Could not parse color') ||
+        note.startsWith('Background paint is a solid color')
+    ) {
+        return 'investigate';
+    }
+    return 'spot-check';
+}
+
+function worstSeverity(
+    a: Finding['severity'],
+    b: Finding['severity'],
+): Finding['severity'] {
+    if (a === 'investigate' || b === 'investigate') return 'investigate';
+    return 'spot-check';
+}
+
 function analyzeSample(url: string, sample: SampleWire): Finding {
     const notes: string[] = [];
 
@@ -142,15 +189,16 @@ function analyzeSample(url: string, sample: SampleWire): Finding {
         : 'n/a';
 
     // Naive contrast: element's own background only (old behavior) vs effective.
+    // Only flag when the WCAG tier changes — ratio noise within the same tier
+    // (e.g. 21:1 AAA vs 18:1 AAA) drowned prior reports.
     const ownBg = parseCssColor(sample.backgroundColor);
     if (ownBg && contrastResult) {
-        const naiveBg =
-            ownBg.a <= 0 ? { r: 255, g: 255, b: 255, a: 1 } : ownBg;
+        const naiveBg = ownBg.a <= 0 ? { r: 255, g: 255, b: 255, a: 1 } : ownBg;
         const naiveOwn = textContrast(sample.color, naiveBg);
-        if (naiveOwn && Math.abs(naiveOwn.ratio - contrastResult.ratio) >= 2) {
+        if (naiveOwn && naiveOwn.label !== contrastResult.label) {
             notes.push(
-                `Interesting: own-bg contrast would be ${naiveOwn.ratio.toFixed(2)}:1 ${naiveOwn.label}, ` +
-                    `effective (ancestors/images) is ${contrastResult.ratio.toFixed(2)}:1 ${contrastResult.label}.`,
+                `WCAG tier changed: own-bg ${naiveOwn.ratio.toFixed(2)}:1 ${naiveOwn.label} → ` +
+                    `effective ${contrastResult.ratio.toFixed(2)}:1 ${contrastResult.label}.`,
             );
         }
     }
@@ -172,10 +220,6 @@ function analyzeSample(url: string, sample: SampleWire): Finding {
         );
     }
 
-    if (weShowColor === '#000000' || weShowColor === '#FFFFFF') {
-        // Extreme colors are fine; no note.
-    }
-
     const label = [
         sample.tag,
         sample.id ? `#${sample.id}` : '',
@@ -184,30 +228,88 @@ function analyzeSample(url: string, sample: SampleWire): Finding {
         .filter(Boolean)
         .join(' ');
 
+    let severity: Finding['severity'] = 'spot-check';
+    for (const note of notes) {
+        severity = worstSeverity(severity, noteSeverity(note));
+    }
+
     return {
         url,
         tag: sample.tag,
         label,
         chromeColor: sample.color,
         chromeBg: sample.backgroundColor,
-        chromeBgImage: sample.backgroundImage.slice(0, 120),
+        chromeBgImage: truncateCssDataUrls(sample.backgroundImage).slice(0, 120),
         weShowColor,
         weShowBg,
-        weShowBgImage: weShowBgImage.slice(0, 120),
+        weShowBgImage: truncateCssDataUrls(weShowBgImage).slice(0, 120),
         contrast,
         notes,
+        severity,
     };
 }
 
-function renderReport(findings: Finding[], urls: string[], errors: string[]): string {
-    const interesting = findings.filter((f) => f.notes.length > 0);
-    const rows = interesting.length > 0 ? interesting : findings.slice(0, 40);
+/**
+ * Collapse identical flag patterns per URL into one row with a count.
+ * Key = url + note text(s) + contrast tier string.
+ */
+export function clusterFindings(findings: Finding[]): ClusteredFinding[] {
+    const flagged = findings.filter((f) => f.notes.length > 0);
+    const map = new Map<string, ClusteredFinding>();
+
+    for (const f of flagged) {
+        const key = `${f.url}\0${f.notes.join('\n')}\0${f.contrast}`;
+        const existing = map.get(key);
+        if (existing) {
+            existing.count += 1;
+            if (existing.examples.length < 3) {
+                existing.examples.push(f.label);
+            }
+            existing.severity = worstSeverity(existing.severity, f.severity);
+            continue;
+        }
+        map.set(key, {
+            ...f,
+            count: 1,
+            examples: [f.label],
+        });
+    }
+
+    return [...map.values()].sort((a, b) => {
+        if (a.severity !== b.severity) {
+            return a.severity === 'investigate' ? -1 : 1;
+        }
+        return a.url.localeCompare(b.url) || b.count - a.count;
+    });
+}
+
+function renderReport(
+    findings: Finding[],
+    clusters: ClusteredFinding[],
+    urls: string[],
+    errors: string[],
+): string {
+    const flagged = findings.filter((f) => f.notes.length > 0);
+    const rows = clusters.length > 0 ? clusters : findings.slice(0, 20).map((f) => ({
+        ...f,
+        count: 1,
+        examples: [f.label],
+    }));
 
     const tableRows = rows
         .map((f) => {
             const notes = f.notes.map((n) => `<li>${escapeHtml(n)}</li>`).join('');
+            const extras =
+                f.count > 1
+                    ? `<div class="count">${f.count} similar · e.g. ${f.examples
+                          .map((e) => escapeHtml(e))
+                          .join('; ')}</div>`
+                    : '';
+            const sev = f.notes.length
+                ? `<span class="sev sev--${f.severity}">${f.severity}</span>`
+                : '';
             return `<tr>
-  <td><code>${escapeHtml(f.url)}</code><br/><small>${escapeHtml(f.label)}</small></td>
+  <td>${sev}<code>${escapeHtml(f.url)}</code><br/><small>${escapeHtml(f.label)}</small>${extras}</td>
   <td><div>Chrome: <code>${escapeHtml(f.chromeColor)}</code></div>
       <div>We show: <code>${escapeHtml(f.weShowColor)}</code></div></td>
   <td><div>Chrome: <code>${escapeHtml(f.chromeBg)}</code></div>
@@ -226,13 +328,26 @@ function renderReport(findings: Finding[], urls: string[], errors: string[]): st
   <title>Style Detective field audit</title>
   <style>
     body { font-family: system-ui, sans-serif; margin: 2rem; max-width: 1200px; line-height: 1.45; }
-    code { font-size: 0.85em; }
+    code { font-size: 0.85em; word-break: break-all; }
     table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
     th, td { border: 1px solid #ccc; padding: 0.5rem; vertical-align: top; }
     th { background: #f4f4f4; text-align: left; }
     .meta { color: #444; margin-bottom: 1.5rem; }
     .err { color: #a00; }
     ul { margin: 0; padding-left: 1.2rem; }
+    .count { color: #666; font-size: 0.85em; margin-top: 0.35rem; }
+    .sev {
+      display: inline-block;
+      margin: 0 0.4rem 0.35rem 0;
+      padding: 0.1rem 0.4rem;
+      border-radius: 3px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .sev--investigate { background: #f5d4d4; color: #7a1f1f; }
+    .sev--spot-check { background: #f5e6b8; color: #6a4b00; }
   </style>
 </head>
 <body>
@@ -242,8 +357,11 @@ function renderReport(findings: Finding[], urls: string[], errors: string[]): st
     Chrome column = raw <code>getComputedStyle</code>.
     “We show” = what Style Detective’s formatters/contrast logic derive from that.</p>
     <p>URLs: ${urls.map((u) => `<code>${escapeHtml(u)}</code>`).join(', ')}</p>
-    <p>Samples analyzed: ${findings.length}. Flagged rows: ${interesting.length}.
-    Showing ${interesting.length > 0 ? 'flagged findings' : 'a sample of rows (nothing flagged)'}.</p>
+    <p>Samples analyzed: ${findings.length}. Flagged samples: ${flagged.length}.
+    Unique patterns shown: ${clusters.length || (flagged.length ? 0 : Math.min(20, findings.length))}
+    (identical notes per URL are clustered).</p>
+    <p>Sampling skips images and elements with no direct text.
+    Own-bg vs effective is only flagged when the WCAG tier changes.</p>
     ${errors.length ? `<p class="err">Load errors:<br/>${errors.map(escapeHtml).join('<br/>')}</p>` : ''}
   </div>
   <table>
@@ -309,22 +427,32 @@ async function main(): Promise<void> {
         await browser.close();
     }
 
+    const clusters = clusterFindings(findings);
+
     await mkdir(REPORT_DIR, { recursive: true });
-    const html = renderReport(findings, urls, errors);
+    const html = renderReport(findings, clusters, urls, errors);
     const out = path.join(REPORT_DIR, 'index.html');
     await writeFile(out, html, 'utf8');
     await writeFile(
         path.join(REPORT_DIR, 'findings.json'),
-        JSON.stringify({ urls, errors, findings }, null, 2),
+        JSON.stringify({ urls, errors, findings, clusters }, null, 2),
         'utf8',
     );
 
     const flagged = findings.filter((f) => f.notes.length > 0).length;
-    console.log(`\nDone. ${findings.length} samples, ${flagged} flagged.`);
+    console.log(
+        `\nDone. ${findings.length} samples, ${flagged} flagged, ${clusters.length} unique patterns.`,
+    );
     console.log(`Open: ${out}`);
 }
 
-main().catch((err) => {
-    console.error(err);
-    process.exit(1);
-});
+const isDirectRun =
+    process.argv[1] !== undefined &&
+    path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isDirectRun) {
+    main().catch((err) => {
+        console.error(err);
+        process.exit(1);
+    });
+}

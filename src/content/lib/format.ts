@@ -228,6 +228,42 @@ export function extractCssUrls(str: string): string[] {
     return urls;
 }
 
+/** Max length for a data: URL before the panel collapses it to `data:…`. */
+const DATA_URL_DISPLAY_MAX = 48;
+
+/** Panel placeholder for a truncated data: URL. */
+export const DATA_URL_DISPLAY_PLACEHOLDER = 'data:…';
+
+/**
+ * Collapse a long `data:` URL for panel display. Short data URLs and non-data
+ * URLs are returned unchanged.
+ */
+export function truncateDataUrl(
+    url: string,
+    maxLength: number = DATA_URL_DISPLAY_MAX,
+): string {
+    if (!/^data:/i.test(url) || url.length <= maxLength) return url;
+    return DATA_URL_DISPLAY_PLACEHOLDER;
+}
+
+/**
+ * Replace long `data:` payloads inside `url(...)` tokens for panel display.
+ * Preserves fallbacks and other list items (e.g. `url("data:…"), move`).
+ * Display-only — copy should keep the raw computed value.
+ */
+export function truncateCssDataUrls(str: string): string {
+    return str.replace(
+        /url\(\s*(['"]?)(.*?)\1\s*\)/gi,
+        (full, quote: string, inner: string) => {
+            const url = inner.trim();
+            const truncated = truncateDataUrl(url);
+            if (truncated === url) return full;
+            const q = quote || '"';
+            return `url(${q}${truncated}${q})`;
+        },
+    );
+}
+
 /**
  * Panel display for background-image: hex/rgba for solid `color(...)` layers,
  * full URL(s) for url(...), otherwise the raw computed string (gradients, etc.).
@@ -241,7 +277,9 @@ export function formatBackgroundImage(str: string): string {
 
     if (/url\s*\(/i.test(trimmed)) {
         const urls = extractCssUrls(trimmed);
-        return urls.length > 0 ? urls.join(', ') : trimmed;
+        return urls.length > 0
+            ? urls.map((url) => truncateDataUrl(url)).join(', ')
+            : trimmed;
     }
 
     return trimmed;

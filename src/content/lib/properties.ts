@@ -19,6 +19,7 @@ import {
     parseCssColor,
     removeExtraFloat,
     textContrast,
+    truncateCssDataUrls,
     type ContrastTone,
     type RgbaColor,
 } from './format';
@@ -577,6 +578,7 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
             {
                 name: 'list-style-image',
                 when: (ctx) => ctx.get('list-style-image') !== 'none',
+                format: (raw) => truncateCssDataUrls(raw),
             },
             { name: 'list-style-position' },
         ],
@@ -601,7 +603,12 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
         properties: [
             { name: 'opacity', hideDefault: '1' },
             { name: 'overflow', hideDefault: 'visible' },
-            { name: 'cursor', hideDefault: 'auto' },
+            {
+                name: 'cursor',
+                hideDefault: 'auto',
+                // Collapse long data: cursors for the panel; copy keeps raw CSS.
+                format: (raw) => truncateCssDataUrls(raw),
+            },
             { name: 'visibility', hideDefault: 'visible' },
         ],
     },

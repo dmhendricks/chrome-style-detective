@@ -85,12 +85,29 @@ describe('copySafe — panel and clipboard agree on colors', () => {
         expect(copiedValue('background-image', 'url("https://e.com/a.png")')).toBe(
             'url("https://e.com/a.png")',
         );
+        // truncateCssDataUrls is display-only; copy keeps the full data URI.
+        const long =
+            'data:application/octet-stream;base64,' + 'A'.repeat(80);
+        const cursor = `url("${long}"), move`;
+        expect(copiedValue('cursor', cursor)).toBe(cursor);
     });
 
     it('marks only formatters whose output is valid CSS as copySafe', () => {
         expect(findProperty('color').copySafe).toBe(true);
         expect(findProperty('background-color').copySafe).toBe(true);
         expect(findProperty('background-image').copySafe).toBeUndefined();
+        expect(findProperty('cursor').copySafe).toBeUndefined();
+    });
+});
+
+describe('cursor data URL display', () => {
+    it('shows a truncated data: cursor in the panel', () => {
+        const long =
+            'data:application/octet-stream;base64,' + 'A'.repeat(80);
+        const raw = `url("${long}"), move`;
+        const resolved = resolveProperty(findProperty('cursor'), ctxOf({ cursor: raw }));
+        expect(resolved.visible).toBe(true);
+        expect(resolved.value).toBe('url("data:…"), move');
     });
 });
 

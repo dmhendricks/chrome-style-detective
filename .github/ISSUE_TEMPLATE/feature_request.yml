@@ -1,0 +1,41 @@
+name: Feature request
+description: Suggest a new feature or an improvement to an existing one
+title: "[Feature]: "
+labels: ["feature request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an idea. Only the first two fields are required — fill in the rest only if they apply.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: |
+        What would you like added/changed, and why would it be useful to you? If it helps, describe what you're trying to accomplish today and what gets in the way.
+      placeholder: |
+        When I hover an element with a background gradient, the panel only shows the raw
+        `background-image` value. I'd like to see a preview swatch of the gradient so I can
+        tell at a glance what it looks like.
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or mockups (optional)
+      description: |
+        Drag and drop any images here — a screenshot of the current behavior, a sketch of what you'd like instead, or an example from another tool. Anything visual helps.
+    validations:
+      required: false
+
+  - type: input
+    id: example-url
+    attributes:
+      label: Example page URL (optional)
+      description: |
+        If your request is about a specific kind of element or style, link to a public page where I can see it and test the extension if your request is implemented. For example, if you want gradients handled better, link to a page that has a gradient on it — that gives me a real page to build and test against.
+      placeholder: https://example.com/page-with-a-gradient
+    validations:
+      required: false

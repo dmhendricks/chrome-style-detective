@@ -23,6 +23,7 @@ import {
     type ContrastTone,
     type RgbaColor,
 } from './format';
+import { layoutBorderBoxSize } from './box-model';
 
 /** Per-hover context passed to format / value / when callbacks. */
 export interface InspectContext {
@@ -323,14 +324,14 @@ export const CSS_CATEGORIES: readonly CssCategory[] = [
             },
             {
                 name: 'aspect-ratio',
-                // Rendered box ratio (from layout), not only the CSS property.
+                // Rendered box ratio from layout size (ignores CSS transforms).
                 value: (ctx) => {
-                    const rect = ctx.el.getBoundingClientRect();
-                    return formatAspectRatio(rect.width, rect.height);
+                    const size = layoutBorderBoxSize(ctx.el);
+                    return formatAspectRatio(size.width, size.height);
                 },
                 when: (ctx) => {
-                    const rect = ctx.el.getBoundingClientRect();
-                    return formatAspectRatio(rect.width, rect.height) !== '';
+                    const size = layoutBorderBoxSize(ctx.el);
+                    return formatAspectRatio(size.width, size.height) !== '';
                 },
             },
             { name: 'min-width', hideDefault: '0px' },

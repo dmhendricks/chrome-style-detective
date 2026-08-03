@@ -185,7 +185,10 @@
     // Shown as flex (see core.ts) so the body scrolls between a fixed banner
     // and footer instead of scrolling the whole panel.
     flex-direction: column !important;
-    position: absolute !important;
+    // Fixed to the viewport so left/top use client coordinates (same space as
+    // keepOverlayInViewport / getBoundingClientRect). Absolute + pageX mixed
+    // with viewport checks made the panel thrash next to CSS animations.
+    position: fixed !important;
     min-width: var(--sd-min-width) !important;
     max-width: var(--sd-max-width) !important;
     // Never grow taller than the viewport (less a strip at the bottom for the

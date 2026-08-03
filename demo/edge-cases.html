@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Style Detective — Edge-case playground</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            :root {
+                --ink: #1a1f2c;
+                --mute: #5c6578;
+                --line: #e6e9f0;
+                --stage: #f4f6fa;
+                --card: #ffffff;
+                --accent: #ff6060;
+                --accent-ink: #ffffff;
+                --ok: #1f5c3a;
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                margin: 0;
+                min-height: 100vh;
+                padding: 2rem 1.5rem 4rem;
+                background: var(--stage);
+                color: var(--ink);
+                font-family: 'Inter', system-ui, sans-serif;
+                line-height: 1.45;
+            }
+
+            h1 {
+                margin: 0 0 0.35rem;
+                font-family: 'Fraunces', Georgia, serif;
+                font-size: 1.6rem;
+                font-weight: 600;
+                letter-spacing: -0.02em;
+            }
+
+            .lede {
+                margin: 0 0 1.75rem;
+                max-width: 42rem;
+                color: var(--mute);
+                font-size: 0.95rem;
+            }
+
+            .lede code {
+                font-family: 'IBM Plex Mono', ui-monospace, monospace;
+                font-size: 0.82em;
+                padding: 0.05em 0.35em;
+                border-radius: 4px;
+                background: #e8ecf4;
+            }
+
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 1.25rem;
+                max-width: 1100px;
+            }
+
+            .card {
+                background: var(--card);
+                border: 1px solid var(--line);
+                border-radius: 12px;
+                padding: 1.1rem 1.15rem 1.25rem;
+                box-shadow: 0 8px 24px -18px rgb(26 31 44 / 45%);
+            }
+
+            .card h2 {
+                margin: 0 0 0.35rem;
+                font-size: 0.95rem;
+                font-weight: 600;
+            }
+
+            .card p {
+                margin: 0 0 1rem;
+                color: var(--mute);
+                font-size: 0.82rem;
+            }
+
+            .card .expect {
+                margin: 0.85rem 0 0;
+                padding-top: 0.75rem;
+                border-top: 1px dashed var(--line);
+                color: var(--ok);
+                font-size: 0.78rem;
+            }
+
+            .stage {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                justify-content: center;
+                gap: 1rem;
+                min-height: 9rem;
+                padding: 1rem;
+                border-radius: 8px;
+                background: #eef1f7;
+            }
+
+            /* ── 1. Animista-style pointer-events:none on :hover ───────── */
+            .pe-none-host {
+                position: relative;
+                display: grid;
+                place-items: center;
+                width: 140px;
+                height: 140px;
+            }
+
+            .pe-none-underlay {
+                position: absolute;
+                inset: 12px;
+                border-radius: 12px;
+                background: #c5d0e6;
+                color: #31405c;
+                display: grid;
+                place-items: center;
+                font-size: 0.72rem;
+                font-weight: 600;
+                text-align: center;
+                padding: 0.5rem;
+            }
+
+            .pe-none-circle {
+                position: relative;
+                z-index: 1;
+                display: grid;
+                place-items: center;
+                width: 108px;
+                height: 108px;
+                border-radius: 50%;
+                background: var(--accent);
+                color: var(--accent-ink);
+                font: 700 0.78rem/1.15 'Inter', sans-serif;
+                letter-spacing: 0.04em;
+                text-transform: uppercase;
+                text-decoration: none;
+                cursor: pointer;
+                /* Identity matrix so transform is visible in the panel even at rest */
+                transform: matrix(1, 0, 0, 1, 0, 0);
+            }
+
+            /* The throb culprit: hover disables hit-testing on the circle itself */
+            .pe-none-circle:hover,
+            .pe-none-circle.is-active:hover {
+                pointer-events: none;
+                filter: brightness(1.06);
+            }
+
+            /* ── 2. Continuous scale animation ─────────────────────────── */
+            .scale-pulse {
+                display: grid;
+                place-items: center;
+                width: 120px;
+                height: 120px;
+                border-radius: 16px;
+                background: #2c72ff;
+                color: #fff;
+                font: 700 0.85rem/1 'Inter', sans-serif;
+                animation: scale-pulse 1.4s ease-in-out infinite alternate;
+                transform-origin: center center;
+            }
+
+            @keyframes scale-pulse {
+                from {
+                    transform: scale(0.55);
+                }
+                to {
+                    transform: scale(1.15);
+                }
+            }
+
+            /* ── 3. Hover scale (transform origin corner) ──────────────── */
+            .scale-hover {
+                display: grid;
+                place-items: center;
+                width: 110px;
+                height: 72px;
+                border-radius: 10px;
+                background: #1f5c3a;
+                color: #fff;
+                font: 600 0.82rem/1.2 'Inter', sans-serif;
+                text-align: center;
+                transform-origin: 0% 100%;
+                transition: transform 0.35s ease;
+            }
+
+            .scale-hover:hover {
+                transform: scale(1.45);
+            }
+
+            /* ── 4. Large transparent hit area over a small control ────── */
+            .hit-wrap {
+                position: relative;
+                width: 200px;
+                height: 120px;
+            }
+
+            .hit-pad {
+                position: absolute;
+                inset: 0;
+                border: 1px dashed #9aa6bf;
+                border-radius: 10px;
+                background: rgb(154 166 191 / 18%);
+            }
+
+            .hit-pad::after {
+                content: 'large hit pad';
+                position: absolute;
+                top: 8px;
+                left: 10px;
+                font-size: 0.7rem;
+                color: var(--mute);
+            }
+
+            .hit-btn {
+                position: absolute;
+                right: 16px;
+                bottom: 16px;
+                z-index: 1;
+                padding: 0.45rem 0.75rem;
+                border: none;
+                border-radius: 8px;
+                background: #6a3cff;
+                color: #fff;
+                font: 600 0.8rem/1 'Inter', sans-serif;
+                cursor: pointer;
+            }
+
+            /* ── 5. Class toggle on a timer (style-refresh throttle) ───── */
+            .toggle-chip {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.4rem;
+                padding: 0.55rem 0.85rem;
+                border-radius: 999px;
+                background: #e8ecf4;
+                color: var(--ink);
+                font: 600 0.85rem/1 'Inter', sans-serif;
+                border: 2px solid transparent;
+                transition:
+                    background 0.15s ease,
+                    color 0.15s ease,
+                    border-color 0.15s ease;
+            }
+
+            .toggle-chip.is-hot {
+                background: #ffe8a3;
+                color: #5c4810;
+                border-color: #f0d37a;
+            }
+
+            /* ── 6. Nested parent / child text targets ─────────────────── */
+            .nest-li {
+                list-style: none;
+                margin: 0;
+                padding: 0.75rem 1rem;
+                border-radius: 10px;
+                background: #31405c;
+                color: #d7deec;
+            }
+
+            .nest-a {
+                display: inline-block;
+                color: #fff;
+                font-weight: 700;
+                text-decoration: none;
+            }
+
+            .nest-a .name {
+                display: block;
+                font-size: 0.95rem;
+                letter-spacing: 0.03em;
+                text-transform: uppercase;
+            }
+
+            .log {
+                margin-top: 1.75rem;
+                max-width: 1100px;
+                padding: 0.85rem 1rem;
+                border-radius: 10px;
+                background: #1a1f2c;
+                color: #d7deec;
+                font-family: 'IBM Plex Mono', ui-monospace, monospace;
+                font-size: 0.75rem;
+                white-space: pre-wrap;
+                min-height: 4.5rem;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Edge-case playground</h1>
+        <p class="lede">
+            Specimens for the sticky-hit / transform work. Arm Style Detective
+            (<code>Alt+Shift+S</code>), then hover each card. The live log below
+            shows <code>elementFromPoint</code> vs layout size while you hover —
+            useful even without the extension.
+        </p>
+
+        <div class="grid">
+            <section class="card" id="card-pe-none">
+                <h2>1. pointer-events:none on :hover</h2>
+                <p>
+                    Animista pattern: the coral circle sets
+                    <code>pointer-events: none</code> while hovered, so hit-testing
+                    falls through to the underlay. The overlay should stick to the
+                    circle, not thrash.
+                </p>
+                <div class="stage">
+                    <div class="pe-none-host" data-specimen="pe-none-host">
+                        <div class="pe-none-underlay" data-specimen="pe-none-underlay">
+                            underlay<br />(visible when circle ignores hits)
+                        </div>
+                        <a
+                            href="#pe-none"
+                            class="pe-none-circle is-active"
+                            id="pe-none-circle"
+                            data-specimen="pe-none-circle"
+                            >Scale-up</a
+                        >
+                    </div>
+                </div>
+                <p class="expect">Expect: panel stays on the coral circle; no wild throb.</p>
+            </section>
+
+            <section class="card" id="card-scale-pulse">
+                <h2>2. Continuous scale animation</h2>
+                <p>
+                    Layout size (<code>offsetWidth</code>) stays put while the painted
+                    box grows/shrinks. Box model + highlight should not pulse with the
+                    animation.
+                </p>
+                <div class="stage">
+                    <div class="scale-pulse" id="scale-pulse" data-specimen="scale-pulse">
+                        PULSE
+                    </div>
+                </div>
+                <p class="expect">Expect: dashed highlight size steady; content WxH steady.</p>
+            </section>
+
+            <section class="card" id="card-scale-hover">
+                <h2>3. Hover scale (corner origin)</h2>
+                <p>
+                    Grows from the bottom-left on hover. Highlight uses layout size
+                    centered on the visual box — outline won’t match the stretched
+                    paint, by design.
+                </p>
+                <div class="stage">
+                    <div class="scale-hover" id="scale-hover" data-specimen="scale-hover">
+                        Hover me
+                    </div>
+                </div>
+                <p class="expect">Expect: no panel jump; highlight ≈ unscaled box.</p>
+            </section>
+
+            <section class="card" id="card-hit-pad">
+                <h2>4. Large hit pad over a button</h2>
+                <p>
+                    Sticky inspect may keep the pad while the cursor is still in its
+                    box — even when you aim at the purple button. Drill-in to the
+                    button should still work once you’re clearly over it… unless the
+                    pad is the hit target on top.
+                </p>
+                <div class="stage">
+                    <div class="hit-wrap">
+                        <div class="hit-pad" id="hit-pad" data-specimen="hit-pad"></div>
+                        <button type="button" class="hit-btn" id="hit-btn" data-specimen="hit-btn">
+                            Nested btn
+                        </button>
+                    </div>
+                </div>
+                <p class="expect">
+                    Expect: pad sticks while cursor remains in pad box; button is
+                    inspectable when it is the event target (it’s on top).
+                </p>
+            </section>
+
+            <section class="card" id="card-toggle">
+                <h2>5. Timed class toggle</h2>
+                <p>
+                    Background flips every 400ms. Same-element style refresh is
+                    throttled (~200ms), so the panel may lag one beat — not freeze.
+                </p>
+                <div class="stage">
+                    <span class="toggle-chip" id="toggle-chip" data-specimen="toggle-chip"
+                        >class toggle</span
+                    >
+                </div>
+                <p class="expect">Expect: panel color updates, slightly lagged, no thrash.</p>
+            </section>
+
+            <section class="card" id="card-nest">
+                <h2>6. Nested LI → A → SPAN</h2>
+                <p>
+                    Moving within nested text should prefer the deeper target
+                    (descendant drill-in), not get stuck on the outer LI.
+                </p>
+                <div class="stage">
+                    <ul style="margin: 0; padding: 0">
+                        <li class="nest-li" data-specimen="nest-li">
+                            <a class="nest-a" href="#nest" data-specimen="nest-a">
+                                <span class="name" data-specimen="nest-span">Nested</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <p class="expect">Expect: hovering the label inspects SPAN or A, not only LI.</p>
+            </section>
+        </div>
+
+        <div class="log" id="log" aria-live="polite">Move over a specimen…</div>
+
+        <script>
+            const logEl = document.getElementById('log');
+            const toggle = document.getElementById('toggle-chip');
+            setInterval(() => toggle.classList.toggle('is-hot'), 400);
+
+            function describe(el) {
+                if (!(el instanceof Element)) return 'null';
+                const id = el.id ? `#${el.id}` : '';
+                const specimen = el.getAttribute?.('data-specimen');
+                const tag = el.tagName.toLowerCase();
+                return specimen ? `${tag}${id}[${specimen}]` : `${tag}${id}`;
+            }
+
+            function sample(clientX, clientY) {
+                const hit = document.elementFromPoint(clientX, clientY);
+                const circle = document.getElementById('pe-none-circle');
+                const pulse = document.getElementById('scale-pulse');
+                const lines = [];
+
+                lines.push(`point (${Math.round(clientX)}, ${Math.round(clientY)})`);
+                lines.push(`elementFromPoint → ${describe(hit)}`);
+
+                if (circle) {
+                    const pe = getComputedStyle(circle).pointerEvents;
+                    const r = circle.getBoundingClientRect();
+                    lines.push(
+                        `circle: pointer-events=${pe}; visual=${Math.round(r.width)}×${Math.round(r.height)}; layout=${circle.offsetWidth}×${circle.offsetHeight}`,
+                    );
+                }
+
+                if (pulse) {
+                    const r = pulse.getBoundingClientRect();
+                    lines.push(
+                        `pulse: visual=${r.width.toFixed(1)}×${r.height.toFixed(1)}; layout=${pulse.offsetWidth}×${pulse.offsetHeight}; transform=${getComputedStyle(pulse).transform}`,
+                    );
+                }
+
+                logEl.textContent = lines.join('\n');
+            }
+
+            document.addEventListener(
+                'mousemove',
+                (e) => sample(e.clientX, e.clientY),
+                { passive: true },
+            );
+        </script>
+    </body>
+</html>

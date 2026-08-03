@@ -332,7 +332,7 @@ body {
     }
 }
 
-// Overlay stylesheet expects a floating absolute panel — pin it for the mock.
+// Overlay stylesheet expects a floating fixed panel — pin it for the mock.
 // Width tracks the live panel's font-scaled min-width; the preview column grows
 // with --sd-preview-width (set from preview.ts) so the mock isn't smushed.
 // Grow with content so Box … Color all stay visible (no clipped section headings).

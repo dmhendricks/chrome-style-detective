@@ -9,7 +9,7 @@
 
 import { copyTextToClipboard } from './lib/clipboard';
 import { setCopyNotifier } from './lib/copy-feedback';
-import { keepOverlayInViewport, syncCopyValueAccessibility } from './lib/dom';
+import { keepOverlayInViewport, layoutHighlightRect, pointOverElement, syncCopyValueAccessibility } from './lib/dom';
 import {
     CSS_CATEGORIES,
     isPropertyEnabled,
@@ -64,7 +64,7 @@ import {
 } from '../shared/dom-ids';
 import './style.scss';
 
-type Pointer = { clientX: number; clientY: number; pageX: number; pageY: number };
+type Pointer = { clientX: number; clientY: number };
 
 const HOVER_LISTENER_OPTS: AddEventListenerOptions = { capture: true, passive: true };
 const HIGHLIGHT_LAYOUT_OPTS: AddEventListenerOptions = { capture: true, passive: true };
@@ -83,6 +83,24 @@ function eventTargetElement(e: Event): HTMLElement | null {
 
 function isInsidePanel(el: HTMLElement | null): boolean {
     return !!el && !!el.closest && el.closest(`#${OVERLAY_ID}`) !== null;
+}
+
+/**
+ * Prefer a stable inspect target when the page toggles `pointer-events: none`
+ * under :hover (Animista's active SCALE-UP circle does this). Hit-testing then
+ * falls through to a parent/underlay and would thrash the panel every frame.
+ * Keep the current element while the pointer stays in its layout box; still
+ * allow drilling into descendants.
+ */
+function resolveInspectTarget(
+    hit: HTMLElement,
+    current: HTMLElement | null,
+    pointer: Pointer | null,
+): HTMLElement {
+    if (!current || !pointer || !current.isConnected || hit === current) return hit;
+    if (current.contains(hit)) return hit;
+    if (pointOverElement(current, pointer.clientX, pointer.clientY)) return current;
+    return hit;
 }
 
 /**
@@ -106,17 +124,6 @@ function sendRuntimeMessage(message: unknown): void {
     } catch {
         // Orphaned content script after reload/update.
     }
-}
-
-function isElementInViewport(el: HTMLElement): boolean {
-    const rect = el.getBoundingClientRect();
-
-    return (
-        rect.top >= 0 &&
-        rect.left >= 0 &&
-        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
-    );
 }
 
 function removeElement(id: string): void {
@@ -227,9 +234,11 @@ class OverlayController {
     private lastPointer: Pointer | null = null;
     /** False after the cursor leaves this frame (e.g. into an iframe). */
     private pointerInFrame = false;
-    private pendingPanelPointer: { pageX: number; pageY: number } | null = null;
+    private pendingPanelPointer: { clientX: number; clientY: number } | null = null;
     private panelPositionFrame: number | null = null;
     private claimFrame: number | null = null;
+    /** Coalesce same-target style refreshes (avoids thrash while :hover flickers). */
+    private styleRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 
     // --- listener flags ---
     private haveHoverListeners = false;
@@ -253,9 +262,10 @@ class OverlayController {
 
     private readonly onMouseOver = (e: MouseEvent): void => {
         this.notePointer(e);
-        const el = eventTargetElement(e);
-        if (!el || isInsidePanel(el)) return;
-        this.inspectElement(el);
+        const hit = eventTargetElement(e);
+        if (!hit || isInsidePanel(hit)) return;
+        const el = resolveInspectTarget(hit, this.inspectedElement, this.lastPointer);
+        this.inspectElement(el, { fromStickyHit: el !== hit });
     };
 
     private readonly onMouseOut = (e: MouseEvent): void => {
@@ -267,6 +277,14 @@ class OverlayController {
         if (next instanceof Node && el.contains(next)) return;
 
         if (el === this.inspectedElement) {
+            // Pages that set pointer-events:none on :hover fire a synthetic
+            // leave while the cursor is still over the element's box — ignore.
+            if (
+                this.lastPointer &&
+                pointOverElement(el, this.lastPointer.clientX, this.lastPointer.clientY)
+            ) {
+                return;
+            }
             this.inspectedElement = null;
             this.clearHighlight();
         }
@@ -274,10 +292,11 @@ class OverlayController {
 
     private readonly onMouseMove = (e: MouseEvent): void => {
         this.notePointer(e);
-        const el = eventTargetElement(e);
-        if (!el || isInsidePanel(el)) return;
+        const hit = eventTargetElement(e);
+        if (!hit || isInsidePanel(hit)) return;
 
-        this.inspectElement(el);
+        const el = resolveInspectTarget(hit, this.inspectedElement, this.lastPointer);
+        this.inspectElement(el, { fromStickyHit: el !== hit });
         if (el === this.inspectedElement) this.highlightElement(el);
         this.schedulePanelPosition(e);
     };
@@ -371,6 +390,7 @@ class OverlayController {
         this.pointerInFrame = false;
         this.lastPointer = null;
         this.cancelScheduledPanelPosition();
+        this.cancelStyleRefresh();
         if (this.claimFrame !== null) {
             cancelAnimationFrame(this.claimFrame);
             this.claimFrame = null;
@@ -598,12 +618,12 @@ class OverlayController {
         }
 
         const box = this.ensureHighlight();
-        const rect = el.getBoundingClientRect();
+        const rect = layoutHighlightRect(el);
         box.style.display = 'block';
         box.style.top = `${rect.top}px`;
         box.style.left = `${rect.left}px`;
-        box.style.width = `${Math.max(0, rect.width)}px`;
-        box.style.height = `${Math.max(0, rect.height)}px`;
+        box.style.width = `${rect.width}px`;
+        box.style.height = `${rect.height}px`;
     }
 
     private syncHighlightToInspected(): void {
@@ -631,8 +651,6 @@ class OverlayController {
         this.lastPointer = {
             clientX: e.clientX,
             clientY: e.clientY,
-            pageX: e.pageX,
-            pageY: e.pageY,
         };
     }
 
@@ -668,6 +686,7 @@ class OverlayController {
         this.clearHighlight();
         this.inspectedElement = null;
         this.cancelScheduledPanelPosition();
+        this.cancelStyleRefresh();
         if (this.claimFrame !== null) {
             cancelAnimationFrame(this.claimFrame);
             this.claimFrame = null;
@@ -677,16 +696,21 @@ class OverlayController {
         this.lastPointer = null;
     }
 
-    private inspectElement(el: HTMLElement): void {
+    private inspectElement(
+        el: HTMLElement,
+        options: { fromStickyHit?: boolean } = {},
+    ): void {
         if (!this.armed || isInsidePanel(el)) return;
 
-        // Same target: still refresh computed styles so :hover / class toggles
-        // (e.g. hover-primary) don't leave the panel on stale colors.
+        // Same target: refresh styles on a timer so :hover / class toggles
+        // still update, but pointer-events:none flicker (Animista) does not
+        // rebuild the panel every frame. Sticky re-hits skip refresh entirely.
         if (el === this.inspectedElement) {
-            this.refreshInspectedStyles();
+            if (!options.fromStickyHit) this.scheduleStyleRefresh();
             return;
         }
 
+        this.cancelStyleRefresh();
         this.ensurePanel();
         this.claimOverlay();
         updateHeader(el);
@@ -708,34 +732,54 @@ class OverlayController {
         updatePanel(document.defaultView.getComputedStyle(el), el);
     }
 
-    private positionPanelAtPointer(e: { pageX: number; pageY: number }): void {
+    private scheduleStyleRefresh(): void {
+        if (this.styleRefreshTimer !== null) return;
+        this.styleRefreshTimer = setTimeout(() => {
+            this.styleRefreshTimer = null;
+            this.refreshInspectedStyles();
+        }, 200);
+    }
+
+    private cancelStyleRefresh(): void {
+        if (this.styleRefreshTimer === null) return;
+        clearTimeout(this.styleRefreshTimer);
+        this.styleRefreshTimer = null;
+    }
+
+    private positionPanelAtPointer(e: { clientX: number; clientY: number }): void {
         if (!this.armed) return;
 
         const block = this.ensurePanel();
         this.claimOverlay();
         block.style.display = 'flex';
 
-        const pageWidth = window.innerWidth;
+        const MARGIN = 8;
         const BOTTOM_MARGIN = 40;
+        const pageWidth = window.innerWidth;
         const pageHeight = window.innerHeight - BOTTOM_MARGIN;
         const blockWidth = block.offsetWidth;
         const blockHeight = block.offsetHeight;
 
-        if (e.pageX + blockWidth > pageWidth) {
-            if (e.pageX - blockWidth - 10 > 0) block.style.left = e.pageX - blockWidth - 40 + 'px';
-            else block.style.left = 0 + 'px';
-        } else block.style.left = e.pageX + 20 + 'px';
+        // Client coordinates match position:fixed left/top.
+        let left = e.clientX + 20;
+        if (e.clientX + blockWidth > pageWidth) {
+            left = e.clientX - blockWidth - 40;
+            if (left < MARGIN) left = MARGIN;
+        }
 
-        if (e.pageY + blockHeight > pageHeight) {
-            if (e.pageY - blockHeight - 10 > 0) block.style.top = e.pageY - blockHeight - 20 + 'px';
-            else block.style.top = 0 + 'px';
-        } else block.style.top = e.pageY + 20 + 'px';
+        let top = e.clientY + 20;
+        if (e.clientY + blockHeight > pageHeight) {
+            top = e.clientY - blockHeight - 20;
+            if (top < MARGIN) top = MARGIN;
+        }
 
-        if (!isElementInViewport(block)) block.style.top = window.pageYOffset + 20 + 'px';
+        block.style.left = `${left}px`;
+        block.style.top = `${top}px`;
+        keepOverlayInViewport(block);
     }
 
-    private schedulePanelPosition(e: { pageX: number; pageY: number }): void {
-        this.pendingPanelPointer = { pageX: e.pageX, pageY: e.pageY };
+    private schedulePanelPosition(e: { clientX: number; clientY: number }): void {
+        this.pendingPanelPointer = { clientX: e.clientX, clientY: e.clientY };
         if (this.panelPositionFrame !== null) return;
 
         this.panelPositionFrame = requestAnimationFrame(() => {
@@ -757,10 +801,11 @@ class OverlayController {
     private inspectElementUnderCursor(): void {
         if (!this.pointerInFrame || !this.lastPointer) return;
 
-        const el = document.elementFromPoint(this.lastPointer.clientX, this.lastPointer.clientY);
-        if (!el || !(el instanceof HTMLElement) || isInsidePanel(el)) return;
+        const hit = document.elementFromPoint(this.lastPointer.clientX, this.lastPointer.clientY);
+        if (!hit || !(hit instanceof HTMLElement) || isInsidePanel(hit)) return;
 
-        this.inspectElement(el);
+        const el = resolveInspectTarget(hit, this.inspectedElement, this.lastPointer);
+        this.inspectElement(el, { fromStickyHit: el !== hit });
         this.positionPanelAtPointer(this.lastPointer);
     }
 
@@ -790,6 +835,7 @@ class OverlayController {
             HOVER_LISTENER_OPTS,
         );
         this.cancelScheduledPanelPosition();
+        this.cancelStyleRefresh();
         this.haveHoverListeners = false;
     }
 

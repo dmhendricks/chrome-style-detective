@@ -3,9 +3,11 @@ import {
     formatBoxContentCopy,
     formatBoxContentSize,
     formatBoxLength,
+    layoutBorderBoxSize,
     readBorderWidths,
     readBoxSides,
 } from './box-model';
+import { layoutHighlightRect, pointOverElement } from './dom';
 
 describe('formatBoxLength', () => {
     it('collapses 0px to 0', () => {
@@ -29,6 +31,69 @@ describe('formatBoxContentSize / formatBoxContentCopy', () => {
 
     it('formats clipboard payload without spaces', () => {
         expect(formatBoxContentCopy(541, 54)).toBe('541x54');
+    });
+});
+
+describe('layoutBorderBoxSize', () => {
+    it('reads offsetWidth/Height (layout size, not transformed paint size)', () => {
+        const el = {
+            offsetWidth: 118.4,
+            offsetHeight: 134.6,
+        } as HTMLElement;
+        expect(layoutBorderBoxSize(el)).toEqual({ width: 118, height: 135 });
+    });
+});
+
+describe('layoutHighlightRect', () => {
+    it('centers the layout box on a scaled visual rect', () => {
+        const el = {
+            offsetWidth: 100,
+            offsetHeight: 100,
+            getBoundingClientRect: () =>
+                ({
+                    top: 50,
+                    left: 50,
+                    width: 200,
+                    height: 200,
+                    right: 250,
+                    bottom: 250,
+                    x: 50,
+                    y: 50,
+                    toJSON: () => ({}),
+                }) as DOMRect,
+        } as HTMLElement;
+
+        expect(layoutHighlightRect(el)).toEqual({
+            top: 100,
+            left: 100,
+            width: 100,
+            height: 100,
+        });
+    });
+});
+
+describe('pointOverElement', () => {
+    it('is true when the point lies inside the layout highlight box', () => {
+        const el = {
+            isConnected: true,
+            offsetWidth: 100,
+            offsetHeight: 100,
+            getBoundingClientRect: () =>
+                ({
+                    top: 10,
+                    left: 10,
+                    width: 100,
+                    height: 100,
+                    right: 110,
+                    bottom: 110,
+                    x: 10,
+                    y: 10,
+                    toJSON: () => ({}),
+                }) as DOMRect,
+        } as HTMLElement;
+
+        expect(pointOverElement(el, 50, 50)).toBe(true);
+        expect(pointOverElement(el, 5, 5)).toBe(false);
     });
 });
 

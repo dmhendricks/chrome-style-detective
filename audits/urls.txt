@@ -5,11 +5,11 @@
 # Supported:
 #   https://example.com/     full http(s) URLs
 #   file:///.../page.html    absolute file URLs
-#   demo.html                path relative to the repo root (converted to file://)
+#   demo/demo.html           path relative to the repo root (converted to file://)
 #
 # Auth-protected sites use a fresh Chromium profile (no your cookies).
 
-demo.html
+demo/demo.html
 https://posthog.com
 https://docs.imgproxy.net/usage/getting_info
 https://tailwindcss.com/docs/display

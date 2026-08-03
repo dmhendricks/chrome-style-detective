@@ -114,7 +114,7 @@ export function isOverlayFrozen(doc: Document = document): boolean {
 }
 
 /**
- * Shift an absolutely-positioned overlay so its box stays inside the viewport
+ * Shift a fixed-position overlay so its box stays inside the viewport
  * (used after font-size changes and header expand).
  */
 export function keepOverlayInViewport(block: HTMLElement): void {
@@ -123,28 +123,68 @@ export function keepOverlayInViewport(block: HTMLElement): void {
     const BOTTOM_MARGIN = 40;
     const rect = block.getBoundingClientRect();
 
-    let dx = 0;
-    let dy = 0;
+    let left = rect.left;
+    let top = rect.top;
 
-    if (rect.right > window.innerWidth - MARGIN) {
-        dx = window.innerWidth - MARGIN - rect.right;
+    if (left + rect.width > window.innerWidth - MARGIN) {
+        left = window.innerWidth - MARGIN - rect.width;
     }
-    if (rect.left + dx < MARGIN) {
-        dx = MARGIN - rect.left;
+    if (left < MARGIN) {
+        left = MARGIN;
     }
-    if (rect.bottom > window.innerHeight - BOTTOM_MARGIN) {
-        dy = window.innerHeight - BOTTOM_MARGIN - rect.bottom;
+    if (top + rect.height > window.innerHeight - BOTTOM_MARGIN) {
+        top = window.innerHeight - BOTTOM_MARGIN - rect.height;
     }
-    if (rect.top + dy < MARGIN) {
-        dy = MARGIN - rect.top;
+    if (top < MARGIN) {
+        top = MARGIN;
     }
 
-    if (dx !== 0) {
-        block.style.left = `${block.offsetLeft + dx}px`;
+    if (left !== rect.left) {
+        block.style.left = `${left}px`;
     }
-    if (dy !== 0) {
-        block.style.top = `${block.offsetTop + dy}px`;
+    if (top !== rect.top) {
+        block.style.top = `${top}px`;
     }
+}
+
+/**
+ * Viewport box for the hover highlight using layout size (offsetWidth/Height),
+ * not the transformed paint box from getBoundingClientRect. Scale animations
+ * would otherwise make the dashed outline throb.
+ */
+export function layoutHighlightRect(el: HTMLElement): {
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+} {
+    const visual = el.getBoundingClientRect();
+    const width = el.offsetWidth;
+    const height = el.offsetHeight;
+    return {
+        // Center the layout box on the visual box so translate/scale-from-center
+        // stays put while size ignores the transform.
+        top: visual.top + (visual.height - height) / 2,
+        left: visual.left + (visual.width - width) / 2,
+        width: Math.max(0, width),
+        height: Math.max(0, height),
+    };
+}
+
+/** True when a viewport point lies over the element's layout highlight box. */
+export function pointOverElement(
+    el: HTMLElement,
+    clientX: number,
+    clientY: number,
+): boolean {
+    if (!el.isConnected) return false;
+    const rect = layoutHighlightRect(el);
+    return (
+        clientX >= rect.left &&
+        clientX <= rect.left + rect.width &&
+        clientY >= rect.top &&
+        clientY <= rect.top + rect.height
+    );
 }
 
 /** Match #RGB, #RRGGBB, or #RRGGBBAA hex tokens in a property value string. */

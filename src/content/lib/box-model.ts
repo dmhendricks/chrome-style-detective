@@ -27,7 +27,7 @@ export interface BoxModelValues {
     margin: BoxSides;
     border: BoxSides;
     padding: BoxSides;
-    /** Laid-out border-box size from getBoundingClientRect (rounded px). */
+    /** Laid-out border-box size (offsetWidth/Height; ignores CSS transforms). */
     width: number;
     height: number;
 }
@@ -75,14 +75,22 @@ export function readBorderWidths(get: (property: string) => string): BoxSides {
     };
 }
 
+/** Layout border-box size in CSS pixels (ignores transforms / animations). */
+export function layoutBorderBoxSize(el: HTMLElement): { width: number; height: number } {
+    return {
+        width: Math.round(el.offsetWidth),
+        height: Math.round(el.offsetHeight),
+    };
+}
+
 export function computeBoxModel(ctx: InspectContext): BoxModelValues {
-    const rect = ctx.el.getBoundingClientRect();
+    const size = layoutBorderBoxSize(ctx.el);
     return {
         margin: readBoxSides(ctx.get, 'margin'),
         border: readBorderWidths(ctx.get),
         padding: readBoxSides(ctx.get, 'padding'),
-        width: Math.round(rect.width),
-        height: Math.round(rect.height),
+        width: size.width,
+        height: size.height,
     };
 }
 

@@ -13,7 +13,8 @@ playground/basic.html
 playground/elements.html
 playground/tailwind.html
 https://posthog.com
+https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/font-weight
 https://docs.imgproxy.net/usage/getting_info
-https://tailwindcss.com/docs/display
 https://cssreference.io/property/border-color/
+https://tailwindcss.com/docs/display
 https://animista.net/

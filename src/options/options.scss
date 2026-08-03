@@ -197,6 +197,48 @@ body {
     height: 1.35rem;
 }
 
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.report-bug {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--sd-coral);
+    background: var(--sd-coral-soft);
+    border: 1px solid color-mix(in srgb, var(--sd-coral) 40%, transparent);
+    border-radius: 999px;
+    text-decoration: none;
+    transition:
+        color 0.18s ease,
+        background 0.18s ease,
+        border-color 0.18s ease,
+        transform 0.18s ease;
+}
+
+.report-bug:hover,
+.report-bug:focus-visible {
+    color: var(--sd-text);
+    background: color-mix(in srgb, var(--sd-coral) 32%, transparent);
+    border-color: color-mix(in srgb, var(--sd-coral) 55%, transparent);
+    outline: none;
+    transform: translateY(-1px);
+}
+
+.report-bug svg {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+}
+
 // —— App shell (nav | content | preview) ————————————————————————————————
 
 .shell {

@@ -53,8 +53,8 @@ body:
     id: extension-version
     attributes:
       label: Extension version
-      description: From `chrome://extensions` (e.g. 1.0.0), or the commit/tag if you're running from source.
-      placeholder: 1.0.0
+      description: From `chrome://extensions` (e.g. 1.1.0), or the commit/tag if you're running from source.
+      placeholder: 1.1.0
     validations:
       required: false
 

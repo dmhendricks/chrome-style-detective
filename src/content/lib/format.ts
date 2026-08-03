@@ -252,7 +252,7 @@ export function truncateDataUrl(
  * Display-only — copy should keep the raw computed value.
  */
 export function truncateCssDataUrls(str: string): string {
-    return str.replace(
+    return str.replaceAll(
         /url\(\s*(['"]?)(.*?)\1\s*\)/gi,
         (full, quote: string, inner: string) => {
             const url = inner.trim();

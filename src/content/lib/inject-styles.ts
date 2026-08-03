@@ -20,6 +20,6 @@ export function ensureOverlayStyles(doc: Document = document): HTMLStyleElement 
     const style = doc.createElement('style');
     style.id = STYLES_ID;
     style.textContent = overlayCss;
-    (doc.head ?? doc.documentElement).appendChild(style);
+    (doc.head ?? doc.documentElement).append(style);
     return style;
 }

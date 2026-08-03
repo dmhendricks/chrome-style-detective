@@ -252,7 +252,7 @@ function bordersUniform(ctx: InspectContext): boolean {
     );
 }
 
-const BORDER_SIDES = ['top', 'right', 'bottom', 'left'] as const;
+type BorderSide = 'top' | 'right' | 'bottom' | 'left';
 
 /** True when a border width string is non-zero (after float cleanup). */
 function isNonZeroBorderWidth(raw: string): boolean {
@@ -266,7 +266,7 @@ function isNonZeroBorderWidth(raw: string): boolean {
  */
 export function borderSideIsPainted(
     ctx: InspectContext,
-    side: (typeof BORDER_SIDES)[number],
+    side: BorderSide,
 ): boolean {
     if (ctx.get(`border-${side}-style`) === 'none') return false;
     return isNonZeroBorderWidth(ctx.get(`border-${side}-width`));

@@ -206,7 +206,7 @@ export function pierceOpenShadow(
         const root = current.shadowRoot;
         if (!root) break;
 
-        let nested: Element | null = null;
+        let nested: Element | null;
         try {
             nested = root.elementFromPoint(clientX, clientY);
         } catch {

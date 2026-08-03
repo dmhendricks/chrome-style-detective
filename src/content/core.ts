@@ -9,7 +9,15 @@
 
 import { copyTextToClipboard } from './lib/clipboard';
 import { setCopyNotifier } from './lib/copy-feedback';
-import { keepOverlayInViewport, layoutHighlightRect, pointOverElement, syncCopyValueAccessibility } from './lib/dom';
+import {
+    asHtmlElement,
+    deepElementFromPoint,
+    isComposedDescendant,
+    keepOverlayInViewport,
+    layoutHighlightRect,
+    pointOverElement,
+    syncCopyValueAccessibility,
+} from './lib/dom';
 import {
     CSS_CATEGORIES,
     isPropertyEnabled,
@@ -90,7 +98,7 @@ function isInsidePanel(el: HTMLElement | null): boolean {
  * under :hover (Animista's active SCALE-UP circle does this). Hit-testing then
  * falls through to a parent/underlay and would thrash the panel every frame.
  * Keep the current element while the pointer stays in its layout box; still
- * allow drilling into descendants.
+ * allow drilling into descendants (including across open shadow roots).
  */
 function resolveInspectTarget(
     hit: HTMLElement,
@@ -98,9 +106,14 @@ function resolveInspectTarget(
     pointer: Pointer | null,
 ): HTMLElement {
     if (!current || !pointer || !current.isConnected || hit === current) return hit;
-    if (current.contains(hit)) return hit;
+    if (isComposedDescendant(current, hit)) return hit;
     if (pointOverElement(current, pointer.clientX, pointer.clientY)) return current;
     return hit;
+}
+
+/** Deepest HTMLElement under the pointer (pierces open shadow roots). */
+function hitElementFromEvent(e: MouseEvent): HTMLElement | null {
+    return asHtmlElement(deepElementFromPoint(e.clientX, e.clientY));
 }
 
 /**
@@ -262,7 +275,7 @@ class OverlayController {
 
     private readonly onMouseOver = (e: MouseEvent): void => {
         this.notePointer(e);
-        const hit = eventTargetElement(e);
+        const hit = hitElementFromEvent(e);
         if (!hit || isInsidePanel(hit)) return;
         const el = resolveInspectTarget(hit, this.inspectedElement, this.lastPointer);
         this.inspectElement(el, { fromStickyHit: el !== hit });
@@ -273,15 +286,20 @@ class OverlayController {
         if (!el || isInsidePanel(el)) return;
 
         // mouseout fires when entering a descendant — that is not a leave.
+        // Use composed ancestry so open-shadow children count as inside the host.
         const next = e.relatedTarget;
-        if (next instanceof Node && el.contains(next)) return;
+        if (next instanceof Node && isComposedDescendant(el, next)) return;
 
-        if (el === this.inspectedElement) {
+        const inspected = this.inspectedElement;
+        if (
+            inspected &&
+            (el === inspected || isComposedDescendant(el, inspected))
+        ) {
             // Pages that set pointer-events:none on :hover fire a synthetic
             // leave while the cursor is still over the element's box — ignore.
             if (
                 this.lastPointer &&
-                pointOverElement(el, this.lastPointer.clientX, this.lastPointer.clientY)
+                pointOverElement(inspected, this.lastPointer.clientX, this.lastPointer.clientY)
             ) {
                 return;
             }
@@ -292,7 +310,7 @@ class OverlayController {
 
     private readonly onMouseMove = (e: MouseEvent): void => {
         this.notePointer(e);
-        const hit = eventTargetElement(e);
+        const hit = hitElementFromEvent(e);
         if (!hit || isInsidePanel(hit)) return;
 
         const el = resolveInspectTarget(hit, this.inspectedElement, this.lastPointer);
@@ -803,8 +821,10 @@ class OverlayController {
     private inspectElementUnderCursor(): void {
         if (!this.pointerInFrame || !this.lastPointer) return;
 
-        const hit = document.elementFromPoint(this.lastPointer.clientX, this.lastPointer.clientY);
-        if (!hit || !(hit instanceof HTMLElement) || isInsidePanel(hit)) return;
+        const hit = asHtmlElement(
+            deepElementFromPoint(this.lastPointer.clientX, this.lastPointer.clientY),
+        );
+        if (!hit || isInsidePanel(hit)) return;
 
         const el = resolveInspectTarget(hit, this.inspectedElement, this.lastPointer);
         this.inspectElement(el, { fromStickyHit: el !== hit });

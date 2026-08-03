@@ -187,6 +187,80 @@ export function pointOverElement(
     );
 }
 
+/** Cap nested open-shadow drills (MDN / Lit often nest a few deep). */
+export const SHADOW_PIERCE_MAX_DEPTH = 8;
+
+/**
+ * Drill into open shadow roots under `start` at a viewport point.
+ * `document.elementFromPoint` retargets to the host; closed roots stay opaque
+ * (`shadowRoot` is null). Stops when nesting ends or the host is returned again.
+ */
+export function pierceOpenShadow(
+    start: Element,
+    clientX: number,
+    clientY: number,
+    maxDepth: number = SHADOW_PIERCE_MAX_DEPTH,
+): Element {
+    let current = start;
+    for (let depth = 0; depth < maxDepth; depth++) {
+        const root = current.shadowRoot;
+        if (!root) break;
+
+        let nested: Element | null = null;
+        try {
+            nested = root.elementFromPoint(clientX, clientY);
+        } catch {
+            break;
+        }
+        if (!nested || nested === current) break;
+        current = nested;
+    }
+    return current;
+}
+
+/**
+ * Deepest element at a viewport point, including inside open shadow trees.
+ * Same as `document.elementFromPoint` on light-DOM-only pages.
+ */
+export function deepElementFromPoint(
+    clientX: number,
+    clientY: number,
+    doc: Document = document,
+): Element | null {
+    const hit = doc.elementFromPoint(clientX, clientY);
+    if (!hit) return null;
+    return pierceOpenShadow(hit, clientX, clientY);
+}
+
+/** Nearest HTMLElement for inspection (SVG hits walk up to an HTML parent). */
+export function asHtmlElement(node: Element | null): HTMLElement | null {
+    let cur: Element | null = node;
+    while (cur) {
+        if (cur instanceof HTMLElement) return cur;
+        cur = cur.parentElement;
+    }
+    return null;
+}
+
+/**
+ * True if `node` is `ancestor` or nested under it, crossing open shadow
+ * boundaries (`parentNode` then `ShadowRoot.host`). `Node.contains` does not.
+ */
+export function isComposedDescendant(ancestor: Node, node: Node): boolean {
+    let cur: Node | null = node;
+    while (cur) {
+        if (cur === ancestor) return true;
+        if (cur.parentNode) {
+            cur = cur.parentNode;
+            continue;
+        }
+        // ShadowRoot.host — plain Nodes lack `.host`.
+        const host: Node | undefined = (cur as ShadowRoot).host;
+        cur = host ?? null;
+    }
+    return false;
+}
+
 /** Match #RGB, #RRGGBB, or #RRGGBBAA hex tokens in a property value string. */
 const HEX_COLOR_RE = /#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/g;
 

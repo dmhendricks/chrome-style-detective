@@ -282,6 +282,13 @@
                 text-transform: uppercase;
             }
 
+            /* ── 7. Open shadow host (MDN-like) ───────────────────────── */
+            mdn-like-code {
+                display: block;
+                width: 100%;
+                min-height: 3.25rem;
+            }
+
             .log {
                 margin-top: 1.75rem;
                 max-width: 1100px;
@@ -414,6 +421,22 @@
                 </div>
                 <p class="expect">Expect: hovering the label inspects SPAN or A, not only LI.</p>
             </section>
+
+            <section class="card" id="card-shadow">
+                <h2>7. Open shadow DOM tokens</h2>
+                <p>
+                    Like MDN code samples: syntax tokens live inside an open
+                    shadow tree. <code>elementFromPoint</code> retargets to the
+                    host unless we pierce.
+                </p>
+                <div class="stage">
+                    <mdn-like-code data-specimen="shadow-host"></mdn-like-code>
+                </div>
+                <p class="expect">
+                    Expect: hovering <code>600</code> inspects the inner token
+                    span (coral / white), not only the host.
+                </p>
+            </section>
         </div>
 
         <div class="log" id="log" aria-live="polite">Move over a specimen…</div>
@@ -423,6 +446,33 @@
             const toggle = document.getElementById('toggle-chip');
             setInterval(() => toggle.classList.toggle('is-hot'), 400);
 
+            customElements.define(
+                'mdn-like-code',
+                class extends HTMLElement {
+                    constructor() {
+                        super();
+                        const root = this.attachShadow({ mode: 'open' });
+                        root.innerHTML = `
+                          <style>
+                            :host { display: block; }
+                            pre {
+                              margin: 0;
+                              padding: 0.85rem 1rem;
+                              border-radius: 8px;
+                              background: #1b2333;
+                              font: 500 0.9rem/1.55 ui-monospace, Menlo, monospace;
+                              color: #e8eefc;
+                            }
+                            .prop { color: #ff8f8f; }
+                            .num { color: #f5f7ff; }
+                            .punct { color: #9aa6bf; }
+                          </style>
+                          <pre data-specimen="shadow-pre"><code data-specimen="shadow-code"><span class="prop" data-specimen="shadow-prop">font-weight</span><span class="punct">: </span><span class="num" data-specimen="shadow-num">600</span><span class="punct">;</span></code></pre>
+                        `;
+                    }
+                },
+            );
+
             function describe(el) {
                 if (!(el instanceof Element)) return 'null';
                 const id = el.id ? `#${el.id}` : '';
@@ -431,14 +481,30 @@
                 return specimen ? `${tag}${id}[${specimen}]` : `${tag}${id}`;
             }
 
+            function pierce(el, x, y) {
+                let current = el;
+                for (let i = 0; i < 8; i++) {
+                    const root = current?.shadowRoot;
+                    if (!root) break;
+                    const nested = root.elementFromPoint(x, y);
+                    if (!nested || nested === current) break;
+                    current = nested;
+                }
+                return current;
+            }
+
             function sample(clientX, clientY) {
                 const hit = document.elementFromPoint(clientX, clientY);
+                const deep = hit ? pierce(hit, clientX, clientY) : null;
                 const circle = document.getElementById('pe-none-circle');
                 const pulse = document.getElementById('scale-pulse');
                 const lines = [];
 
                 lines.push(`point (${Math.round(clientX)}, ${Math.round(clientY)})`);
                 lines.push(`elementFromPoint → ${describe(hit)}`);
+                if (deep && deep !== hit) {
+                    lines.push(`pierced → ${describe(deep)}`);
+                }
 
                 if (circle) {
                     const pe = getComputedStyle(circle).pointerEvents;

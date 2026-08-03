@@ -53,8 +53,9 @@
     border-radius: 0 !important;
     background: transparent !important;
     pointer-events: none !important;
-    // Below the panel (9999) and toast; above ordinary page content.
-    z-index: 9998 !important;
+    // Below the panel / toast. Use near-max so sticky ads (W3Schools, etc.)
+    // that claim huge z-indexes cannot cover the highlight.
+    z-index: 2147483645 !important;
 }
 
 // Top-left toast — engagement cue and copy feedback (outside the panel block).
@@ -180,7 +181,9 @@
         visibility: visible !important;
         width: auto !important;
         height: auto !important;
-        z-index: 9999 !important;
+        // Near max so fixed/sticky page chrome (ads, cookie bars) stays under us.
+        // Toast keeps 2147483647 so feedback still paints above the panel.
+        z-index: 2147483646 !important;
     }
 
     display: none;

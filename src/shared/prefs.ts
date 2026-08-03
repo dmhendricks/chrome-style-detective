@@ -16,12 +16,20 @@ import { z } from 'zod';
 
 /**
  * chrome.storage can be missing in orphaned content scripts (after reload) and
- * some sandboxed / odd frames. Touching `.local` there throws and shows up in
- * Manage Extensions — prefer defaults / no-ops instead.
+ * some sandboxed / odd frames. Touching `.local` / `.sync` there throws and
+ * shows up in Manage Extensions — prefer defaults / no-ops instead.
  */
 function localArea(): chrome.storage.StorageArea | undefined {
     try {
         return globalThis.chrome?.storage?.local;
+    } catch {
+        return undefined;
+    }
+}
+
+function syncArea(): chrome.storage.StorageArea | undefined {
+    try {
+        return globalThis.chrome?.storage?.sync;
     } catch {
         return undefined;
     }
@@ -59,6 +67,28 @@ async function localRemove(keys: string | string[]): Promise<void> {
     }
 }
 
+async function syncGet(
+    keys: string | string[],
+): Promise<Record<string, unknown> | undefined> {
+    const sync = syncArea();
+    if (!sync) return undefined;
+    try {
+        return (await sync.get(keys)) as Record<string, unknown>;
+    } catch {
+        return undefined;
+    }
+}
+
+async function syncSet(items: Record<string, unknown>): Promise<void> {
+    const sync = syncArea();
+    if (!sync) return;
+    try {
+        await sync.set(items);
+    } catch {
+        // Orphaned / restricted / quota — ignore.
+    }
+}
+
 /**
  * Read a local storage key, parse with Zod, and rewrite the default when the
  * stored value is present but invalid. Missing keys stay missing (return default).
@@ -75,6 +105,37 @@ async function loadLocalPref<T>(
     if (result.success) return result.data;
 
     await localSet({ [key]: defaultValue });
+    return defaultValue;
+}
+
+/**
+ * Prefer sync; if absent, copy a still-valid local value into sync once and
+ * drop the local key so device-local leftovers don't fight synced prefs.
+ *
+ * TEMPORARY — remove after migration window; see docs/remove-settings-migration.md
+ */
+async function loadSyncedPrefMigratingFromLocal<T>(
+    key: string,
+    schema: z.ZodType<T>,
+    defaultValue: T,
+): Promise<T> {
+    const synced = await syncGet(key);
+    if (synced && key in synced) {
+        const result = schema.safeParse(synced[key]);
+        if (result.success) return result.data;
+        await syncSet({ [key]: defaultValue });
+        return defaultValue;
+    }
+
+    const local = await localGet(key);
+    if (local && key in local) {
+        const result = schema.safeParse(local[key]);
+        const value = result.success ? result.data : defaultValue;
+        await syncSet({ [key]: value });
+        await localRemove(key);
+        return value;
+    }
+
     return defaultValue;
 }
 
@@ -200,10 +261,10 @@ export async function savePanelFontSize(size: number): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Show CSS Classes section
+// Show CSS Classes section (synced across devices)
 // ---------------------------------------------------------------------------
 
-/** Show the Classes chip row. Default: true. */
+/** Show the Classes chip row. Default: true. Stored in chrome.storage.sync. */
 export const SHOW_CSS_CLASSES_KEY = 'showCssClasses';
 
 /** Legacy key — migrated to `showCssClasses` on read (`!hideCssClasses`). */
@@ -219,21 +280,31 @@ export function parseShowCssClasses(value: unknown): boolean {
 }
 
 export async function loadShowCssClasses(): Promise<boolean> {
-    const stored = await localGet([SHOW_CSS_CLASSES_KEY, LEGACY_HIDE_CSS_CLASSES_KEY]);
-    if (!stored) return SHOW_CSS_CLASSES_DEFAULT;
-
-    if (SHOW_CSS_CLASSES_KEY in stored) {
-        const result = showCssClassesSchema.safeParse(stored[SHOW_CSS_CLASSES_KEY]);
+    const synced = await syncGet(SHOW_CSS_CLASSES_KEY);
+    if (synced && SHOW_CSS_CLASSES_KEY in synced) {
+        const result = showCssClassesSchema.safeParse(synced[SHOW_CSS_CLASSES_KEY]);
         if (result.success) return result.data;
-        await localSet({ [SHOW_CSS_CLASSES_KEY]: SHOW_CSS_CLASSES_DEFAULT });
+        await syncSet({ [SHOW_CSS_CLASSES_KEY]: SHOW_CSS_CLASSES_DEFAULT });
         return SHOW_CSS_CLASSES_DEFAULT;
     }
 
-    // Migrate inverted legacy pref once, then drop the old key.
-    if (LEGACY_HIDE_CSS_CLASSES_KEY in stored) {
-        const legacy = z.boolean().safeParse(stored[LEGACY_HIDE_CSS_CLASSES_KEY]);
+    // One-time migrate from chrome.storage.local (pre-sync) or inverted legacy key.
+    // TEMPORARY — see docs/remove-settings-migration.md
+    const local = await localGet([SHOW_CSS_CLASSES_KEY, LEGACY_HIDE_CSS_CLASSES_KEY]);
+    if (!local) return SHOW_CSS_CLASSES_DEFAULT;
+
+    if (SHOW_CSS_CLASSES_KEY in local) {
+        const result = showCssClassesSchema.safeParse(local[SHOW_CSS_CLASSES_KEY]);
+        const shown = result.success ? result.data : SHOW_CSS_CLASSES_DEFAULT;
+        await syncSet({ [SHOW_CSS_CLASSES_KEY]: shown });
+        await localRemove([SHOW_CSS_CLASSES_KEY, LEGACY_HIDE_CSS_CLASSES_KEY]);
+        return shown;
+    }
+
+    if (LEGACY_HIDE_CSS_CLASSES_KEY in local) {
+        const legacy = z.boolean().safeParse(local[LEGACY_HIDE_CSS_CLASSES_KEY]);
         const shown = legacy.success ? !legacy.data : SHOW_CSS_CLASSES_DEFAULT;
-        await localSet({ [SHOW_CSS_CLASSES_KEY]: shown });
+        await syncSet({ [SHOW_CSS_CLASSES_KEY]: shown });
         await localRemove(LEGACY_HIDE_CSS_CLASSES_KEY);
         return shown;
     }
@@ -242,13 +313,15 @@ export async function loadShowCssClasses(): Promise<boolean> {
 }
 
 export async function saveShowCssClasses(shown: boolean): Promise<void> {
-    await localSet({
+    await syncSet({
         [SHOW_CSS_CLASSES_KEY]: showCssClassesSchema.parse(shown),
     });
+    // Drop any leftover local copy so it cannot override sync on next load.
+    await localRemove([SHOW_CSS_CLASSES_KEY, LEGACY_HIDE_CSS_CLASSES_KEY]);
 }
 
 // ---------------------------------------------------------------------------
-// Show box-model diagram
+// Show box-model diagram (synced across devices)
 // ---------------------------------------------------------------------------
 
 /** Show the concentric box-model diagram in the Box section. Default: true. */
@@ -264,13 +337,18 @@ export function parseShowBoxModel(value: unknown): boolean {
 }
 
 export async function loadShowBoxModel(): Promise<boolean> {
-    return loadLocalPref(SHOW_BOX_MODEL_KEY, showBoxModelSchema, SHOW_BOX_MODEL_DEFAULT);
+    return loadSyncedPrefMigratingFromLocal(
+        SHOW_BOX_MODEL_KEY,
+        showBoxModelSchema,
+        SHOW_BOX_MODEL_DEFAULT,
+    );
 }
 
 export async function saveShowBoxModel(shown: boolean): Promise<void> {
-    await localSet({
+    await syncSet({
         [SHOW_BOX_MODEL_KEY]: showBoxModelSchema.parse(shown),
     });
+    await localRemove(SHOW_BOX_MODEL_KEY);
 }
 
 // ---------------------------------------------------------------------------

@@ -477,6 +477,33 @@ class OverlayController {
         }
 
         chrome.storage.onChanged.addListener((changes, area) => {
+            if (area === 'sync') {
+                const showClassesChange = changes[SHOW_CSS_CLASSES_KEY];
+                if (showClassesChange) {
+                    setShowCssClasses(parseShowCssClasses(showClassesChange.newValue));
+                    if (this.inspectedElement?.isConnected) {
+                        updateClassesPanel(this.inspectedElement);
+                    }
+                    const block = document.getElementById(OVERLAY_ID);
+                    if (block) keepOverlayInViewport(block);
+                }
+
+                const showBoxModelChange = changes[SHOW_BOX_MODEL_KEY];
+                if (showBoxModelChange) {
+                    setShowBoxModelDiagram(parseShowBoxModel(showBoxModelChange.newValue));
+                    if (this.inspectedElement?.isConnected) {
+                        const style =
+                            this.inspectedElement.ownerDocument.defaultView?.getComputedStyle(
+                                this.inspectedElement,
+                            );
+                        if (style) updatePanel(style, this.inspectedElement);
+                    }
+                    const block = document.getElementById(OVERLAY_ID);
+                    if (block) keepOverlayInViewport(block);
+                }
+                return;
+            }
+
             if (area !== 'local') return;
 
             const themeChange = changes[PANEL_THEME_KEY];
@@ -484,29 +511,6 @@ class OverlayController {
                 this.panelThemePreference = parsePanelTheme(themeChange.newValue);
                 this.bindSystemThemeListener();
                 this.applyPanelTheme();
-            }
-
-            const showClassesChange = changes[SHOW_CSS_CLASSES_KEY];
-            if (showClassesChange) {
-                setShowCssClasses(parseShowCssClasses(showClassesChange.newValue));
-                if (this.inspectedElement?.isConnected) {
-                    updateClassesPanel(this.inspectedElement);
-                }
-                const block = document.getElementById(OVERLAY_ID);
-                if (block) keepOverlayInViewport(block);
-            }
-
-            const showBoxModelChange = changes[SHOW_BOX_MODEL_KEY];
-            if (showBoxModelChange) {
-                setShowBoxModelDiagram(parseShowBoxModel(showBoxModelChange.newValue));
-                if (this.inspectedElement?.isConnected) {
-                    const style = this.inspectedElement.ownerDocument.defaultView?.getComputedStyle(
-                        this.inspectedElement,
-                    );
-                    if (style) updatePanel(style, this.inspectedElement);
-                }
-                const block = document.getElementById(OVERLAY_ID);
-                if (block) keepOverlayInViewport(block);
             }
 
             const chipLinesChange = changes[CLASSES_CHIP_LINES_KEY];

@@ -1,8 +1,9 @@
 /*!
  * Style Detective — options page script.
  *
- * Loads and persists preferences from chrome.storage.local. Keep UI logic
- * small; share keys with the content script via ../shared/prefs.
+ * Loads and persists preferences from chrome.storage (sync for cross-device
+ * toggles; local for device-specific panel prefs). Keep UI logic small; share
+ * keys with the content script via ../shared/prefs.
  */
 
 import {
@@ -337,24 +338,27 @@ function wireResetDefaults(): void {
 
 try {
     chrome.storage?.onChanged?.addListener((changes, area) => {
+        if (area === 'sync') {
+            const showClassesChange = changes[SHOW_CSS_CLASSES_KEY];
+            if (showClassesChange && showCssClassesToggle) {
+                const shown = parseShowCssClasses(showClassesChange.newValue);
+                showCssClassesToggle.checked = shown;
+                syncChipLinesRowVisibility(shown);
+                previewState = { ...previewState, showCssClasses: shown };
+                refreshPreview();
+            }
+
+            const showBoxModelChange = changes[SHOW_BOX_MODEL_KEY];
+            if (showBoxModelChange && showBoxModelToggle) {
+                const shown = parseShowBoxModel(showBoxModelChange.newValue);
+                showBoxModelToggle.checked = shown;
+                previewState = { ...previewState, showBoxModel: shown };
+                refreshPreview();
+            }
+            return;
+        }
+
         if (area !== 'local') return;
-
-        const showClassesChange = changes[SHOW_CSS_CLASSES_KEY];
-        if (showClassesChange && showCssClassesToggle) {
-            const shown = parseShowCssClasses(showClassesChange.newValue);
-            showCssClassesToggle.checked = shown;
-            syncChipLinesRowVisibility(shown);
-            previewState = { ...previewState, showCssClasses: shown };
-            refreshPreview();
-        }
-
-        const showBoxModelChange = changes[SHOW_BOX_MODEL_KEY];
-        if (showBoxModelChange && showBoxModelToggle) {
-            const shown = parseShowBoxModel(showBoxModelChange.newValue);
-            showBoxModelToggle.checked = shown;
-            previewState = { ...previewState, showBoxModel: shown };
-            refreshPreview();
-        }
 
         const chipLinesChange = changes[CLASSES_CHIP_LINES_KEY];
         if (chipLinesChange && classesChipLinesInput) {

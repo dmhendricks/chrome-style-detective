@@ -2,8 +2,10 @@
 * Style Detective
 */
 
-// This stylesheet is injected into arbitrary host pages. Two consequences drive
-// its structure:
+// This stylesheet is injected into arbitrary host pages via the content script
+// (see inject-styles.ts) — not only via manifest content_scripts.css, which is
+// unreliable after document.write() in about:blank iframes. Two consequences
+// drive its structure:
 //
 //   1. Every declaration is !important so it wins against the host page's CSS.
 //   2. Custom properties are declared on the #StyleDetectiveOverlay block (never :root)

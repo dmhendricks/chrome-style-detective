@@ -62,7 +62,7 @@ import {
     TOAST_ID,
     TOAST_SUCCESS_CLASS,
 } from '../shared/dom-ids';
-import './style.scss';
+import { ensureOverlayStyles } from './lib/inject-styles';
 
 type Pointer = { clientX: number; clientY: number };
 
@@ -351,6 +351,8 @@ class OverlayController {
     enable(): boolean {
         if (this.armed) return false;
 
+        // Re-assert styles in case a document.write iframe wiped injected CSS.
+        ensureOverlayStyles();
         this.armed = true;
         this.addHoverListeners();
         this.addKeyListeners();
@@ -999,6 +1001,10 @@ const controller = new OverlayController();
 const ready = controller.loadPrefs().catch(() => {
     // Prefs unavailable (orphaned script / restricted frame) — keep defaults.
 });
+
+// Attach styles from JS — declared content_scripts CSS often misses
+// document.write() about:blank result frames (e.g. W3Schools Tryit).
+ensureOverlayStyles();
 
 const BOOT_FLAG = '__styleDetectiveBooted__';
 const bootRoot = globalThis as typeof globalThis & { [BOOT_FLAG]?: boolean };
